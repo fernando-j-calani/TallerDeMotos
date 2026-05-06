@@ -19,7 +19,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'auth_group',
-                'managed': False,
+                    'managed': True,
             },
         ),
         migrations.CreateModel(
@@ -29,7 +29,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'auth_group_permissions',
-                'managed': False,
+                    'managed': True,
             },
         ),
         migrations.CreateModel(
@@ -41,7 +41,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'auth_permission',
-                'managed': False,
+                    'managed': True,
             },
         ),
         migrations.CreateModel(
@@ -61,7 +61,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'auth_user',
-                'managed': False,
+                    'managed': True,
             },
         ),
         migrations.CreateModel(
@@ -71,7 +71,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'auth_user_groups',
-                'managed': False,
+                    'managed': True,
             },
         ),
         migrations.CreateModel(
@@ -81,7 +81,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'auth_user_user_permissions',
-                'managed': False,
+                    'managed': True,
             },
         ),
         migrations.CreateModel(
@@ -94,7 +94,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'bitacora',
-                'managed': False,
+                    'managed': True,
             },
         ),
         migrations.CreateModel(
@@ -112,7 +112,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'cliente',
-                'managed': False,
+                    'managed': True,
             },
         ),
         migrations.CreateModel(
@@ -129,7 +129,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'compra',
-                'managed': False,
+                    'managed': True,
             },
         ),
         migrations.CreateModel(
@@ -145,7 +145,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'cotizacion',
-                'managed': False,
+                    'managed': True,
             },
         ),
         migrations.CreateModel(
@@ -158,7 +158,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'detallecompra',
-                'managed': False,
+                    'managed': True,
             },
         ),
         migrations.CreateModel(
@@ -173,7 +173,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'detallecotizacion',
-                'managed': False,
+                    'managed': True,
             },
         ),
         migrations.CreateModel(
@@ -189,7 +189,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'detalleordentrabajo',
-                'managed': False,
+                    'managed': True,
             },
         ),
         migrations.CreateModel(
@@ -204,7 +204,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'django_admin_log',
-                'managed': False,
+                    'managed': True,
             },
         ),
         migrations.CreateModel(
@@ -216,7 +216,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'django_content_type',
-                'managed': False,
+                    'managed': True,
             },
         ),
         migrations.CreateModel(
@@ -229,7 +229,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'django_migrations',
-                'managed': False,
+                    'managed': True,
             },
         ),
         migrations.CreateModel(
@@ -241,7 +241,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'django_session',
-                'managed': False,
+                    'managed': True,
             },
         ),
         migrations.CreateModel(
@@ -258,7 +258,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'factura',
-                'managed': False,
+                    'managed': True,
             },
         ),
         migrations.CreateModel(
@@ -278,7 +278,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'motocicleta',
-                'managed': False,
+                    'managed': True,
             },
         ),
         migrations.CreateModel(
@@ -294,7 +294,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'notaservicio',
-                'managed': False,
+                    'managed': True,
             },
         ),
         migrations.CreateModel(
@@ -307,7 +307,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'notatrabajo',
-                'managed': False,
+                    'managed': True,
             },
         ),
         migrations.CreateModel(
@@ -326,7 +326,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'ordentrabajo',
-                'managed': False,
+                    'managed': True,
             },
         ),
         migrations.CreateModel(
@@ -338,7 +338,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'privilegio',
-                'managed': False,
+                    'managed': True,
             },
         ),
         migrations.CreateModel(
@@ -359,7 +359,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'producto',
-                'managed': False,
+                    'managed': True,
             },
         ),
         migrations.CreateModel(
@@ -375,7 +375,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'proveedor',
-                'managed': False,
+                    'managed': True,
             },
         ),
         migrations.CreateModel(
@@ -387,7 +387,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'rol',
-                'managed': False,
+                    'managed': True,
             },
         ),
         migrations.CreateModel(
@@ -397,7 +397,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'rol_privilegio',
-                'managed': False,
+                    'managed': True,
             },
         ),
         migrations.CreateModel(
@@ -413,7 +413,7 @@ class Migration(migrations.Migration):
             ],
             options={
                 'db_table': 'usuario',
-                'managed': False,
+                    'managed': True,
             },
         ),
     ]

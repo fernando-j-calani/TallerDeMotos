@@ -12,7 +12,7 @@ class AuthGroup(models.Model):
     name = models.CharField(unique=True, max_length=150)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'auth_group'
 
 
@@ -22,7 +22,7 @@ class AuthGroupPermissions(models.Model):
     permission = models.ForeignKey('AuthPermission', models.DO_NOTHING)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'auth_group_permissions'
         unique_together = (('group', 'permission'),)
 
@@ -33,7 +33,7 @@ class AuthPermission(models.Model):
     codename = models.CharField(max_length=100)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'auth_permission'
         unique_together = (('content_type', 'codename'),)
 
@@ -51,7 +51,7 @@ class AuthUser(models.Model):
     date_joined = models.DateTimeField()
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'auth_user'
 
 
@@ -61,7 +61,7 @@ class AuthUserGroups(models.Model):
     group = models.ForeignKey(AuthGroup, models.DO_NOTHING)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'auth_user_groups'
         unique_together = (('user', 'group'),)
 
@@ -72,7 +72,7 @@ class AuthUserUserPermissions(models.Model):
     permission = models.ForeignKey(AuthPermission, models.DO_NOTHING)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'auth_user_user_permissions'
         unique_together = (('user', 'permission'),)
 
@@ -85,7 +85,7 @@ class Bitacora(models.Model):
     descripcion = models.TextField()
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'bitacora'
 
 
@@ -101,7 +101,7 @@ class Cliente(models.Model):
     estado = models.CharField(max_length=20, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'cliente'
 
 
@@ -117,7 +117,7 @@ class Compra(models.Model):
     estado = models.CharField(max_length=20, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'compra'
 
 
@@ -133,7 +133,7 @@ class Cotizacion(models.Model):
     estado = models.CharField(max_length=20, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'cotizacion'
 
 
@@ -146,7 +146,7 @@ class Detallecompra(models.Model):
     subtotal = models.DecimalField(max_digits=10, decimal_places=2)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'detallecompra'
 
 
@@ -160,7 +160,7 @@ class Detallecotizacion(models.Model):
     subtotal = models.DecimalField(max_digits=10, decimal_places=2)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'detallecotizacion'
 
 
@@ -176,7 +176,7 @@ class Detalleordentrabajo(models.Model):
     subtotal = models.DecimalField(max_digits=10, decimal_places=2)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'detalleordentrabajo'
 
 
@@ -190,7 +190,7 @@ class DjangoAdminLog(models.Model):
     user = models.ForeignKey(AuthUser, models.DO_NOTHING)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'django_admin_log'
 
 
@@ -199,7 +199,7 @@ class DjangoContentType(models.Model):
     model = models.CharField(max_length=100)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'django_content_type'
         unique_together = (('app_label', 'model'),)
 
@@ -211,7 +211,7 @@ class DjangoMigrations(models.Model):
     applied = models.DateTimeField()
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'django_migrations'
 
 
@@ -221,7 +221,7 @@ class DjangoSession(models.Model):
     expire_date = models.DateTimeField()
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'django_session'
 
 
@@ -237,7 +237,7 @@ class Factura(models.Model):
     razon_social = models.CharField(max_length=150)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'factura'
 
 
@@ -256,7 +256,7 @@ class Motocicleta(models.Model):
     estado = models.CharField(max_length=20, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'motocicleta'
 
 
@@ -272,7 +272,7 @@ class Notaservicio(models.Model):
     estado_pago = models.CharField(max_length=20, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'notaservicio'
 
 
@@ -285,7 +285,7 @@ class Notatrabajo(models.Model):
     tipo_nota = models.CharField(max_length=50, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'notatrabajo'
 
 
@@ -306,7 +306,7 @@ class Ordentrabajo(models.Model):
     total = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'ordentrabajo'
 
 
@@ -316,7 +316,7 @@ class Privilegio(models.Model):
     descripcion = models.TextField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'privilegio'
 
 
@@ -335,7 +335,7 @@ class Producto(models.Model):
     estado = models.CharField(max_length=20, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'producto'
 
 
@@ -349,7 +349,7 @@ class Proveedor(models.Model):
     direccion = models.TextField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'proveedor'
 
 
@@ -359,7 +359,7 @@ class Rol(models.Model):
     descripcion = models.TextField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'rol'
 
 
@@ -368,7 +368,7 @@ class RolPrivilegio(models.Model):
     id_privilegio = models.ForeignKey(Privilegio, models.DO_NOTHING, db_column='id_privilegio')
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'rol_privilegio'
         unique_together = (('id_rol', 'id_privilegio'),)
 
@@ -384,5 +384,5 @@ class Usuario(models.Model):
     fecha_registro = models.DateField(blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'usuario'
