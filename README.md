@@ -24,7 +24,7 @@ cp .env.example .env
 
 - `DJANGO_SECRET_KEY`
 - `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
-- `DB_NAME`, `DB_USER`, `DB_PASSWORD` (deben coincidir con `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`)
+- `DB_NAME`, `DB_USER`, `DB_PASSWORD` (credenciales que usa Django; si usas la base del `docker-compose.yml`, deben coincidir con `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`)
 - `DB_HOST` debe coincidir con el nombre del servicio de base de datos en `docker-compose.yml` (por defecto: `db`)
 - Opcional: variables de correo (`MAIL_*`) según tu entorno
 
@@ -50,13 +50,11 @@ docker compose exec backend python manage.py createsuperuser
 
 ## Datos de ejemplo (opcional)
 
-Hay scripts en `BaseDeDatos/` (incluidos en este repositorio). Para cargarlos en PostgreSQL:
+Hay scripts en `BaseDeDatos/` (incluidos en este repositorio). Reemplaza los valores por los de tu `.env`:
 
 ```bash
-docker compose exec -T db psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} < BaseDeDatos/ScriptBaseSi1_motos.pgsql
+docker compose exec -T db psql -U <DB_USER> -d <DB_NAME> < BaseDeDatos/ScriptBaseSi1_motos.pgsql
 ```
-
-> Si no tienes estas variables exportadas, reemplaza `${POSTGRES_USER}` y `${POSTGRES_DB}` por los valores de tu `.env`. Si prefieres usar variables, primero exporta tu `.env` en la terminal (por ejemplo en bash/zsh: `set -a; source .env; set +a`).
 
 Ejemplo (valores por defecto de `.env.example`):
 
