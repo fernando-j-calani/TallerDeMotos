@@ -25,7 +25,7 @@ cp .env.example .env
 - `DJANGO_SECRET_KEY`
 - `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
 - `DB_NAME`, `DB_USER`, `DB_PASSWORD` (deben coincidir con `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`)
-- `DB_HOST` debe ser `db` (nombre del servicio definido en el archivo `docker-compose.yml` del repositorio)
+- `DB_HOST` debe coincidir con el nombre del servicio de base de datos en `docker-compose.yml` (por defecto: `db`)
 - Opcional: variables de correo (`MAIL_*`) según tu entorno
 
 ## Levantar el proyecto con Docker
@@ -56,7 +56,7 @@ Hay scripts en `BaseDeDatos/` (incluidos en este repositorio). Para cargarlos en
 docker compose exec -T db psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} < BaseDeDatos/ScriptBaseSi1_motos.pgsql
 ```
 
-> Si no tienes estas variables exportadas, reemplaza `${POSTGRES_USER}` y `${POSTGRES_DB}` por los valores de tu `.env`. Si prefieres usar variables, primero exporta tu `.env` en la terminal (por ejemplo: `set -a; source .env; set +a`).
+> Si no tienes estas variables exportadas, reemplaza `${POSTGRES_USER}` y `${POSTGRES_DB}` por los valores de tu `.env`. Si prefieres usar variables, primero exporta tu `.env` en la terminal (por ejemplo en bash/zsh: `set -a; source .env; set +a`).
 
 Ejemplo (valores por defecto de `.env.example`):
 
