@@ -10,14 +10,14 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunSQL(
             sql=(
-                "ALTER TABLE cliente ADD COLUMN IF NOT EXISTS estado VARCHAR(20) DEFAULT 'Activo';"
-                "UPDATE cliente SET estado = 'Activo' WHERE estado IS NULL;"
-                "ALTER TABLE motocicleta ADD COLUMN IF NOT EXISTS estado VARCHAR(20) DEFAULT 'Activo';"
-                "UPDATE motocicleta SET estado = 'Activo' WHERE estado IS NULL;"
+                "ALTER TABLE taller_cliente ADD COLUMN IF NOT EXISTS estado VARCHAR(20) DEFAULT 'Activo';"
+                "UPDATE taller_cliente SET estado = 'Activo' WHERE estado IS NULL;"
+                "ALTER TABLE taller_motocicleta ADD COLUMN IF NOT EXISTS estado VARCHAR(20) DEFAULT 'Activo';"
+                "UPDATE taller_motocicleta SET estado = 'Activo' WHERE estado IS NULL;"
             ),
             reverse_sql=(
-                "ALTER TABLE cliente DROP COLUMN IF EXISTS estado;"
-                "ALTER TABLE motocicleta DROP COLUMN IF EXISTS estado;"
+                "ALTER TABLE taller_cliente DROP COLUMN IF EXISTS estado;"
+                "ALTER TABLE taller_motocicleta DROP COLUMN IF EXISTS estado;"
             ),
         )
     ]
