@@ -34,7 +34,7 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-dev-key-change
 DEBUG = get_bool_env('DJANGO_DEBUG', True)
 
 WEBSITE_HOSTNAME = os.environ.get('WEBSITE_HOSTNAME', 'localhost').strip()
-ALLOWED_HOSTS = [WEBSITE_HOSTNAME]
+ALLOWED_HOSTS = ['*']
 if WEBSITE_HOSTNAME != 'localhost':
     ALLOWED_HOSTS.append('localhost')
 
