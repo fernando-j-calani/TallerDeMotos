@@ -33,7 +33,14 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-dev-key-change
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = get_bool_env('DJANGO_DEBUG', True)
 
-ALLOWED_HOSTS = []
+WEBSITE_HOSTNAME = os.environ.get('WEBSITE_HOSTNAME', 'localhost').strip()
+ALLOWED_HOSTS = [WEBSITE_HOSTNAME]
+if WEBSITE_HOSTNAME != 'localhost':
+    ALLOWED_HOSTS.append('localhost')
+
+CSRF_TRUSTED_ORIGINS = [f"https://{WEBSITE_HOSTNAME}"]
+if WEBSITE_HOSTNAME == 'localhost':
+    CSRF_TRUSTED_ORIGINS.append('http://localhost')
 
 TOKEN_MAX_AGE_SECONDS = int(os.environ.get('TOKEN_MAX_AGE_SECONDS', '3600'))
 CLIENT_TEMP_PASSWORD = os.environ.get('CLIENT_TEMP_PASSWORD', 'zaq12wsx')
@@ -83,6 +90,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -163,6 +171,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
