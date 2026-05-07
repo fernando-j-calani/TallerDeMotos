@@ -1,7 +1,19 @@
 from rest_framework import serializers
 from datetime import timezone as dt_timezone
 from zoneinfo import ZoneInfo
-from .models import Usuario, Rol, Privilegio, Bitacora, RolPrivilegio, Cliente, Motocicleta, Proveedor, Producto
+from .models import (
+    Usuario,
+    Rol,
+    Privilegio,
+    Bitacora,
+    RolPrivilegio,
+    Cliente,
+    Motocicleta,
+    Proveedor,
+    Producto,
+    Compra,
+    Detallecompra,
+)
 
 class RolSerializer(serializers.ModelSerializer):
     class Meta:
@@ -79,6 +91,41 @@ class ProductoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Producto
         fields = '__all__'
+
+
+class DetalleCompraSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Detallecompra
+        fields = ['codigo', 'id_producto', 'cantidad', 'precio_compra', 'subtotal']
+        read_only_fields = ['codigo']
+
+
+class CompraSerializer(serializers.ModelSerializer):
+    detalles = DetalleCompraSerializer(source='detallecompra_set', many=True)
+
+    class Meta:
+        model = Compra
+        fields = [
+            'codigo',
+            'id_proveedor',
+            'numero_factura',
+            'fecha',
+            'subtotal',
+            'impuesto',
+            'total',
+            'metodo_pago',
+            'estado',
+            'detalles',
+        ]
+
+    def create(self, validated_data):
+        detalles_data = validated_data.pop('detallecompra_set', [])
+        compra = Compra.objects.create(**validated_data)
+
+        for detalle in detalles_data:
+            Detallecompra.objects.create(id_compra=compra, **detalle)
+
+        return compra
 
 
 class PerfilSerializer(serializers.ModelSerializer):

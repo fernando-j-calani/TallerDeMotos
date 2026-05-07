@@ -10,6 +10,7 @@ import Clientes from './Clientes';
 import Motocicletas from './Motocicletas';
 import Proveedores from './Proveedores';
 import Productos from './Productos';
+import Compras from './Compras';
 import Perfil from './Perfil';
 import MisMotocicletas from './MisMotocicletas';
 import InicioOperativo from './InicioOperativo';
@@ -37,6 +38,7 @@ root.render(
         <Route path="/clientes" element={<Clientes />} />
         <Route path="/productos" element={<Productos />} />
         <Route path="/proveedores" element={<Proveedores />} />
+        <Route path="/compras" element={<Compras />} />
         <Route path="/motocicletas" element={<Motocicletas />} />
         <Route path="/mis-motocicletas" element={<MisMotocicletas />} />
         <Route path="/inicio" element={<InicioOperativo />} />

@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.http import HttpResponse
 from django.core.mail import send_mail
 from django.core.cache import cache
-from django.db import connection
+from django.db import connection, transaction
 from django.db.models import Q
 from django.utils.dateparse import parse_date
 import math
@@ -17,7 +17,18 @@ import uuid
 import csv
 import re
 import unicodedata
-from .models import Usuario, Bitacora, Rol, Privilegio, Cliente, Motocicleta, Cotizacion, Proveedor, Producto
+from .models import (
+    Usuario,
+    Bitacora,
+    Rol,
+    Privilegio,
+    Cliente,
+    Motocicleta,
+    Cotizacion,
+    Proveedor,
+    Producto,
+    Compra,
+)
 from .serializers import BitacoraSerializer
 from .serializers import (
     UsuarioSerializer,
@@ -28,6 +39,7 @@ from .serializers import (
     PerfilSerializer,
     ProveedorSerializer,
     ProductoSerializer,
+    CompraSerializer,
 )
 from django.contrib.auth.hashers import make_password
 
@@ -1067,6 +1079,73 @@ class ProductoViewSet(viewsets.ModelViewSet):
             'ELIMINACIÓN',
             f"Eliminó producto: {nombre_producto}.",
         )
+
+
+# ==========================================
+# CU12: GESTIONAR COMPRAS A PROVEEDORES (API REST)
+# ==========================================
+class CompraViewSet(viewsets.ModelViewSet):
+    queryset = Compra.objects.all().order_by('codigo')
+    serializer_class = CompraSerializer
+
+    def _autorizar_admin(self, request):
+        usuario_sesion, error_auth = obtener_usuario_autenticado(request)
+        if error_auth:
+            return None, error_auth
+
+        error_admin = exigir_admin(usuario_sesion)
+        if error_admin:
+            return None, error_admin
+
+        self._usuario_sesion = usuario_sesion
+        return usuario_sesion, None
+
+    def list(self, request, *args, **kwargs):
+        _, error = self._autorizar_admin(request)
+        if error:
+            return error
+        return super().list(request, *args, **kwargs)
+
+    def retrieve(self, request, *args, **kwargs):
+        _, error = self._autorizar_admin(request)
+        if error:
+            return error
+        return super().retrieve(request, *args, **kwargs)
+
+    def create(self, request, *args, **kwargs):
+        _, error = self._autorizar_admin(request)
+        if error:
+            return error
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        _, error = self._autorizar_admin(request)
+        if error:
+            return error
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        _, error = self._autorizar_admin(request)
+        if error:
+            return error
+        return super().partial_update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        _, error = self._autorizar_admin(request)
+        if error:
+            return error
+        return super().destroy(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        with transaction.atomic():
+            compra = serializer.save()
+
+            numero_factura = compra.numero_factura or 'SIN_FACTURA'
+            registrar_bitacora(
+                self._usuario_sesion,
+                'CREACIÓN',
+                f"Registró compra al proveedor {compra.id_proveedor.empresa} con factura {numero_factura}.",
+            )
 
 
 @api_view(['GET', 'PUT', 'PATCH'])
