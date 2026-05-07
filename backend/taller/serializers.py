@@ -11,6 +11,8 @@ from .models import (
     Motocicleta,
     Proveedor,
     Producto,
+    Cotizacion,
+    Detallecotizacion,
     Compra,
     Detallecompra,
 )
@@ -126,6 +128,41 @@ class CompraSerializer(serializers.ModelSerializer):
             Detallecompra.objects.create(id_compra=compra, **detalle)
 
         return compra
+
+
+class DetalleCotizacionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Detallecotizacion
+        fields = ['codigo', 'tipo', 'descripcion', 'cantidad', 'precio_unitario', 'subtotal']
+        read_only_fields = ['codigo']
+
+
+class CotizacionSerializer(serializers.ModelSerializer):
+    detalles = DetalleCotizacionSerializer(source='detallecotizacion_set', many=True)
+
+    class Meta:
+        model = Cotizacion
+        fields = [
+            'codigo',
+            'id_cliente',
+            'id_motocicleta',
+            'fecha_emision',
+            'fecha_validez',
+            'subtotal',
+            'impuesto',
+            'total',
+            'estado',
+            'detalles',
+        ]
+
+    def create(self, validated_data):
+        detalles_data = validated_data.pop('detallecotizacion_set', [])
+        cotizacion = Cotizacion.objects.create(**validated_data)
+
+        for detalle in detalles_data:
+            Detallecotizacion.objects.create(id_cotizacion=cotizacion, **detalle)
+
+        return cotizacion
 
 
 class PerfilSerializer(serializers.ModelSerializer):

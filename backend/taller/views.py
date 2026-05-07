@@ -37,6 +37,7 @@ from .serializers import (
     ClienteSerializer,
     MotocicletaSerializer,
     PerfilSerializer,
+    CotizacionSerializer,
     ProveedorSerializer,
     ProductoSerializer,
     CompraSerializer,
@@ -917,6 +918,71 @@ def motocicleta_detalle_api(request, motocicleta_id):
     moto.save(update_fields=['estado'])
     registrar_bitacora(usuario_sesion, 'MODIFICACIÓN', f"Desactivó motocicleta placa {moto.placa}.")
     return Response({"exito": True, "mensaje": "Motocicleta desactivada."}, status=200)
+
+
+# ==========================================
+# CU07: GESTIONAR COTIZACIONES (API REST)
+# ==========================================
+class CotizacionViewSet(viewsets.ModelViewSet):
+    queryset = Cotizacion.objects.all().order_by('codigo')
+    serializer_class = CotizacionSerializer
+
+    def _autorizar_roles(self, request):
+        usuario_sesion, error_auth = obtener_usuario_autenticado(request)
+        if error_auth:
+            return None, error_auth
+
+        error_rol = exigir_roles(usuario_sesion, ['Administrador', 'Recepcionista'])
+        if error_rol:
+            return None, error_rol
+
+        self._usuario_sesion = usuario_sesion
+        return usuario_sesion, None
+
+    def list(self, request, *args, **kwargs):
+        _, error = self._autorizar_roles(request)
+        if error:
+            return error
+        return super().list(request, *args, **kwargs)
+
+    def retrieve(self, request, *args, **kwargs):
+        _, error = self._autorizar_roles(request)
+        if error:
+            return error
+        return super().retrieve(request, *args, **kwargs)
+
+    def create(self, request, *args, **kwargs):
+        _, error = self._autorizar_roles(request)
+        if error:
+            return error
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        _, error = self._autorizar_roles(request)
+        if error:
+            return error
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        _, error = self._autorizar_roles(request)
+        if error:
+            return error
+        return super().partial_update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        _, error = self._autorizar_roles(request)
+        if error:
+            return error
+        return super().destroy(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        with transaction.atomic():
+            cotizacion = serializer.save()
+            registrar_bitacora(
+                self._usuario_sesion,
+                'CREACIÓN',
+                f"Generó cotizacion para cliente {cotizacion.id_cliente.nombre}.",
+            )
 
 
 # ==========================================

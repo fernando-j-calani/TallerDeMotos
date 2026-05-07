@@ -115,6 +115,11 @@ const cerrarSesion = async () => {
               Motocicletas
             </button>
           )}
+          {(usuarioLocal?.rol === 'Administrador' || usuarioLocal?.rol === 'Recepcionista') && (
+            <button onClick={() => navigate('/cotizaciones')} style={{ marginRight: '10px', padding: '8px 16px', backgroundColor: '#ff6600', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
+              Cotizaciones
+            </button>
+          )}
           {usuarioLocal?.rol === 'Administrador' && (
             <button onClick={() => navigate('/proveedores')} style={{ marginRight: '10px', padding: '8px 16px', backgroundColor: '#ff6600', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
               Proveedores
