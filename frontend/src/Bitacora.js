@@ -130,6 +130,11 @@ const cerrarSesion = async () => {
               Compras
             </button>
           )}
+          {usuarioLocal?.rol === 'Administrador' && (
+            <button onClick={() => navigate('/inventario')} style={{ marginRight: '10px', padding: '8px 16px', backgroundColor: '#ff6600', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
+              Inventario
+            </button>
+          )}
           <button onClick={() => navigate('/perfil')} style={{ marginRight: '10px', padding: '8px 16px', backgroundColor: '#ff6600', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
             Mi Perfil
           </button>
