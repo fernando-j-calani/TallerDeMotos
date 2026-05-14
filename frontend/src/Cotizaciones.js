@@ -122,13 +122,19 @@ const Cotizaciones = () => {
         headers: headers(),
         body: JSON.stringify(payload),
       });
-      const data = await res.json().catch(() => ({}));
+      const data = await res.json().catch(() => null);
       if (!res.ok) {
-        setError(data.error || JSON.stringify(data.errores || {}) || 'No se pudo actualizar la cotización.');
+        const errores = data && data.errores ? JSON.stringify(data.errores) : '';
+        const mensaje = (data && data.error) || errores || 'No se pudo actualizar la cotización.';
+        setError(mensaje);
         return;
       }
       setCotizacionEdicion(null);
-      await cargarCotizaciones(busqueda);
+      if (data && data.cotizacion) {
+        setCotizaciones((prev) => prev.map((c) => (c.codigo === data.cotizacion.codigo ? data.cotizacion : c)));
+      } else {
+        await cargarCotizaciones(busqueda);
+      }
     } catch (err) {
       console.error('Error guardando cotización:', err);
       setError('Error de conexión al guardar la cotización.');

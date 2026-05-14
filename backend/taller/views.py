@@ -1797,10 +1797,20 @@ def cotizacion_detalle_api(request, cotizacion_id):
     if not serializer.is_valid():
         return Response({"exito": False, "errores": serializer.errors}, status=400)
 
-    cotizacion_actualizada = serializer.save()
-    Cotizaciones.Modifica(cotizacion_actualizada, request.data)
+    try:
+        cotizacion_actualizada = serializer.save()
+    except Exception as exc:
+        return Response({"exito": False, "error": str(exc)}, status=400)
+
     registrar_bitacora(usuario_sesion, 'MODIFICACIÓN', f"Actualizó cotización #{cotizacion.codigo}.")
-    return Response({"exito": True, "mensaje": "Cotización actualizada."}, status=200)
+    return Response(
+        {
+            "exito": True,
+            "mensaje": "Cotización actualizada.",
+            "cotizacion": CotizacionSerializer(cotizacion_actualizada).data,
+        },
+        status=200,
+    )
 
 
 # ==========================================

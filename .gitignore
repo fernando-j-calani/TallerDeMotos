@@ -33,6 +33,7 @@ frontend/build/
 Thumbs.db
 .vscode/
 .idea/
+BACKUP_SI1_20260415_174943.code-workspace
 
 # Local/backup data not needed to run
 BACKUP_SQL_SI1/
