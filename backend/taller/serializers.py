@@ -19,6 +19,8 @@ from .models import (
     Detalleordentrabajo,
     Compra,
     Detallecompra,
+    Notaservicio,
+    Factura,
 )
 
 class RolSerializer(serializers.ModelSerializer):
@@ -171,3 +173,20 @@ class PermisoModuloSerializer(serializers.ModelSerializer):
     class Meta:
         model = PermisoModulo
         fields = ['id', 'id_rol', 'rol_nombre', 'codigo_cu', 'nombre_modulo', 'accion', 'permitido']
+
+
+class NotaServicioSerializer(serializers.ModelSerializer):
+    orden_codigo = serializers.ReadOnlyField(source='id_orden_trabajo.codigo')
+    cliente_nombre = serializers.ReadOnlyField(source='id_cliente.nombre')
+
+    class Meta:
+        model = Notaservicio
+        fields = '__all__'
+
+
+class FacturaSerializer(serializers.ModelSerializer):
+    nota_codigo = serializers.ReadOnlyField(source='id_nota_servicio.codigo')
+
+    class Meta:
+        model = Factura
+        fields = '__all__'

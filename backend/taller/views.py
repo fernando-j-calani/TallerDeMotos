@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.http import HttpResponse
 from django.core.mail import send_mail
 from django.core.cache import cache
-from django.db import connection, OperationalError
+from django.db import connection, OperationalError, transaction
 from django.db.models import Q, F
 from django.utils.dateparse import parse_date
 import math
@@ -30,6 +30,8 @@ from .models import (
     Detalleordentrabajo,
     Ordentrabajo,
     Notatrabajo,
+    Notaservicio,
+    Factura,
     Producto,
     Proveedor,
     Compra,
@@ -50,6 +52,8 @@ from .serializers import (
     NotaTrabajoSerializer,
     CompraSerializer,
     PermisoModuloSerializer,
+    NotaServicioSerializer,
+    FacturaSerializer,
 )
 from django.contrib.auth.hashers import make_password
 
@@ -2065,6 +2069,147 @@ def notas_trabajo_api(request):
         },
         status=201,
     )
+
+
+# ==========================================
+# CU14: GESTIONAR FACTURACION
+# ==========================================
+@api_view(['POST'])
+def facturacion_api(request):
+    usuario_sesion, error_auth = obtener_usuario_autenticado(request)
+    if error_auth:
+        return error_auth
+
+    error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU14', 'Adicionar')
+    if error_permiso:
+        return error_permiso
+
+    orden_id = request.data.get('orden_id') or request.data.get('id_orden_trabajo')
+    metodo_pago = (request.data.get('metodo_pago') or '').strip()
+    estado_pago = (request.data.get('estado_pago') or 'Pendiente').strip()
+    nit_cliente = (request.data.get('nit_cliente') or '').strip()
+    razon_social = (request.data.get('razon_social') or '').strip()
+    impuesto_raw = request.data.get('impuesto', '0')
+
+    if not orden_id:
+        return Response({"exito": False, "error": "Debe seleccionar una orden de trabajo."}, status=400)
+
+    if not nit_cliente or not razon_social:
+        return Response({"exito": False, "error": "NIT y Razón Social son obligatorios."}, status=400)
+
+    try:
+        impuesto = Decimal(str(impuesto_raw or '0'))
+    except (InvalidOperation, TypeError):
+        return Response({"exito": False, "error": "Impuesto inválido."}, status=400)
+
+    try:
+        orden = Ordentrabajo.objects.select_related('id_cliente', 'id_motocicleta').get(codigo=orden_id)
+    except Ordentrabajo.DoesNotExist:
+        return Response({"exito": False, "error": "Orden de trabajo no encontrada."}, status=404)
+
+    if (orden.estado or '').strip().lower() != 'finalizado':
+        return Response({"exito": False, "error": "La orden debe estar en estado Finalizado."}, status=400)
+
+    if Notaservicio.objects.filter(id_orden_trabajo=orden).exists():
+        return Response({"exito": False, "error": "La orden ya fue facturada previamente."}, status=409)
+
+    total_repuestos = Decimal(orden.costo_repuestos or 0)
+    total_mano_obra = Decimal(orden.costo_mano_obra or 0)
+    total_general = total_repuestos + total_mano_obra
+    fecha_emision = timezone.now().date()
+
+    with transaction.atomic():
+        nota = Notaservicio.objects.create(
+            id_orden_trabajo=orden,
+            id_cliente=orden.id_cliente,
+            fecha_emision=fecha_emision,
+            total_repuestos=total_repuestos,
+            total_mano_obra=total_mano_obra,
+            total_general=total_general,
+            observaciones=(request.data.get('observaciones') or '').strip() or None,
+            estado_pago=estado_pago or 'Pendiente',
+        )
+
+        factura = Factura.objects.create(
+            id_nota_servicio=nota,
+            numero_autorizacion=(request.data.get('numero_autorizacion') or '').strip() or None,
+            fecha_emision=fecha_emision,
+            monto_servicio_facturado=total_mano_obra,
+            impuesto=impuesto,
+            total_facturado=total_mano_obra + impuesto,
+            nit_cliente=nit_cliente,
+            razon_social=razon_social,
+        )
+
+        nuevo_estado = 'Pagado' if estado_pago.lower() == 'pagado' else 'Facturado'
+        Ordentrabajo.objects.filter(codigo=orden.codigo).update(estado=nuevo_estado)
+        orden.estado = nuevo_estado
+
+        registrar_bitacora(
+            usuario_sesion,
+            'FACTURACION',
+            (
+                f"Procesó facturación de orden #{orden.codigo} (Método: {metodo_pago or 'N/D'}, "
+                f"Estado pago: {estado_pago or 'Pendiente'})."
+            ),
+        )
+
+    return Response(
+        {
+            "exito": True,
+            "mensaje": "Facturación generada correctamente.",
+            "orden": {
+                "codigo": orden.codigo,
+                "estado": orden.estado,
+                "cliente": orden.id_cliente.nombre,
+                "motocicleta": orden.id_motocicleta.placa if orden.id_motocicleta else None,
+                "costo_mano_obra": str(total_mano_obra),
+                "costo_repuestos": str(total_repuestos),
+                "total": str(total_general),
+            },
+            "nota_servicio": NotaServicioSerializer(nota).data,
+            "factura": FacturaSerializer(factura).data,
+            "metodo_pago": metodo_pago,
+        },
+        status=201,
+    )
+
+
+@api_view(['GET'])
+def facturacion_historial_api(request):
+    usuario_sesion, error_auth = obtener_usuario_autenticado(request)
+    if error_auth:
+        return error_auth
+
+    error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU14', 'Mostrar')
+    if error_permiso:
+        return error_permiso
+
+    ordenes = (
+        Ordentrabajo.objects.select_related('id_cliente', 'id_motocicleta')
+        .filter(estado__in=['Facturado', 'Pagado'])
+        .order_by('-fecha_fin', '-codigo')
+    )
+
+    notas = Notaservicio.objects.select_related('id_orden_trabajo').filter(id_orden_trabajo__in=ordenes)
+    notas_por_orden = {nota.id_orden_trabajo_id: nota for nota in notas}
+
+    facturas = Factura.objects.select_related('id_nota_servicio').filter(id_nota_servicio__in=notas)
+    facturas_por_nota = {factura.id_nota_servicio_id: factura for factura in facturas}
+
+    respuesta = []
+    for orden in ordenes:
+        nota = notas_por_orden.get(orden.codigo)
+        factura = facturas_por_nota.get(nota.codigo) if nota else None
+        respuesta.append(
+            {
+                "orden": OrdenTrabajoSerializer(orden).data,
+                "nota_servicio": NotaServicioSerializer(nota).data if nota else None,
+                "factura": FacturaSerializer(factura).data if factura else None,
+            }
+        )
+
+    return Response(respuesta, status=200)
 
 
 # ==========================================

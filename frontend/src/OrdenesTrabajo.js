@@ -44,6 +44,9 @@ const OrdenesTrabajo = () => {
     total: 0,
   });
 
+  const normalizarRol = (rol = '') => rol.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  const esMecanico = (usuario) => normalizarRol(usuario?.rol_nombre) === 'mecanico';
+
   const IniciaOrden = () => {
     setNuevo({ id_cotizacion: '', id_cliente: '', id_motocicleta: '', id_mecanico: '', fecha_creacion: '', fecha_inicio: '', fecha_fin: '', kilometraje_ingreso: 0, estado: 'Pendiente', prioridad: 'Normal', costo_mano_obra: 0, costo_repuestos: 0, total: 0 });
   };
@@ -156,6 +159,24 @@ const OrdenesTrabajo = () => {
     validarAcceso();
   }, [navigate, usuarioLocal]);
 
+  useEffect(() => {
+    const mano = Number(nuevo.costo_mano_obra || 0);
+    const repuestos = Number(nuevo.costo_repuestos || 0);
+    const total = Number((mano + repuestos).toFixed(2));
+    if (Number(nuevo.total || 0) !== total) {
+      setNuevo((prev) => ({ ...prev, total }));
+    }
+  }, [nuevo.costo_mano_obra, nuevo.costo_repuestos]);
+
+  useEffect(() => {
+    const mano = Number(editOrden.costo_mano_obra || 0);
+    const repuestos = Number(editOrden.costo_repuestos || 0);
+    const total = Number((mano + repuestos).toFixed(2));
+    if (Number(editOrden.total || 0) !== total) {
+      setEditOrden((prev) => ({ ...prev, total }));
+    }
+  }, [editOrden.costo_mano_obra, editOrden.costo_repuestos]);
+
   const cargarClientes = async () => {
     const res = await fetch(`${API}/clientes/`, { headers: headers(false) });
     const data = await res.json();
@@ -177,7 +198,11 @@ const OrdenesTrabajo = () => {
   const cargarUsuarios = async () => {
     const res = await fetch(`${API}/usuarios/`, { headers: headers() });
     const data = await res.json();
-    if (res.ok) setMecanicos(Array.isArray(data) ? data.filter((u) => u.rol_nombre === 'Mecanico') : []);
+    if (res.ok) {
+      const lista = Array.isArray(data) ? data : [];
+      const mecanicos = lista.filter(esMecanico);
+      setMecanicos(mecanicos.length ? mecanicos : lista);
+    }
   };
 
   const obtenerMecanicoActual = (clienteId) => {
@@ -248,7 +273,7 @@ const OrdenesTrabajo = () => {
             <div className="input-group"><label>Prioridad</label><select value={nuevo.prioridad} onChange={(e) => setNuevo({ ...nuevo, prioridad: e.target.value })}><option value="Normal">Normal</option><option value="Alta">Alta</option><option value="Urgente">Urgente</option></select></div>
             <div className="input-group"><label>Costo mano de obra</label><input type="number" step="0.01" value={nuevo.costo_mano_obra} onChange={(e) => setNuevo({ ...nuevo, costo_mano_obra: Number(e.target.value) })} /></div>
             <div className="input-group"><label>Costo repuestos</label><input type="number" step="0.01" value={nuevo.costo_repuestos} onChange={(e) => setNuevo({ ...nuevo, costo_repuestos: Number(e.target.value) })} /></div>
-            <div className="input-group"><label>Total</label><input type="number" step="0.01" value={nuevo.total} onChange={(e) => setNuevo({ ...nuevo, total: Number(e.target.value) })} /></div>
+            <div className="input-group"><label>Total</label><input type="number" step="0.01" value={nuevo.total} readOnly /></div>
             <div className="input-group"><label>Estado</label><select value={nuevo.estado} onChange={(e) => setNuevo({ ...nuevo, estado: e.target.value })}><option value="Pendiente">Pendiente</option><option value="Aprobado">Aprobado</option><option value="Rechazado">Rechazado</option></select></div>
             <button type="submit" className="btn-login">Crear orden</button>
           </form>
@@ -336,7 +361,7 @@ const OrdenesTrabajo = () => {
               <div className="input-group"><label>Prioridad</label><select value={editOrden.prioridad} onChange={(e) => setEditOrden({ ...editOrden, prioridad: e.target.value })}><option value="Normal">Normal</option><option value="Alta">Alta</option><option value="Urgente">Urgente</option></select></div>
               <div className="input-group"><label>Costo mano de obra</label><input type="number" step="0.01" value={editOrden.costo_mano_obra} onChange={(e) => setEditOrden({ ...editOrden, costo_mano_obra: Number(e.target.value) })} /></div>
               <div className="input-group"><label>Costo repuestos</label><input type="number" step="0.01" value={editOrden.costo_repuestos} onChange={(e) => setEditOrden({ ...editOrden, costo_repuestos: Number(e.target.value) })} /></div>
-              <div className="input-group"><label>Total</label><input type="number" step="0.01" value={editOrden.total} onChange={(e) => setEditOrden({ ...editOrden, total: Number(e.target.value) })} /></div>
+              <div className="input-group"><label>Total</label><input type="number" step="0.01" value={editOrden.total} readOnly /></div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                 <button type="button" onClick={() => setOrdenEdicion(null)} style={{ padding: '8px 12px', backgroundColor: '#444', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Cancelar</button>
                 <button type="submit" style={{ padding: '8px 12px', backgroundColor: '#ff6600', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Guardar cambios</button>

@@ -33,6 +33,8 @@ from taller.views import (
     aceptar_cotizacion_api,
     logout_api,
     permisos_api,
+    facturacion_api,
+    facturacion_historial_api,
 )
 
 urlpatterns = [
@@ -72,4 +74,6 @@ urlpatterns = [
     path('api/perfil/', perfil_api, name='api_perfil'),
     path('api/cotizaciones/<int:cotizacion_id>/aceptar/', aceptar_cotizacion_api, name='api_cotizacion_aceptar'),
     path('api/permisos/', permisos_api, name='api_permisos'),
+    path('api/facturacion/', facturacion_api, name='api_facturacion'),
+    path('api/facturacion/historial/', facturacion_historial_api, name='api_facturacion_historial'),
 ]
