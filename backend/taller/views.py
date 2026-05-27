@@ -12,6 +12,8 @@ from django.db import connection, OperationalError, transaction
 from django.db.models import Q, F
 from django.utils.dateparse import parse_date
 import math
+import logging
+import traceback
 import uuid
 import csv
 import re
@@ -60,6 +62,7 @@ from django.contrib.auth.hashers import make_password
 
 MAX_LOGIN_INTENTOS = 3
 LOGIN_BLOQUEO_SEGUNDOS = 60
+logger = logging.getLogger(__name__)
 
 
 def registrar_bitacora(usuario, accion, descripcion):
@@ -1384,6 +1387,10 @@ class OrdenTrabajo:
 
     @staticmethod
     def ValidaCotizacionOrigen(cotizacion_id):
+        if isinstance(cotizacion_id, Cotizacion):
+            return cotizacion_id
+        if isinstance(cotizacion_id, dict):
+            cotizacion_id = cotizacion_id.get('codigo')
         try:
             return Cotizacion.objects.get(codigo=cotizacion_id)
         except Cotizacion.DoesNotExist:
@@ -1894,51 +1901,63 @@ def cotizacion_detalle_api(request, cotizacion_id):
 # ==========================================
 @api_view(['GET', 'POST'])
 def ordenes_trabajo_api(request):
-    usuario_sesion, error_auth = obtener_usuario_autenticado(request)
-    if error_auth:
-        return error_auth
+    try:
+        print("PAYLOAD RECIBIDO:", request.data)
+        usuario_sesion, error_auth = obtener_usuario_autenticado(request)
+        if error_auth:
+            return error_auth
 
-    if request.method == 'GET':
-        query = request.GET.get('q', '').strip()
-        accion_permiso = 'Buscar' if query else 'Mostrar'
-        error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU08', accion_permiso)
+        if request.method == 'GET':
+            query = request.GET.get('q', '').strip()
+            accion_permiso = 'Buscar' if query else 'Mostrar'
+            error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU08', accion_permiso)
+            if error_permiso:
+                return error_permiso
+            ordenes = Ordentrabajo.objects.select_related('id_cliente', 'id_motocicleta', 'id_mecanico').all()
+            if query:
+                filtros = (
+                    Q(id_cliente__nombre__icontains=query)
+                    | Q(id_motocicleta__placa__icontains=query)
+                    | Q(id_motocicleta__marca__icontains=query)
+                    | Q(id_motocicleta__modelo__icontains=query)
+                    | Q(id_mecanico__nombre__icontains=query)
+                    | Q(estado__icontains=query)
+                    | Q(prioridad__icontains=query)
+                )
+                if query.isdigit():
+                    filtros |= Q(codigo=int(query))
+                ordenes = ordenes.filter(filtros)
+            ordenes = ordenes.order_by('-fecha_creacion')
+            serializer = OrdenTrabajoSerializer(ordenes, many=True)
+            return Response(serializer.data, status=200)
+
+        error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU08', 'Adicionar')
         if error_permiso:
             return error_permiso
-        ordenes = Ordentrabajo.objects.select_related('id_cliente', 'id_motocicleta', 'id_mecanico').all()
-        if query:
-            filtros = (
-                Q(id_cliente__nombre__icontains=query)
-                | Q(id_motocicleta__placa__icontains=query)
-                | Q(id_motocicleta__marca__icontains=query)
-                | Q(id_motocicleta__modelo__icontains=query)
-                | Q(id_mecanico__nombre__icontains=query)
-                | Q(estado__icontains=query)
-                | Q(prioridad__icontains=query)
-            )
-            if query.isdigit():
-                filtros |= Q(codigo=int(query))
-            ordenes = ordenes.filter(filtros)
-        ordenes = ordenes.order_by('-fecha_creacion')
-        serializer = OrdenTrabajoSerializer(ordenes, many=True)
-        return Response(serializer.data, status=200)
 
-    error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU08', 'Adicionar')
-    if error_permiso:
-        return error_permiso
+        datos_orden = OrdenTrabajo.EnviaDatos(request.data)
+        serializer = OrdenTrabajoSerializer(data=datos_orden)
+        serializer.is_valid(raise_exception=True)
 
-    datos_orden = OrdenTrabajo.EnviaDatos(request.data)
-    serializer = OrdenTrabajoSerializer(data=datos_orden)
-    if not serializer.is_valid():
-        return Response({"exito": False, "errores": serializer.errors}, status=400)
+        id_cotizacion = serializer.validated_data.get('id_cotizacion')
+        if id_cotizacion is not None:
+            origen_cotizacion = OrdenTrabajo.ValidaCotizacionOrigen(id_cotizacion)
+            if origen_cotizacion is None:
+                return Response({"exito": False, "error": "Cotización de origen no válida."}, status=400)
 
-    origen_cotizacion = OrdenTrabajo.ValidaCotizacionOrigen(serializer.validated_data.get('id_cotizacion'))
-    if origen_cotizacion is None:
-        return Response({"exito": False, "error": "Cotización de origen no válida."}, status=400)
+        orden = Ordentrabajo.objects.create(**serializer.validated_data)
+        OrdenTrabajo.SolicitaRegistroBitacora(
+            usuario_sesion,
+            'CREACIÓN',
+            f"Registró orden de trabajo #{orden.codigo} para cliente ID {orden.id_cliente.codigo}.",
+        )
 
-    orden = Ordentrabajo.objects.create(**serializer.validated_data)
-    OrdenTrabajo.SolicitaRegistroBitacora(usuario_sesion, 'CREACIÓN', f"Registró orden de trabajo #{orden.codigo} para cliente ID {orden.id_cliente.codigo}.")
-    confirmacion = OrdenTrabajo.RetornaConfirmacionGeneral(True)
-    return Response({"exito": True, "mensaje": "Orden de trabajo creada.", **confirmacion}, status=201)
+        confirmacion = OrdenTrabajo.RetornaConfirmacionGeneral(True)
+        return Response({"exito": True, "mensaje": "Orden de trabajo creada.", **confirmacion}, status=201)
+    except Exception as e:
+        print("ERROR CRITICO:", str(e))
+        trace = traceback.format_exc()
+        return Response({"error_critico": str(e), "trace": trace}, status=500)
 
 
 @api_view(['PUT'])
@@ -1957,8 +1976,7 @@ def orden_trabajo_detalle_api(request, orden_id):
         return Response({"exito": False, "error": "Orden de trabajo no encontrada."}, status=404)
 
     serializer = OrdenTrabajoSerializer(orden, data=request.data, partial=True)
-    if not serializer.is_valid():
-        return Response({"exito": False, "errores": serializer.errors}, status=400)
+    serializer.is_valid(raise_exception=True)
 
     orden_actualizada = serializer.save()
     OrdenTrabajo.ModificaEstado(orden_actualizada, request.data.get('estado'))
@@ -2074,49 +2092,67 @@ def notas_trabajo_api(request):
 # ==========================================
 # CU14: GESTIONAR FACTURACION
 # ==========================================
-@api_view(['POST'])
-def facturacion_api(request):
-    usuario_sesion, error_auth = obtener_usuario_autenticado(request)
-    if error_auth:
-        return error_auth
+def solicita_ordenes(request):
+    ordenes = (
+        Ordentrabajo.objects.select_related('id_cliente', 'id_motocicleta')
+        .filter(estado__iexact='Finalizado')
+        .order_by('-fecha_creacion')
+    )
+    serializer = OrdenTrabajoSerializer(ordenes, many=True)
+    return Response(serializer.data, status=200)
 
-    error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU14', 'Adicionar')
-    if error_permiso:
-        return error_permiso
 
+def envia_payload_cobro(request):
     orden_id = request.data.get('orden_id') or request.data.get('id_orden_trabajo')
     metodo_pago = (request.data.get('metodo_pago') or '').strip()
     estado_pago = (request.data.get('estado_pago') or 'Pendiente').strip()
     nit_cliente = (request.data.get('nit_cliente') or '').strip()
     razon_social = (request.data.get('razon_social') or '').strip()
     impuesto_raw = request.data.get('impuesto', '0')
+    observaciones = (request.data.get('observaciones') or '').strip() or None
+    numero_autorizacion = (request.data.get('numero_autorizacion') or '').strip() or None
 
     if not orden_id:
-        return Response({"exito": False, "error": "Debe seleccionar una orden de trabajo."}, status=400)
+        return None, None, Response({"exito": False, "error": "Debe seleccionar una orden de trabajo."}, status=400)
 
     if not nit_cliente or not razon_social:
-        return Response({"exito": False, "error": "NIT y Razón Social son obligatorios."}, status=400)
+        return None, None, Response({"exito": False, "error": "NIT y Razón Social son obligatorios."}, status=400)
 
     try:
         impuesto = Decimal(str(impuesto_raw or '0'))
     except (InvalidOperation, TypeError):
-        return Response({"exito": False, "error": "Impuesto inválido."}, status=400)
+        return None, None, Response({"exito": False, "error": "Impuesto inválido."}, status=400)
 
     try:
         orden = Ordentrabajo.objects.select_related('id_cliente', 'id_motocicleta').get(codigo=orden_id)
     except Ordentrabajo.DoesNotExist:
-        return Response({"exito": False, "error": "Orden de trabajo no encontrada."}, status=404)
+        return None, None, Response({"exito": False, "error": "Orden de trabajo no encontrada."}, status=404)
 
     if (orden.estado or '').strip().lower() != 'finalizado':
-        return Response({"exito": False, "error": "La orden debe estar en estado Finalizado."}, status=400)
+        return None, None, Response({"exito": False, "error": "La orden debe estar en estado Finalizado."}, status=400)
 
     if Notaservicio.objects.filter(id_orden_trabajo=orden).exists():
-        return Response({"exito": False, "error": "La orden ya fue facturada previamente."}, status=409)
+        return None, None, Response({"exito": False, "error": "La orden ya fue facturada previamente."}, status=409)
 
+    datos_validados = {
+        'metodo_pago': metodo_pago,
+        'estado_pago': estado_pago,
+        'nit_cliente': nit_cliente,
+        'razon_social': razon_social,
+        'impuesto': impuesto,
+        'observaciones': observaciones,
+        'numero_autorizacion': numero_autorizacion,
+        'fecha_emision': timezone.now().date(),
+    }
+    return datos_validados, orden, None
+
+
+def solicita_generacion_registros(datos_validados, orden):
     total_repuestos = Decimal(orden.costo_repuestos or 0)
     total_mano_obra = Decimal(orden.costo_mano_obra or 0)
     total_general = total_repuestos + total_mano_obra
-    fecha_emision = timezone.now().date()
+    fecha_emision = datos_validados['fecha_emision']
+    usuario_sesion = datos_validados.get('usuario_sesion')
 
     with transaction.atomic():
         nota = Notaservicio.objects.create(
@@ -2126,33 +2162,45 @@ def facturacion_api(request):
             total_repuestos=total_repuestos,
             total_mano_obra=total_mano_obra,
             total_general=total_general,
-            observaciones=(request.data.get('observaciones') or '').strip() or None,
-            estado_pago=estado_pago or 'Pendiente',
+            observaciones=datos_validados.get('observaciones'),
+            estado_pago=datos_validados.get('estado_pago') or 'Pendiente',
         )
 
         factura = Factura.objects.create(
             id_nota_servicio=nota,
-            numero_autorizacion=(request.data.get('numero_autorizacion') or '').strip() or None,
+            numero_autorizacion=datos_validados.get('numero_autorizacion'),
             fecha_emision=fecha_emision,
             monto_servicio_facturado=total_mano_obra,
-            impuesto=impuesto,
-            total_facturado=total_mano_obra + impuesto,
-            nit_cliente=nit_cliente,
-            razon_social=razon_social,
+            impuesto=datos_validados.get('impuesto'),
+            total_facturado=total_mano_obra + datos_validados.get('impuesto'),
+            nit_cliente=datos_validados.get('nit_cliente'),
+            razon_social=datos_validados.get('razon_social'),
         )
 
-        nuevo_estado = 'Pagado' if estado_pago.lower() == 'pagado' else 'Facturado'
+        nuevo_estado = 'Pagado' if (datos_validados.get('estado_pago') or '').lower() == 'pagado' else 'Facturado'
         Ordentrabajo.objects.filter(codigo=orden.codigo).update(estado=nuevo_estado)
         orden.estado = nuevo_estado
 
-        registrar_bitacora(
-            usuario_sesion,
-            'FACTURACION',
-            (
-                f"Procesó facturación de orden #{orden.codigo} (Método: {metodo_pago or 'N/D'}, "
-                f"Estado pago: {estado_pago or 'Pendiente'})."
-            ),
-        )
+        if usuario_sesion is not None:
+            registrar_bitacora(
+                usuario_sesion,
+                'FACTURACION',
+                (
+                    f"Procesó facturación de orden #{orden.codigo} (Método: {datos_validados.get('metodo_pago') or 'N/D'}, "
+                    f"Estado pago: {datos_validados.get('estado_pago') or 'Pendiente'})."
+                ),
+            )
+
+    nota._metodo_pago = datos_validados.get('metodo_pago')
+    return nota, factura
+
+
+def retorna_confirmacion_general_y_urls_pdfs(nota, factura):
+    orden = nota.id_orden_trabajo
+    total_repuestos = Decimal(nota.total_repuestos or 0)
+    total_mano_obra = Decimal(nota.total_mano_obra or 0)
+    total_general = Decimal(nota.total_general or 0)
+    metodo_pago = getattr(nota, '_metodo_pago', '')
 
     return Response(
         {
@@ -2173,6 +2221,31 @@ def facturacion_api(request):
         },
         status=201,
     )
+
+
+@api_view(['GET', 'POST'])
+def facturacion_api(request):
+    usuario_sesion, error_auth = obtener_usuario_autenticado(request)
+    if error_auth:
+        return error_auth
+
+    if request.method == 'GET':
+        error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU14', 'Mostrar')
+        if error_permiso:
+            return error_permiso
+        return solicita_ordenes(request)
+
+    error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU14', 'Adicionar')
+    if error_permiso:
+        return error_permiso
+
+    datos_validados, orden, error_response = envia_payload_cobro(request)
+    if error_response is not None:
+        return error_response
+
+    datos_validados['usuario_sesion'] = usuario_sesion
+    nota, factura = solicita_generacion_registros(datos_validados, orden)
+    return retorna_confirmacion_general_y_urls_pdfs(nota, factura)
 
 
 @api_view(['GET'])

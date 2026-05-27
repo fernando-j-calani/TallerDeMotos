@@ -83,13 +83,26 @@ const FormFacturacion = () => {
     }
   };
 
-  const seleccionarOrden = (ordenId) => {
+  const seleccionaOrdenFinalizada = (ordenId) => {
     const orden = ordenes.find((o) => Number(o.codigo) === Number(ordenId)) || null;
     setOrdenSeleccionada(orden);
     setResultado(null);
     setForm((prev) => ({
       ...prev,
       orden_id: orden ? orden.codigo : '',
+    }));
+  };
+
+  const iniciaFacturacion = (ordenId) => {
+    seleccionaOrdenFinalizada(ordenId);
+  };
+
+  const registraPagoYDatosFiscales = (nit, razonSocial, metodoPago) => {
+    setForm((prev) => ({
+      ...prev,
+      nit_cliente: nit ?? prev.nit_cliente,
+      razon_social: razonSocial ?? prev.razon_social,
+      metodo_pago: metodoPago ?? prev.metodo_pago,
     }));
   };
 
@@ -133,7 +146,13 @@ const FormFacturacion = () => {
     doc.save(`factura_${factura.codigo || 'orden'}.pdf`);
   };
 
-  const procesarFacturacion = async (e) => {
+  const recibeConfirmacionVisualYPDFs = (responseData) => {
+    setResultado(responseData);
+    generarPdfNotaServicio(responseData);
+    generarPdfFactura(responseData);
+  };
+
+  const solicitaEmitirComprobantes = async (e) => {
     e.preventDefault();
     setError('');
     setResultado(null);
@@ -152,9 +171,7 @@ const FormFacturacion = () => {
         setError(data.error || 'No se pudo procesar la facturacion.');
         return;
       }
-      setResultado(data);
-      generarPdfNotaServicio(data);
-      generarPdfFactura(data);
+      recibeConfirmacionVisualYPDFs(data);
       await cargarOrdenesFinalizadas();
       await cargarHistorialFacturacion();
     } catch {
@@ -169,8 +186,7 @@ const FormFacturacion = () => {
       setError('No hay datos completos para generar los PDFs.');
       return;
     }
-    generarPdfNotaServicio(item);
-    generarPdfFactura(item);
+    recibeConfirmacionVisualYPDFs(item);
   };
 
   return (
@@ -188,10 +204,10 @@ const FormFacturacion = () => {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px' }}>
         <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
           <h3>Procesar facturacion</h3>
-          <form onSubmit={procesarFacturacion}>
+          <form onSubmit={solicitaEmitirComprobantes}>
             <div className="input-group">
               <label>Orden finalizada</label>
-              <select value={form.orden_id} onChange={(e) => seleccionarOrden(e.target.value)} required>
+              <select value={form.orden_id} onChange={(e) => iniciaFacturacion(e.target.value)} required>
                 <option value="">Seleccione</option>
                 {ordenes.map((o) => (
                   <option key={o.codigo} value={o.codigo}>
@@ -202,7 +218,11 @@ const FormFacturacion = () => {
             </div>
             <div className="input-group">
               <label>Metodo de pago</label>
-              <input value={form.metodo_pago} onChange={(e) => setForm({ ...form, metodo_pago: e.target.value })} required />
+              <input
+                value={form.metodo_pago}
+                onChange={(e) => registraPagoYDatosFiscales(form.nit_cliente, form.razon_social, e.target.value)}
+                required
+              />
             </div>
             <div className="input-group">
               <label>Estado de pago</label>
@@ -214,11 +234,19 @@ const FormFacturacion = () => {
             </div>
             <div className="input-group">
               <label>NIT</label>
-              <input value={form.nit_cliente} onChange={(e) => setForm({ ...form, nit_cliente: e.target.value })} required />
+              <input
+                value={form.nit_cliente}
+                onChange={(e) => registraPagoYDatosFiscales(e.target.value, form.razon_social, form.metodo_pago)}
+                required
+              />
             </div>
             <div className="input-group">
               <label>Razon social</label>
-              <input value={form.razon_social} onChange={(e) => setForm({ ...form, razon_social: e.target.value })} required />
+              <input
+                value={form.razon_social}
+                onChange={(e) => registraPagoYDatosFiscales(form.nit_cliente, e.target.value, form.metodo_pago)}
+                required
+              />
             </div>
             <div className="input-group">
               <label>Impuesto</label>

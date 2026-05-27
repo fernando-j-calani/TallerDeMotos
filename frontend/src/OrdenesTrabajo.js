@@ -46,6 +46,24 @@ const OrdenesTrabajo = () => {
 
   const normalizarRol = (rol = '') => rol.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
   const esMecanico = (usuario) => normalizarRol(usuario?.rol_nombre) === 'mecanico';
+  const toNumber = (value, fallback = 0) => {
+    const num = Number(value);
+    return Number.isNaN(num) ? fallback : num;
+  };
+  const toIdOrNull = (value) => {
+    if (value === '' || value === null || value === undefined) return null;
+    const num = Number(value);
+    return Number.isNaN(num) ? null : num;
+  };
+  const toDateOrNull = (value) => (value ? value : null);
+
+  const parseResponse = async (res) => {
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      return { data: await res.json(), isJson: true };
+    }
+    return { data: await res.text(), isJson: false };
+  };
 
   const IniciaOrden = () => {
     setNuevo({ id_cotizacion: '', id_cliente: '', id_motocicleta: '', id_mecanico: '', fecha_creacion: '', fecha_inicio: '', fecha_fin: '', kilometraje_ingreso: 0, estado: 'Pendiente', prioridad: 'Normal', costo_mano_obra: 0, costo_repuestos: 0, total: 0 });
@@ -89,27 +107,38 @@ const OrdenesTrabajo = () => {
     if (!ordenEdicion) return;
     setError('');
     const payload = {
-      id_mecanico: Number(editOrden.id_mecanico) || null,
-      fecha_inicio: editOrden.fecha_inicio,
-      fecha_fin: editOrden.fecha_fin,
+      id_mecanico: toIdOrNull(editOrden.id_mecanico),
+      fecha_inicio: toDateOrNull(editOrden.fecha_inicio),
+      fecha_fin: toDateOrNull(editOrden.fecha_fin),
       estado: editOrden.estado,
       prioridad: editOrden.prioridad,
-      costo_mano_obra: Number(editOrden.costo_mano_obra || 0),
-      costo_repuestos: Number(editOrden.costo_repuestos || 0),
-      total: Number(editOrden.total || 0),
+      costo_mano_obra: toNumber(editOrden.costo_mano_obra, 0),
+      costo_repuestos: toNumber(editOrden.costo_repuestos, 0),
+      total: toNumber(editOrden.total, 0),
     };
-    const res = await fetch(`${API}/ordenes-trabajo/${ordenEdicion.codigo}/`, {
-      method: 'PUT',
-      headers: headers(),
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setError(data.error || JSON.stringify(data.errores || {}));
-      return;
+    try {
+      const res = await fetch(`${API}/ordenes-trabajo/${ordenEdicion.codigo}/`, {
+        method: 'PUT',
+        headers: headers(),
+        body: JSON.stringify(payload),
+      });
+      const { data, isJson } = await parseResponse(res);
+      if (!res.ok) {
+        if (isJson) {
+          setError(data.error || JSON.stringify(data.errores || {}));
+          console.log('OrdenTrabajo error response:', data);
+        } else {
+          setError('Error inesperado del servidor.');
+          console.log('OrdenTrabajo error response:', data);
+        }
+        return;
+      }
+      setOrdenEdicion(null);
+      await cargarOrdenes(busqueda);
+    } catch (err) {
+      console.log('OrdenTrabajo error response:', err);
+      setError('Error de conexión actualizando la orden.');
     }
-    setOrdenEdicion(null);
-    await cargarOrdenes(busqueda);
   };
 
   const eliminarOrden = async (orden) => {
@@ -227,16 +256,44 @@ const OrdenesTrabajo = () => {
   const crearOrden = async (e) => {
     e.preventDefault();
     setError('');
-    const payload = { ...nuevo };
-    const res = await fetch(`${API}/ordenes-trabajo/`, {
-      method: 'POST',
-      headers: headers(),
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json();
-    if (!res.ok) return setError(data.error || JSON.stringify(data.errores || {}));
-    setNuevo({ id_cotizacion: '', id_cliente: '', id_motocicleta: '', id_mecanico: '', fecha_creacion: '', fecha_inicio: '', fecha_fin: '', kilometraje_ingreso: 0, estado: 'Pendiente', prioridad: 'Normal', costo_mano_obra: 0, costo_repuestos: 0, total: 0 });
-    await cargarOrdenes();
+    const payload = {
+      id_cotizacion: toIdOrNull(nuevo.id_cotizacion),
+      id_cliente: toIdOrNull(nuevo.id_cliente),
+      id_motocicleta: toIdOrNull(nuevo.id_motocicleta),
+      id_mecanico: toIdOrNull(nuevo.id_mecanico),
+      fecha_creacion: toDateOrNull(nuevo.fecha_creacion),
+      fecha_inicio: toDateOrNull(nuevo.fecha_inicio),
+      fecha_fin: toDateOrNull(nuevo.fecha_fin),
+      kilometraje_ingreso: toNumber(nuevo.kilometraje_ingreso, 0),
+      estado: nuevo.estado,
+      prioridad: nuevo.prioridad,
+      costo_mano_obra: toNumber(nuevo.costo_mano_obra, 0),
+      costo_repuestos: toNumber(nuevo.costo_repuestos, 0),
+      total: toNumber(nuevo.total, 0),
+    };
+    try {
+      const res = await fetch(`${API}/ordenes-trabajo/`, {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify(payload),
+      });
+      const { data, isJson } = await parseResponse(res);
+      if (!res.ok) {
+        if (isJson) {
+          setError(data.error || JSON.stringify(data.errores || {}));
+          console.log('OrdenTrabajo error response:', data);
+        } else {
+          setError('Error inesperado del servidor.');
+          console.log('OrdenTrabajo error response:', data);
+        }
+        return;
+      }
+      setNuevo({ id_cotizacion: '', id_cliente: '', id_motocicleta: '', id_mecanico: '', fecha_creacion: '', fecha_inicio: '', fecha_fin: '', kilometraje_ingreso: 0, estado: 'Pendiente', prioridad: 'Normal', costo_mano_obra: 0, costo_repuestos: 0, total: 0 });
+      await cargarOrdenes();
+    } catch (err) {
+      console.log('OrdenTrabajo error response:', err);
+      setError('Error de conexión creando la orden.');
+    }
   };
 
   return (
@@ -255,17 +312,27 @@ const OrdenesTrabajo = () => {
         <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
           <h3>Registrar orden de trabajo</h3>
           <form onSubmit={crearOrden}>
-            <div className="input-group"><label>Cotización</label><select value={nuevo.id_cotizacion} onChange={(e) => setNuevo({ ...nuevo, id_cotizacion: Number(e.target.value) })}><option value="">Ninguna</option>{cotizaciones.map((c) => (<option key={c.codigo} value={c.codigo}>{`#${c.codigo} (${c.id_cliente_nombre})`}</option>))}</select></div>
+            <div className="input-group"><label>Cotización</label><select value={nuevo.id_cotizacion} onChange={(e) => {
+              const value = e.target.value;
+              setNuevo({ ...nuevo, id_cotizacion: value ? Number(value) : '' });
+            }}><option value="">Ninguna</option>{cotizaciones.map((c) => (<option key={c.codigo} value={c.codigo}>{`#${c.codigo} (${c.id_cliente_nombre})`}</option>))}</select></div>
             <div className="input-group"><label>Cliente</label><select value={nuevo.id_cliente} onChange={(e) => {
               const clienteId = e.target.value;
+              const clienteNumero = clienteId ? Number(clienteId) : '';
               setNuevo({
                 ...nuevo,
-                id_cliente: Number(clienteId),
+                id_cliente: clienteNumero,
                 id_mecanico: clienteId ? obtenerMecanicoActual(clienteId) : '',
               });
             }} required><option value="">Seleccione</option>{clientes.map((c) => (<option key={c.codigo} value={c.codigo}>{c.nombre}</option>))}</select></div>
-            <div className="input-group"><label>Motocicleta</label><select value={nuevo.id_motocicleta} onChange={(e) => setNuevo({ ...nuevo, id_motocicleta: Number(e.target.value) })} required><option value="">Seleccione</option>{motocicletas.map((m) => (<option key={m.codigo} value={m.codigo}>{`${m.placa} - ${m.marca || ''} ${m.modelo || ''}`}</option>))}</select></div>
-            <div className="input-group"><label>Mecánico</label><select value={nuevo.id_mecanico} onChange={(e) => setNuevo({ ...nuevo, id_mecanico: Number(e.target.value) })}><option value="">Seleccione</option>{mecanicos.map((m) => (<option key={m.codigo} value={m.codigo}>{m.nombre}</option>))}</select></div>
+            <div className="input-group"><label>Motocicleta</label><select value={nuevo.id_motocicleta} onChange={(e) => {
+              const value = e.target.value;
+              setNuevo({ ...nuevo, id_motocicleta: value ? Number(value) : '' });
+            }} required><option value="">Seleccione</option>{motocicletas.map((m) => (<option key={m.codigo} value={m.codigo}>{`${m.placa} - ${m.marca || ''} ${m.modelo || ''}`}</option>))}</select></div>
+            <div className="input-group"><label>Mecánico</label><select value={nuevo.id_mecanico} onChange={(e) => {
+              const value = e.target.value;
+              setNuevo({ ...nuevo, id_mecanico: value ? Number(value) : '' });
+            }}><option value="">Seleccione</option>{mecanicos.map((m) => (<option key={m.codigo} value={m.codigo}>{m.nombre}</option>))}</select></div>
             <div className="input-group"><label>Fecha creación</label><input type="date" value={nuevo.fecha_creacion} onChange={(e) => setNuevo({ ...nuevo, fecha_creacion: e.target.value })} required /></div>
             <div className="input-group"><label>Fecha inicio</label><input type="date" value={nuevo.fecha_inicio} onChange={(e) => setNuevo({ ...nuevo, fecha_inicio: e.target.value })} /></div>
             <div className="input-group"><label>Fecha fin</label><input type="date" value={nuevo.fecha_fin} onChange={(e) => setNuevo({ ...nuevo, fecha_fin: e.target.value })} /></div>
@@ -354,7 +421,10 @@ const OrdenesTrabajo = () => {
           <div style={{ width: '100%', maxWidth: '560px', maxHeight: '80vh', overflowY: 'auto', backgroundColor: '#1e1e1e', border: '1px solid #333', borderRadius: '10px', padding: '20px' }}>
             <h3 style={{ marginTop: 0, color: '#ff6600' }}>Editar orden #{ordenEdicion.codigo}</h3>
             <form onSubmit={guardarEdicionOrden}>
-              <div className="input-group"><label>Mecánico</label><select value={editOrden.id_mecanico} onChange={(e) => setEditOrden({ ...editOrden, id_mecanico: Number(e.target.value) })}><option value="">Seleccione</option>{mecanicos.map((m) => (<option key={m.codigo} value={m.codigo}>{m.nombre}</option>))}</select></div>
+              <div className="input-group"><label>Mecánico</label><select value={editOrden.id_mecanico} onChange={(e) => {
+                const value = e.target.value;
+                setEditOrden({ ...editOrden, id_mecanico: value ? Number(value) : '' });
+              }}><option value="">Seleccione</option>{mecanicos.map((m) => (<option key={m.codigo} value={m.codigo}>{m.nombre}</option>))}</select></div>
               <div className="input-group"><label>Fecha inicio</label><input type="date" value={editOrden.fecha_inicio} onChange={(e) => setEditOrden({ ...editOrden, fecha_inicio: e.target.value })} /></div>
               <div className="input-group"><label>Fecha fin</label><input type="date" value={editOrden.fecha_fin} onChange={(e) => setEditOrden({ ...editOrden, fecha_fin: e.target.value })} /></div>
               <div className="input-group"><label>Estado</label><select value={editOrden.estado} onChange={(e) => setEditOrden({ ...editOrden, estado: e.target.value })}><option value="Pendiente">Pendiente</option><option value="Aprobado">Aprobado</option><option value="Rechazado">Rechazado</option><option value="Finalizado">Finalizado</option></select></div>
