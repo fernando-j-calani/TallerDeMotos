@@ -92,6 +92,20 @@ class Bitacora(models.Model):
         db_table = 'bitacora'
 
 
+class Seguimiento(models.Model):
+    codigo = models.AutoField(primary_key=True)
+    id_cliente = models.ForeignKey('Cliente', models.DO_NOTHING, db_column='id_cliente')
+    id_usuario = models.ForeignKey('Usuario', models.DO_NOTHING, db_column='id_usuario')
+    fecha_hora = models.DateTimeField()
+    tipo_gestion = models.CharField(max_length=50)
+    canal = models.CharField(max_length=50)
+    mensaje = models.TextField()
+    observaciones = models.TextField(blank=True, null=True)
+
+    class Meta:
+        db_table = 'seguimiento'
+
+
 class Cliente(models.Model):
     codigo = models.AutoField(primary_key=True)
     cedula = models.CharField(unique=True, max_length=20)

@@ -35,6 +35,7 @@ from .models import (
     Notatrabajo,
     Notaservicio,
     Factura,
+    Seguimiento,
     Producto,
     Proveedor,
     Compra,
@@ -59,6 +60,7 @@ from .serializers import (
     FacturaSerializer,
     HistorialOrdenSerializer,
     DetalleOrdenTrabajoSerializer,
+    SeguimientoSerializer,
 )
 from django.contrib.auth.hashers import make_password
 
@@ -2415,6 +2417,135 @@ class HistorialMantenimientoAPI(APIView):
             return error_response
 
         return self.retorna_datos_y_url_reporte(data)
+
+
+# ==========================================
+# CU16: GESTIONAR SEGUIMIENTO PARA CLIENTES
+# ==========================================
+class SeguimientoClientesAPI(APIView):
+    def solicita_lista_segmentada_clientes(self, request):
+        hoy = timezone.now().date()
+        clientes = Cliente.objects.filter(estado='Activo').order_by('codigo')
+        ordenes = (
+            Ordentrabajo.objects.select_related('id_cliente')
+            .order_by('-fecha_fin', '-fecha_creacion', '-codigo')
+        )
+
+        ultimas_ordenes = {}
+        for orden in ordenes:
+            cliente_id = orden.id_cliente_id
+            if cliente_id not in ultimas_ordenes:
+                ultimas_ordenes[cliente_id] = orden
+
+        data = []
+        for cliente in clientes:
+            ultima_orden = ultimas_ordenes.get(cliente.codigo)
+            ultima_fecha = None
+            segmento = 'Preventivo'
+
+            if ultima_orden is not None:
+                ultima_fecha = ultima_orden.fecha_fin or ultima_orden.fecha_creacion
+                dias = (hoy - ultima_fecha).days if ultima_fecha else None
+                if (ultima_orden.estado or '').strip() == 'Finalizado':
+                    segmento = 'Retiro'
+                elif dias is not None and dias <= 2:
+                    segmento = 'Encuesta'
+                elif dias is not None and dias >= 90:
+                    segmento = 'Preventivo'
+
+            data.append(
+                {
+                    "cliente": ClienteSerializer(cliente).data,
+                    "segmento": segmento,
+                    "ultima_visita": ultima_fecha.isoformat() if ultima_fecha else None,
+                }
+            )
+
+        return Response({"exito": True, "clientes": data}, status=200)
+
+    def envia_payload_notificacion(self, request, email, texto):
+        try:
+            asunto = (request.data.get('asunto') or 'Seguimiento de servicio - Taller La Roca').strip()
+            tipo_gestion = (request.data.get('tipo_gestion') or 'Seguimiento').strip()
+            observaciones = (request.data.get('observaciones') or '').strip() or None
+            cliente_id = request.data.get('id_cliente')
+
+            if not cliente_id:
+                return None, Response({"exito": False, "error": "Cliente requerido."}, status=400)
+
+            try:
+                cliente = Cliente.objects.get(codigo=cliente_id)
+            except Cliente.DoesNotExist:
+                return None, Response({"exito": False, "error": "Cliente no encontrado."}, status=404)
+
+            send_mail(
+                subject=asunto,
+                message=texto,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+
+            seguimiento = Seguimiento.objects.create(
+                id_cliente=cliente,
+                id_usuario=request.usuario_sesion,
+                fecha_hora=timezone.now(),
+                tipo_gestion=tipo_gestion,
+                canal='Email',
+                mensaje=texto,
+                observaciones=observaciones,
+            )
+
+            registrar_bitacora(
+                request.usuario_sesion,
+                'SEGUIMIENTO',
+                f"Envio seguimiento a {cliente.nombre} ({cliente.email}).",
+            )
+
+            return {
+                "exito": True,
+                "mensaje": "Seguimiento enviado y registrado.",
+                "seguimiento": SeguimientoSerializer(seguimiento).data,
+            }, None
+        except Exception as e:
+            trace = traceback.format_exc()
+            return None, Response({"error_critico": str(e), "trace": trace}, status=500)
+
+    def retorna_confirmacion_despacho_exitoso(self, datos):
+        return Response(datos, status=200)
+
+    def get(self, request):
+        usuario_sesion, error_auth = obtener_usuario_autenticado(request)
+        if error_auth:
+            return error_auth
+
+        request.usuario_sesion = usuario_sesion
+        error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU16', ['Mostrar', 'Buscar'])
+        if error_permiso:
+            return error_permiso
+
+        return self.solicita_lista_segmentada_clientes(request)
+
+    def post(self, request):
+        usuario_sesion, error_auth = obtener_usuario_autenticado(request)
+        if error_auth:
+            return error_auth
+
+        request.usuario_sesion = usuario_sesion
+        error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU16', 'Adicionar')
+        if error_permiso:
+            return error_permiso
+
+        email = (request.data.get('email') or '').strip()
+        texto = (request.data.get('texto') or '').strip()
+        if not email or not texto:
+            return Response({"exito": False, "error": "Email y texto son obligatorios."}, status=400)
+
+        datos, error_response = self.envia_payload_notificacion(request, email, texto)
+        if error_response is not None:
+            return error_response
+
+        return self.retorna_confirmacion_despacho_exitoso(datos)
 
 
 # ==========================================

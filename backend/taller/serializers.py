@@ -21,6 +21,7 @@ from .models import (
     Detallecompra,
     Notaservicio,
     Factura,
+    Seguimiento,
 )
 
 class RolSerializer(serializers.ModelSerializer):
@@ -199,4 +200,13 @@ class FacturaSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Factura
+        fields = '__all__'
+
+
+class SeguimientoSerializer(serializers.ModelSerializer):
+    cliente_nombre = serializers.ReadOnlyField(source='id_cliente.nombre')
+    usuario_nombre = serializers.ReadOnlyField(source='id_usuario.nombre')
+
+    class Meta:
+        model = Seguimiento
         fields = '__all__'
