@@ -35,6 +35,7 @@ from taller.views import (
     permisos_api,
     facturacion_api,
     facturacion_historial_api,
+    HistorialMantenimientoAPI,
 )
 
 urlpatterns = [
@@ -76,4 +77,7 @@ urlpatterns = [
     path('api/permisos/', permisos_api, name='api_permisos'),
     path('api/facturacion/', facturacion_api, name='api_facturacion'),
     path('api/facturacion/historial/', facturacion_historial_api, name='api_facturacion_historial'),
+    path('api/historial-mantenimiento/', HistorialMantenimientoAPI.as_view(), name='api_historial_mantenimiento'),
+    path('api/historial-mantenimiento/<int:orden_id>/', HistorialMantenimientoAPI.as_view(), name='api_historial_mantenimiento_detalle'),
+    path('api/historial-mantenimiento/reporte/', HistorialMantenimientoAPI.as_view(), name='api_historial_mantenimiento_reporte'),
 ]

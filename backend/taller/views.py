@@ -1,4 +1,5 @@
 from rest_framework.decorators import api_view
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth.hashers import check_password
 from django.core import signing # Para generar el Token de sesión
@@ -56,6 +57,8 @@ from .serializers import (
     PermisoModuloSerializer,
     NotaServicioSerializer,
     FacturaSerializer,
+    HistorialOrdenSerializer,
+    DetalleOrdenTrabajoSerializer,
 )
 from django.contrib.auth.hashers import make_password
 
@@ -2283,6 +2286,135 @@ def facturacion_historial_api(request):
         )
 
     return Response(respuesta, status=200)
+
+
+# ==========================================
+# CU15: GESTIONAR HISTORIAL DE MANTENIMIENTO
+# ==========================================
+class HistorialMantenimientoAPI(APIView):
+    def solicita_datos_vehiculo_y_historial(self, request):
+        criterio = (request.GET.get('q') or request.GET.get('criterio') or '').strip()
+        if not criterio:
+            return Response({"exito": False, "error": "Debe ingresar placa o chasis."}, status=400)
+
+        motocicleta = (
+            Motocicleta.objects.select_related('id_cliente')
+            .filter(Q(placa__icontains=criterio) | Q(numero_chasis__icontains=criterio))
+            .order_by('codigo')
+            .first()
+        )
+        if motocicleta is None:
+            return Response({"exito": True, "motocicleta": None, "ordenes": []}, status=200)
+
+        ordenes = (
+            Ordentrabajo.objects.select_related('id_cliente', 'id_motocicleta', 'id_mecanico')
+            .filter(id_motocicleta=motocicleta)
+            .order_by('-fecha_creacion', '-codigo')
+        )
+
+        return Response(
+            {
+                "exito": True,
+                "motocicleta": MotocicletaSerializer(motocicleta).data,
+                "ordenes": HistorialOrdenSerializer(ordenes, many=True).data,
+            },
+            status=200,
+        )
+
+    def solicita_detalles_orden_especifica(self, request, orden_id):
+        try:
+            try:
+                orden = Ordentrabajo.objects.select_related('id_cliente', 'id_motocicleta', 'id_mecanico').get(codigo=orden_id)
+            except Ordentrabajo.DoesNotExist:
+                return Response({"exito": False, "error": "Orden de trabajo no encontrada."}, status=404)
+
+            detalles = Detalleordentrabajo.objects.select_related('id_producto').filter(id_orden_trabajo=orden)
+            return Response(
+                {
+                    "exito": True,
+                    "orden": HistorialOrdenSerializer(orden).data,
+                    "detalles": DetalleOrdenTrabajoSerializer(detalles, many=True).data,
+                },
+                status=200,
+            )
+        except Exception as e:
+            trace = traceback.format_exc()
+            return Response({"error_critico": str(e), "trace": trace}, status=500)
+
+    def solicita_generacion_pdf_y_registro(self, request):
+        criterio = (request.data.get('criterio') or '').strip()
+        if not criterio:
+            return None, Response({"exito": False, "error": "Debe ingresar placa o chasis."}, status=400)
+
+        motocicleta = (
+            Motocicleta.objects.select_related('id_cliente')
+            .filter(Q(placa__icontains=criterio) | Q(numero_chasis__icontains=criterio))
+            .order_by('codigo')
+            .first()
+        )
+        if motocicleta is None:
+            return {
+                "exito": True,
+                "motocicleta": None,
+                "ordenes": [],
+                "mensaje": "No se encontraron registros para el criterio.",
+            }, None
+
+        ordenes = (
+            Ordentrabajo.objects.select_related('id_cliente', 'id_motocicleta', 'id_mecanico')
+            .filter(id_motocicleta=motocicleta)
+            .order_by('-fecha_creacion', '-codigo')
+        )
+
+        registrar_bitacora(
+            request.usuario_sesion,
+            'EXPORTACION',
+            f"Exportó historial de mantenimiento de la motocicleta {motocicleta.placa}.",
+        )
+
+        return {
+            "exito": True,
+            "motocicleta": MotocicletaSerializer(motocicleta).data,
+            "ordenes": HistorialOrdenSerializer(ordenes, many=True).data,
+            "mensaje": "Reporte generado.",
+        }, None
+
+    def retorna_datos_y_url_reporte(self, data):
+        response_data = dict(data or {})
+        response_data.setdefault("reporte_url", None)
+        return Response(response_data, status=200)
+
+    def get(self, request, orden_id=None):
+        usuario_sesion, error_auth = obtener_usuario_autenticado(request)
+        if error_auth:
+            return error_auth
+
+        request.usuario_sesion = usuario_sesion
+        accion = 'Buscar' if (request.GET.get('q') or request.GET.get('criterio')) else 'Mostrar'
+        error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU15', accion)
+        if error_permiso:
+            return error_permiso
+
+        if orden_id is not None:
+            return self.solicita_detalles_orden_especifica(request, orden_id)
+
+        return self.solicita_datos_vehiculo_y_historial(request)
+
+    def post(self, request):
+        usuario_sesion, error_auth = obtener_usuario_autenticado(request)
+        if error_auth:
+            return error_auth
+
+        request.usuario_sesion = usuario_sesion
+        error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU15', 'Exportar')
+        if error_permiso:
+            return error_permiso
+
+        data, error_response = self.solicita_generacion_pdf_y_registro(request)
+        if error_response is not None:
+            return error_response
+
+        return self.retorna_datos_y_url_reporte(data)
 
 
 # ==========================================

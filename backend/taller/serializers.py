@@ -126,6 +126,16 @@ class OrdenTrabajoSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class HistorialOrdenSerializer(serializers.ModelSerializer):
+    cliente_nombre = serializers.ReadOnlyField(source='id_cliente.nombre')
+    motocicleta_placa = serializers.ReadOnlyField(source='id_motocicleta.placa')
+    mecanico_nombre = serializers.ReadOnlyField(source='id_mecanico.nombre')
+
+    class Meta:
+        model = Ordentrabajo
+        fields = '__all__'
+
+
 class NotaTrabajoSerializer(serializers.ModelSerializer):
     orden_numero = serializers.ReadOnlyField(source='id_orden_trabajo.codigo')
     mecanico_nombre = serializers.ReadOnlyField(source='id_mecanico.nombre')
