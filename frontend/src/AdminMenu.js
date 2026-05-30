@@ -136,6 +136,13 @@ const AdminMenu = () => {
           )}
         </div>
       ))}
+      <button
+        type="button"
+        onClick={() => navigate('/reportes')}
+        className="admin-menu-button admin-menu-report"
+      >
+        REPORTES
+      </button>
     </div>
   );
 };

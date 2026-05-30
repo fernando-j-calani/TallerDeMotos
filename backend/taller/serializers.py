@@ -80,6 +80,10 @@ class ClienteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cliente
         fields = '__all__'
+        extra_kwargs = {
+            'nit': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'razon_social': {'required': False, 'allow_null': True, 'allow_blank': True},
+        }
 
 
 class MotocicletaSerializer(serializers.ModelSerializer):
@@ -119,22 +123,66 @@ class CotizacionSerializer(serializers.ModelSerializer):
 
 class OrdenTrabajoSerializer(serializers.ModelSerializer):
     cliente_nombre = serializers.ReadOnlyField(source='id_cliente.nombre')
+    cliente_cedula = serializers.ReadOnlyField(source='id_cliente.cedula')
+    cliente_nit = serializers.ReadOnlyField(source='id_cliente.nit')
+    cliente_razon_social = serializers.ReadOnlyField(source='id_cliente.razon_social')
+    cliente_email = serializers.ReadOnlyField(source='id_cliente.email')
+    cliente_telefono = serializers.ReadOnlyField(source='id_cliente.telefono')
     motocicleta_placa = serializers.ReadOnlyField(source='id_motocicleta.placa')
+    motocicleta_marca = serializers.ReadOnlyField(source='id_motocicleta.marca')
+    motocicleta_modelo = serializers.ReadOnlyField(source='id_motocicleta.modelo')
+    motocicleta_chasis = serializers.ReadOnlyField(source='id_motocicleta.numero_chasis')
     mecanico_nombre = serializers.ReadOnlyField(source='id_mecanico.nombre')
 
     class Meta:
         model = Ordentrabajo
         fields = '__all__'
+        extra_kwargs = {
+            'hora_ingreso': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'proforma_nro': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'origen': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'entregado_por_nombre': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'entregado_por_ci': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'combustible_nivel': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'kilometraje_recorrido': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'fecha_estimada_entrega': {'required': False, 'allow_null': True},
+            'cotizado_por': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'req_cliente': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'soluciones_tecnicas': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'sugerencias_obs': {'required': False, 'allow_null': True, 'allow_blank': True},
+        }
 
 
 class HistorialOrdenSerializer(serializers.ModelSerializer):
     cliente_nombre = serializers.ReadOnlyField(source='id_cliente.nombre')
+    cliente_cedula = serializers.ReadOnlyField(source='id_cliente.cedula')
+    cliente_nit = serializers.ReadOnlyField(source='id_cliente.nit')
+    cliente_razon_social = serializers.ReadOnlyField(source='id_cliente.razon_social')
+    cliente_email = serializers.ReadOnlyField(source='id_cliente.email')
+    cliente_telefono = serializers.ReadOnlyField(source='id_cliente.telefono')
     motocicleta_placa = serializers.ReadOnlyField(source='id_motocicleta.placa')
+    motocicleta_marca = serializers.ReadOnlyField(source='id_motocicleta.marca')
+    motocicleta_modelo = serializers.ReadOnlyField(source='id_motocicleta.modelo')
+    motocicleta_chasis = serializers.ReadOnlyField(source='id_motocicleta.numero_chasis')
     mecanico_nombre = serializers.ReadOnlyField(source='id_mecanico.nombre')
 
     class Meta:
         model = Ordentrabajo
         fields = '__all__'
+        extra_kwargs = {
+            'hora_ingreso': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'proforma_nro': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'origen': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'entregado_por_nombre': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'entregado_por_ci': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'combustible_nivel': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'kilometraje_recorrido': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'fecha_estimada_entrega': {'required': False, 'allow_null': True},
+            'cotizado_por': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'req_cliente': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'soluciones_tecnicas': {'required': False, 'allow_null': True, 'allow_blank': True},
+            'sugerencias_obs': {'required': False, 'allow_null': True, 'allow_blank': True},
+        }
 
 
 class NotaTrabajoSerializer(serializers.ModelSerializer):
@@ -164,6 +212,9 @@ class DetalleCompraSerializer(serializers.ModelSerializer):
 
 class DetalleOrdenTrabajoSerializer(serializers.ModelSerializer):
     producto_nombre = serializers.ReadOnlyField(source='id_producto.nombre')
+    producto_codigo = serializers.ReadOnlyField(source='id_producto.codigo')
+    producto_codigo_barras = serializers.ReadOnlyField(source='id_producto.codigo_barras')
+    producto_ubicacion_almacen = serializers.ReadOnlyField(source='id_producto.ubicacion_almacen')
 
     class Meta:
         model = Detalleordentrabajo

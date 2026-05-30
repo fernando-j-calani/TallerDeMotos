@@ -41,3 +41,6 @@ PROYECTO APARTE UNIR/
 backend/media/
 backend/staticfiles/
 _backup_*/
+
+
+backend/fix_db.py

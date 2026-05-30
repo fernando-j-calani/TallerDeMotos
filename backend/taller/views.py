@@ -2202,6 +2202,7 @@ def solicita_generacion_registros(datos_validados, orden):
 
 def retorna_confirmacion_general_y_urls_pdfs(nota, factura):
     orden = nota.id_orden_trabajo
+    detalles = Detalleordentrabajo.objects.select_related('id_producto').filter(id_orden_trabajo=orden)
     total_repuestos = Decimal(nota.total_repuestos or 0)
     total_mano_obra = Decimal(nota.total_mano_obra or 0)
     total_general = Decimal(nota.total_general or 0)
@@ -2220,6 +2221,9 @@ def retorna_confirmacion_general_y_urls_pdfs(nota, factura):
                 "costo_repuestos": str(total_repuestos),
                 "total": str(total_general),
             },
+            "cliente": ClienteSerializer(orden.id_cliente).data,
+            "motocicleta": MotocicletaSerializer(orden.id_motocicleta).data if orden.id_motocicleta else None,
+            "detalles": DetalleOrdenTrabajoSerializer(detalles, many=True).data,
             "nota_servicio": NotaServicioSerializer(nota).data,
             "factura": FacturaSerializer(factura).data,
             "metodo_pago": metodo_pago,
@@ -2277,6 +2281,7 @@ def facturacion_historial_api(request):
 
     respuesta = []
     for orden in ordenes:
+        detalles = Detalleordentrabajo.objects.select_related('id_producto').filter(id_orden_trabajo=orden)
         nota = notas_por_orden.get(orden.codigo)
         factura = facturas_por_nota.get(nota.codigo) if nota else None
         respuesta.append(
@@ -2284,10 +2289,187 @@ def facturacion_historial_api(request):
                 "orden": OrdenTrabajoSerializer(orden).data,
                 "nota_servicio": NotaServicioSerializer(nota).data if nota else None,
                 "factura": FacturaSerializer(factura).data if factura else None,
+                "detalles": DetalleOrdenTrabajoSerializer(detalles, many=True).data,
             }
         )
 
     return Response(respuesta, status=200)
+
+
+# ==========================================
+# CU18: MODULO DE REPORTES ANALITICOS
+# ==========================================
+@api_view(['GET'])
+def reportes_api(request):
+    usuario_sesion, error_auth = obtener_usuario_autenticado(request)
+    if error_auth:
+        return error_auth
+
+    export = (request.GET.get('export') or '').strip().lower()
+    accion = 'Exportar' if export else 'Buscar'
+    error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU15', accion)
+    if error_permiso:
+        return error_permiso
+
+    tipo = (request.GET.get('tipo') or '').strip().lower()
+    fecha_inicio = parse_date((request.GET.get('fecha_inicio') or '').strip())
+    fecha_fin = parse_date((request.GET.get('fecha_fin') or '').strip())
+
+    if fecha_inicio and fecha_fin and fecha_inicio > fecha_fin:
+        return Response({"exito": False, "error": "La fecha inicio no puede ser mayor que fecha fin."}, status=400)
+
+    resultados = []
+
+    if tipo == 'financiero':
+        facturas = Factura.objects.all()
+        compras = Compra.objects.all()
+        if fecha_inicio:
+            facturas = facturas.filter(fecha_emision__gte=fecha_inicio)
+            compras = compras.filter(fecha__gte=fecha_inicio)
+        if fecha_fin:
+            facturas = facturas.filter(fecha_emision__lte=fecha_fin)
+            compras = compras.filter(fecha__lte=fecha_fin)
+
+        for factura in facturas:
+            resultados.append(
+                {
+                    "fecha": factura.fecha_emision,
+                    "categoria": "Ingreso",
+                    "descripcion": f"Factura #{factura.codigo}",
+                    "monto": float(factura.total_facturado or 0),
+                    "estado": "Emitida",
+                }
+            )
+        for compra in compras:
+            resultados.append(
+                {
+                    "fecha": compra.fecha,
+                    "categoria": "Egreso",
+                    "descripcion": f"Compra #{compra.codigo}",
+                    "monto": float(compra.total or 0),
+                    "estado": compra.estado or '-',
+                }
+            )
+
+    elif tipo == 'operativo':
+        ordenes = Ordentrabajo.objects.select_related('id_mecanico').all()
+        if fecha_inicio:
+            ordenes = ordenes.filter(fecha_creacion__gte=fecha_inicio)
+        if fecha_fin:
+            ordenes = ordenes.filter(fecha_creacion__lte=fecha_fin)
+
+        estados = {}
+        tecnicos = {}
+        for orden in ordenes:
+            estado = (orden.estado or 'Sin estado').strip()
+            estados[estado] = estados.get(estado, 0) + 1
+            if orden.id_mecanico:
+                nombre = orden.id_mecanico.nombre or 'Mecanico'
+                tecnicos[nombre] = tecnicos.get(nombre, 0) + 1
+
+        for estado, cantidad in estados.items():
+            resultados.append(
+                {
+                    "fecha": None,
+                    "categoria": "Ordenes por estado",
+                    "descripcion": estado,
+                    "monto": cantidad,
+                    "estado": "OK",
+                }
+            )
+        for mecanico, cantidad in tecnicos.items():
+            resultados.append(
+                {
+                    "fecha": None,
+                    "categoria": "Ordenes por tecnico",
+                    "descripcion": mecanico,
+                    "monto": cantidad,
+                    "estado": "OK",
+                }
+            )
+
+    elif tipo == 'inventario':
+        productos = Producto.objects.all().order_by('nombre')
+        for producto in productos:
+            resultados.append(
+                {
+                    "fecha": None,
+                    "categoria": producto.categoria or 'Repuesto',
+                    "descripcion": producto.nombre,
+                    "monto": int(producto.stock_actual or 0),
+                    "estado": producto.estado or '-',
+                }
+            )
+    else:
+        return Response({"exito": False, "error": "Tipo de consulta inválido."}, status=400)
+
+    registrar_bitacora(
+        usuario_sesion,
+        'REPORTE',
+        f"Generó reporte {tipo or '-'} ({'export' if export else 'consulta'}).",
+    )
+
+    if export:
+        if export == 'csv':
+            response = HttpResponse(content_type='text/csv; charset=utf-8')
+            response['Content-Disposition'] = 'attachment; filename="reporte.csv"'
+            writer = csv.writer(response)
+            writer.writerow(['fecha', 'categoria', 'descripcion', 'monto', 'estado'])
+            for row in resultados:
+                writer.writerow([
+                    row.get('fecha') or '',
+                    row.get('categoria') or '',
+                    row.get('descripcion') or '',
+                    row.get('monto') or 0,
+                    row.get('estado') or '',
+                ])
+            return response
+
+        if export == 'excel':
+            response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            response['Content-Disposition'] = 'attachment; filename="reporte.xlsx"'
+            writer = csv.writer(response)
+            writer.writerow(['fecha', 'categoria', 'descripcion', 'monto', 'estado'])
+            for row in resultados:
+                writer.writerow([
+                    row.get('fecha') or '',
+                    row.get('categoria') or '',
+                    row.get('descripcion') or '',
+                    row.get('monto') or 0,
+                    row.get('estado') or '',
+                ])
+            return response
+
+        if export == 'pdf':
+            try:
+                from reportlab.pdfgen import canvas
+                from reportlab.lib.pagesizes import letter
+            except Exception:
+                return Response(
+                    {"exito": False, "error": "PDF no disponible. Instale reportlab en el backend."},
+                    status=501,
+                )
+
+            response = HttpResponse(content_type='application/pdf')
+            response['Content-Disposition'] = 'attachment; filename="reporte.pdf"'
+            pdf = canvas.Canvas(response, pagesize=letter)
+            pdf.setFont('Helvetica', 12)
+            pdf.drawString(50, 770, f"Reporte {tipo}")
+            y = 740
+            for row in resultados[:40]:
+                pdf.drawString(50, y, f"{row.get('categoria')}: {row.get('descripcion')} - {row.get('monto')}")
+                y -= 16
+                if y < 60:
+                    pdf.showPage()
+                    pdf.setFont('Helvetica', 12)
+                    y = 770
+            pdf.showPage()
+            pdf.save()
+            return response
+
+        return Response({"exito": False, "error": "Formato de exportación inválido."}, status=400)
+
+    return Response({"exito": True, "resultados": resultados}, status=200)
 
 
 # ==========================================

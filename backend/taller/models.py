@@ -110,6 +110,8 @@ class Cliente(models.Model):
     codigo = models.AutoField(primary_key=True)
     cedula = models.CharField(unique=True, max_length=20)
     nombre = models.CharField(max_length=150)
+    nit = models.CharField(max_length=30, blank=True, null=True)
+    razon_social = models.CharField(max_length=150, blank=True, null=True)
     telefono = models.CharField(max_length=20, blank=True, null=True)
     telefono_alternativo = models.CharField(max_length=20, blank=True, null=True)
     direccion = models.TextField(blank=True, null=True)
@@ -118,7 +120,7 @@ class Cliente(models.Model):
     estado = models.CharField(max_length=20, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'cliente'
 
 
@@ -394,8 +396,20 @@ class Ordentrabajo(models.Model):
     id_motocicleta = models.ForeignKey(Motocicleta, models.DO_NOTHING, db_column='id_motocicleta')
     id_mecanico = models.ForeignKey('Usuario', models.DO_NOTHING, db_column='id_mecanico', blank=True, null=True)
     fecha_creacion = models.DateField(blank=True, null=True)
+    hora_ingreso = models.CharField(max_length=20, blank=True, null=True)
     fecha_inicio = models.DateField(blank=True, null=True)
     fecha_fin = models.DateField(blank=True, null=True)
+    proforma_nro = models.CharField(max_length=50, blank=True, null=True)
+    origen = models.CharField(max_length=50, blank=True, null=True)
+    entregado_por_nombre = models.CharField(max_length=150, blank=True, null=True)
+    entregado_por_ci = models.CharField(max_length=50, blank=True, null=True)
+    combustible_nivel = models.CharField(max_length=20, blank=True, null=True)
+    kilometraje_recorrido = models.CharField(max_length=30, blank=True, null=True)
+    fecha_estimada_entrega = models.DateField(blank=True, null=True)
+    cotizado_por = models.CharField(max_length=150, blank=True, null=True)
+    req_cliente = models.TextField(blank=True, null=True)
+    soluciones_tecnicas = models.TextField(blank=True, null=True)
+    sugerencias_obs = models.TextField(blank=True, null=True)
     kilometraje_ingreso = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     estado = models.CharField(max_length=30, blank=True, null=True)
     prioridad = models.CharField(max_length=20, blank=True, null=True)
@@ -404,7 +418,7 @@ class Ordentrabajo(models.Model):
     total = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'ordentrabajo'
 
 
