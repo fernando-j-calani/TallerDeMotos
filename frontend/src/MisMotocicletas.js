@@ -96,6 +96,7 @@ const MisMotocicletas = () => {
         </div>
         <div className="user-actions">
           <span>👤 {repairText(usuarioLocal?.nombre)} ({repairText(usuarioLocal?.rol)})</span>
+          <button onClick={() => navigate('/mis-pagos')} className="btn-secondary">Pagar</button>
           {puedeVerBitacora && (
             <button onClick={() => navigate('/bitacora')} className="btn-secondary">Bitácora</button>
           )}
@@ -143,7 +144,12 @@ const MisMotocicletas = () => {
             const marcaModelo = `${repairText(moto.marca)} ${repairText(moto.modelo)}`.trim() || 'Motocicleta';
 
             return (
-              <div key={moto.codigo} className={`garage-card ${esActivo ? '' : 'garage-card--inactivo'}`}>
+              <div
+                key={moto.codigo}
+                className={`garage-card ${esActivo ? '' : 'garage-card--inactivo'}`}
+                onClick={() => navigate(`/detalle-motocicleta/${moto.codigo}`)}
+                style={{ cursor: 'pointer' }}
+              >
                 <div className="garage-card-media">
                   <i className="fa-solid fa-motorcycle"></i>
                   <span className={`garage-card-status garage-card-status--${esActivo ? 'activo' : 'inactivo'}`}>

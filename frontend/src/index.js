@@ -23,6 +23,8 @@ import Reportes from './Reportes';
 import DashboardAnalitico from './DashboardAnalitico';
 import Perfil from './Perfil';
 import MisMotocicletas from './MisMotocicletas';
+import PagoCliente from './PagoCliente';
+import DetalleMotocicleta from './DetalleMotocicleta';
 import InicioOperativo from './InicioOperativo';
 import AsignarPrivilegios from './AsignarPrivilegios';
 import ForgotPasswordRequest from './ForgotPasswordRequest';
@@ -63,6 +65,8 @@ root.render(
         <Route path="/dashboard-analitico" element={<DashboardAnalitico />} />
         <Route path="/dashboard" element={<InicioOperativo />} />
         <Route path="/mis-motocicletas" element={<MisMotocicletas />} />
+        <Route path="/detalle-motocicleta/:codigo" element={<DetalleMotocicleta />} />
+        <Route path="/mis-pagos" element={<PagoCliente />} />
         <Route path="/inicio" element={<InicioOperativo />} />
         <Route path="/perfil" element={<Perfil />} />
         <Route path="/asignar-privilegios" element={<AsignarPrivilegios />} />

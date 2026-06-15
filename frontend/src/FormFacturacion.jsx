@@ -9,6 +9,15 @@ import { repairText } from './textNormalization';
 
 const API = `${API_BASE_URL}/api`;
 
+// Datos configurables via frontend/.env.local (no se suben al repositorio)
+const DATOS_CUENTA_BANCARIA = {
+  banco: process.env.REACT_APP_BANCO_NOMBRE || 'Banco Ejemplo',
+  tipoCuenta: process.env.REACT_APP_BANCO_TIPO_CUENTA || 'Ahorros',
+  numeroCuenta: process.env.REACT_APP_BANCO_NUMERO_CUENTA || '0000000-000-000',
+  titular: process.env.REACT_APP_BANCO_TITULAR || 'Nombre Apellido',
+  nit: process.env.REACT_APP_BANCO_NIT || '00000000',
+};
+
 const numeroALetras = (numero) => {
   const n = Math.floor(Number(numero) || 0);
   if (n === 0) return 'CERO';
@@ -81,6 +90,7 @@ const FormFacturacion = () => {
   const [resultado, setResultado] = useState(null);
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
+  const [comprobante, setComprobante] = useState(null);
 
   const headers = () => ({
     'Content-Type': 'application/json',
@@ -159,6 +169,13 @@ const FormFacturacion = () => {
       razon_social: razonSocial ?? prev.razon_social,
       metodo_pago: metodoPago ?? prev.metodo_pago,
     }));
+  };
+
+  const cambiaMetodoPago = (metodoPago) => {
+    registraPagoYDatosFiscales(form.nit_cliente, form.razon_social, metodoPago);
+    if (metodoPago !== 'Transferencia' && metodoPago !== 'QR') {
+      setComprobante(null);
+    }
   };
 
   const generarPdfOrdenServicio = (data) => {
@@ -576,13 +593,29 @@ const FormFacturacion = () => {
     setResultado(null);
     if (!form.orden_id) return setError('Seleccione una orden finalizada.');
     if (!form.nit_cliente || !form.razon_social) return setError('NIT y Razon Social son obligatorios.');
+    if ((form.metodo_pago === 'Transferencia' || form.metodo_pago === 'QR') && !comprobante) {
+      return setError('Debe adjuntar el comprobante de pago.');
+    }
 
     setCargando(true);
     try {
+      let body;
+      const { 'Content-Type': contentType, ...resto } = headers();
+      let requestHeaders = { 'Content-Type': contentType, ...resto };
+      if (comprobante) {
+        const formData = new FormData();
+        Object.entries(form).forEach(([key, value]) => formData.append(key, value ?? ''));
+        formData.append('comprobante_pago', comprobante);
+        body = formData;
+        requestHeaders = resto;
+      } else {
+        body = JSON.stringify(form);
+      }
+
       const res = await fetch(`${API}/facturacion/`, {
         method: 'POST',
-        headers: headers(),
-        body: JSON.stringify(form),
+        headers: requestHeaders,
+        body,
       });
       const data = await res.json();
       if (!res.ok) {
@@ -590,6 +623,7 @@ const FormFacturacion = () => {
         return;
       }
       recibeConfirmacionVisualYPDFs(data);
+      setComprobante(null);
       await cargarOrdenesFinalizadas();
       await cargarHistorialFacturacion();
     } catch {
@@ -645,12 +679,46 @@ const FormFacturacion = () => {
             </div>
             <div className="input-group">
               <label>Método de pago</label>
-              <input
+              <select
                 value={form.metodo_pago}
-                onChange={(e) => registraPagoYDatosFiscales(form.nit_cliente, form.razon_social, e.target.value)}
+                onChange={(e) => cambiaMetodoPago(e.target.value)}
                 required
-              />
+              >
+                <option value="">Seleccione</option>
+                <option value="Efectivo">Efectivo</option>
+                <option value="Transferencia">Transferencia</option>
+                <option value="QR">QR</option>
+              </select>
             </div>
+
+            {(form.metodo_pago === 'Transferencia' || form.metodo_pago === 'QR') && (
+              <div className="facturacion-pago-info">
+                <p><strong>Banco:</strong> {DATOS_CUENTA_BANCARIA.banco}</p>
+                <p><strong>Tipo de cuenta:</strong> {DATOS_CUENTA_BANCARIA.tipoCuenta}</p>
+                <p><strong>N° de cuenta:</strong> {DATOS_CUENTA_BANCARIA.numeroCuenta}</p>
+                <p><strong>Titular:</strong> {DATOS_CUENTA_BANCARIA.titular}</p>
+                <p><strong>NIT:</strong> {DATOS_CUENTA_BANCARIA.nit}</p>
+                {form.metodo_pago === 'QR' && (
+                  <div className="facturacion-qr-wrap">
+                    <img src="/static/img/facturacion/qr-pago.jpeg" alt="QR para pago" className="facturacion-qr-img" />
+                    <p className="facturacion-qr-hint">Escanea el código con tu app bancaria para pagar</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {(form.metodo_pago === 'Transferencia' || form.metodo_pago === 'QR') && (
+              <div className="input-group">
+                <label>Comprobante de pago</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setComprobante(e.target.files[0] || null)}
+                  required
+                />
+              </div>
+            )}
+
             <div className="input-group">
               <label>Estado de pago</label>
               <select value={form.estado_pago} onChange={(e) => setForm({ ...form, estado_pago: e.target.value })}>
@@ -710,6 +778,7 @@ const FormFacturacion = () => {
               <p><strong>Nota servicio:</strong> #{resultado?.nota_servicio?.codigo || '-'}</p>
               <p><strong>Factura:</strong> #{resultado?.factura?.codigo || '-'}</p>
               <p><strong>Estado orden:</strong> {resultado?.orden?.estado || '-'}</p>
+              <p><strong>Método de pago:</strong> {resultado?.factura?.metodo_pago || resultado?.metodo_pago || '-'}</p>
             </div>
           )}
         </div>
@@ -727,13 +796,15 @@ const FormFacturacion = () => {
                 <th>Estado</th>
                 <th>Nota</th>
                 <th>Factura</th>
+                <th>Método</th>
+                <th>Comprobante</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {historial.length === 0 ? (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: 'center' }}>No hay facturas registradas.</td>
+                  <td colSpan="9" style={{ textAlign: 'center' }}>No hay facturas registradas.</td>
                 </tr>
               ) : (
                 historial.map((item) => (
@@ -744,6 +815,20 @@ const FormFacturacion = () => {
                     <td>{item?.orden?.estado || '-'}</td>
                     <td>#{item?.nota_servicio?.codigo || '-'}</td>
                     <td>#{item?.factura?.codigo || '-'}</td>
+                    <td>{item?.factura?.metodo_pago || '-'}</td>
+                    <td>
+                      {item?.factura?.metodo_pago === 'PayPal' ? (
+                        item?.factura?.comprobante_pago ? `PayPal: ${item.factura.comprobante_pago}` : '-'
+                      ) : item?.factura?.comprobante_pago ? (
+                        <a
+                          href={`${API_BASE_URL}/media/${item.factura.comprobante_pago}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Ver
+                        </a>
+                      ) : '-'}
+                    </td>
                     <td>
                       <button
                         onClick={() => descargarHistorial(item)}

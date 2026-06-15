@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from django.contrib.auth.hashers import check_password
 from django.core import signing # Para generar el Token de sesión
 from django.core.signing import BadSignature, SignatureExpired
+from django.core.files.storage import default_storage
 from django.conf import settings
 from django.utils import timezone
 from django.http import HttpResponse
@@ -67,6 +68,7 @@ from .serializers import (
 )
 from django.contrib.auth.hashers import make_password
 from .reportes_export import columnas_para, generar_csv_reporte, generar_excel_reporte, generar_pdf_reporte
+from .paypal_client import crear_orden_paypal, capturar_orden_paypal, PayPalError
 
 
 MAX_LOGIN_INTENTOS = 3
@@ -1401,6 +1403,51 @@ def mis_motocicletas_api(request):
     )
 
 
+@api_view(['GET'])
+def mis_motocicletas_historial_api(request, moto_id):
+    usuario_sesion, error_auth = obtener_usuario_autenticado(request)
+    if error_auth:
+        return error_auth
+
+    if usuario_sesion.id_rol.nombre != 'Cliente':
+        return Response({"exito": False, "error": "No autorizado para esta consulta."}, status=403)
+
+    cliente = obtener_cliente_vinculado(usuario_sesion)
+    if not cliente:
+        return Response({"exito": False, "error": "No se encontró un cliente vinculado a tu usuario."}, status=404)
+
+    try:
+        moto = Motocicleta.objects.get(codigo=moto_id)
+    except Motocicleta.DoesNotExist:
+        return Response({"exito": False, "error": "Motocicleta no encontrada."}, status=404)
+
+    if moto.id_cliente_id != cliente.codigo:
+        return Response({"exito": False, "error": "Esta motocicleta no pertenece a tu cuenta."}, status=403)
+
+    ordenes = (
+        Ordentrabajo.objects.select_related('id_mecanico')
+        .filter(id_motocicleta=moto)
+        .order_by('-fecha_creacion', '-codigo')
+    )
+
+    respuesta_ordenes = []
+    for orden in ordenes:
+        data = OrdenTrabajoSerializer(orden).data
+        data['total_general'] = str(Decimal(orden.costo_repuestos or 0) + Decimal(orden.costo_mano_obra or 0))
+        notas = Notatrabajo.objects.filter(id_orden_trabajo=orden).select_related('id_mecanico').order_by('fecha_hora')
+        data['notas'] = NotaTrabajoSerializer(notas, many=True).data
+        respuesta_ordenes.append(data)
+
+    return Response(
+        {
+            "exito": True,
+            "motocicleta": MotocicletaSerializer(moto).data,
+            "ordenes": respuesta_ordenes,
+        },
+        status=200,
+    )
+
+
 @api_view(['PUT', 'DELETE'])
 def cliente_detalle_api(request, cliente_id):
     usuario_sesion, error_auth = obtener_usuario_autenticado(request)
@@ -2529,8 +2576,20 @@ def envia_payload_cobro(request):
     if Notaservicio.objects.filter(id_orden_trabajo=orden).exists():
         return None, None, Response({"exito": False, "error": "La orden ya fue facturada previamente."}, status=409)
 
+    comprobante_pago = None
+    comprobante_archivo = request.FILES.get('comprobante_pago')
+    if metodo_pago in ('Transferencia', 'QR'):
+        if not comprobante_archivo:
+            return None, None, Response(
+                {"exito": False, "error": "Debe adjuntar el comprobante de pago."},
+                status=400,
+            )
+        nombre_archivo = f"comprobantes/orden_{orden_id}_{comprobante_archivo.name}"
+        comprobante_pago = default_storage.save(nombre_archivo, comprobante_archivo)
+
     datos_validados = {
         'metodo_pago': metodo_pago,
+        'comprobante_pago': comprobante_pago,
         'estado_pago': estado_pago,
         'nit_cliente': nit_cliente,
         'razon_social': razon_social,
@@ -2570,6 +2629,8 @@ def solicita_generacion_registros(datos_validados, orden):
             total_facturado=total_mano_obra + datos_validados.get('impuesto'),
             nit_cliente=datos_validados.get('nit_cliente'),
             razon_social=datos_validados.get('razon_social'),
+            metodo_pago=datos_validados.get('metodo_pago') or None,
+            comprobante_pago=datos_validados.get('comprobante_pago'),
         )
 
         nuevo_estado = 'Pagado' if (datos_validados.get('estado_pago') or '').lower() == 'pagado' else 'Facturado'
@@ -2684,6 +2745,164 @@ def facturacion_historial_api(request):
         )
 
     return Response(respuesta, status=200)
+
+
+# ==========================================
+# PAGO DEL CLIENTE: QR / PAYPAL (rol Cliente)
+# ==========================================
+def _validar_orden_propia_pendiente(usuario_sesion, orden_id):
+    if usuario_sesion.id_rol.nombre != 'Cliente':
+        return None, None, Response({"exito": False, "error": "No autorizado para esta operación."}, status=403)
+
+    cliente = obtener_cliente_vinculado(usuario_sesion)
+    if not cliente:
+        return None, None, Response({"exito": False, "error": "No se encontró un cliente vinculado a tu usuario."}, status=404)
+
+    if not orden_id:
+        return None, None, Response({"exito": False, "error": "Debe indicar la orden a pagar."}, status=400)
+
+    try:
+        orden = Ordentrabajo.objects.select_related('id_cliente').get(codigo=orden_id)
+    except Ordentrabajo.DoesNotExist:
+        return None, None, Response({"exito": False, "error": "Orden de trabajo no encontrada."}, status=404)
+
+    if orden.id_cliente_id != cliente.codigo:
+        return None, None, Response({"exito": False, "error": "Esta orden no pertenece a tu cuenta."}, status=403)
+
+    if (orden.estado or '').strip().lower() != 'finalizado':
+        return None, None, Response({"exito": False, "error": "La orden debe estar en estado Finalizado."}, status=400)
+
+    if Notaservicio.objects.filter(id_orden_trabajo=orden).exists():
+        return None, None, Response({"exito": False, "error": "La orden ya fue facturada previamente."}, status=409)
+
+    return cliente, orden, None
+
+
+@api_view(['GET'])
+def mis_pagos_api(request):
+    usuario_sesion, error_auth = obtener_usuario_autenticado(request)
+    if error_auth:
+        return error_auth
+
+    if usuario_sesion.id_rol.nombre != 'Cliente':
+        return Response({"exito": False, "error": "No autorizado para esta consulta."}, status=403)
+
+    cliente = obtener_cliente_vinculado(usuario_sesion)
+    if not cliente:
+        return Response(
+            {"exito": True, "cliente": None, "ordenes": [], "mensaje": "No se encontró un cliente vinculado a tu usuario."},
+            status=200,
+        )
+
+    ordenes = (
+        Ordentrabajo.objects.select_related('id_cliente', 'id_motocicleta')
+        .filter(id_cliente=cliente, estado__iexact='Finalizado')
+        .order_by('-fecha_creacion')
+    )
+
+    respuesta = []
+    for orden in ordenes:
+        data = OrdenTrabajoSerializer(orden).data
+        data['total_general'] = str(Decimal(orden.costo_repuestos or 0) + Decimal(orden.costo_mano_obra or 0))
+        respuesta.append(data)
+
+    return Response({"exito": True, "cliente": ClienteSerializer(cliente).data, "ordenes": respuesta}, status=200)
+
+
+@api_view(['POST'])
+def mis_pagos_qr_api(request):
+    usuario_sesion, error_auth = obtener_usuario_autenticado(request)
+    if error_auth:
+        return error_auth
+
+    orden_id = request.data.get('orden_id')
+    cliente, orden, error_response = _validar_orden_propia_pendiente(usuario_sesion, orden_id)
+    if error_response is not None:
+        return error_response
+
+    comprobante_archivo = request.FILES.get('comprobante_pago')
+    if not comprobante_archivo:
+        return Response({"exito": False, "error": "Debe adjuntar el comprobante de pago."}, status=400)
+
+    nombre_archivo = f"comprobantes/orden_{orden.codigo}_{comprobante_archivo.name}"
+    comprobante_pago = default_storage.save(nombre_archivo, comprobante_archivo)
+
+    datos_validados = {
+        'metodo_pago': 'QR',
+        'comprobante_pago': comprobante_pago,
+        'estado_pago': 'Pendiente',
+        'nit_cliente': cliente.cedula,
+        'razon_social': cliente.nombre,
+        'impuesto': Decimal('0'),
+        'observaciones': None,
+        'numero_autorizacion': None,
+        'fecha_emision': timezone.now().date(),
+        'usuario_sesion': usuario_sesion,
+    }
+
+    nota, factura = solicita_generacion_registros(datos_validados, orden)
+    return retorna_confirmacion_general_y_urls_pdfs(nota, factura)
+
+
+@api_view(['POST'])
+def mis_pagos_paypal_crear_api(request):
+    usuario_sesion, error_auth = obtener_usuario_autenticado(request)
+    if error_auth:
+        return error_auth
+
+    orden_id = request.data.get('orden_id')
+    cliente, orden, error_response = _validar_orden_propia_pendiente(usuario_sesion, orden_id)
+    if error_response is not None:
+        return error_response
+
+    total_general = Decimal(orden.costo_repuestos or 0) + Decimal(orden.costo_mano_obra or 0)
+
+    try:
+        paypal_order_id = crear_orden_paypal(total_general)
+    except PayPalError as exc:
+        return Response({"exito": False, "error": f"No se pudo iniciar el pago con PayPal: {exc}"}, status=502)
+
+    return Response({"exito": True, "paypal_order_id": paypal_order_id}, status=200)
+
+
+@api_view(['POST'])
+def mis_pagos_paypal_capturar_api(request):
+    usuario_sesion, error_auth = obtener_usuario_autenticado(request)
+    if error_auth:
+        return error_auth
+
+    orden_id = request.data.get('orden_id')
+    paypal_order_id = (request.data.get('paypal_order_id') or '').strip()
+    if not paypal_order_id:
+        return Response({"exito": False, "error": "Falta el identificador de la orden de PayPal."}, status=400)
+
+    cliente, orden, error_response = _validar_orden_propia_pendiente(usuario_sesion, orden_id)
+    if error_response is not None:
+        return error_response
+
+    try:
+        estado_paypal, captura_id = capturar_orden_paypal(paypal_order_id)
+    except PayPalError as exc:
+        return Response({"exito": False, "error": f"No se pudo confirmar el pago con PayPal: {exc}"}, status=502)
+
+    if estado_paypal != 'COMPLETED':
+        return Response({"exito": False, "error": f"PayPal no completó el pago (estado: {estado_paypal})."}, status=400)
+
+    datos_validados = {
+        'metodo_pago': 'PayPal',
+        'comprobante_pago': captura_id or paypal_order_id,
+        'estado_pago': 'Pagado',
+        'nit_cliente': cliente.cedula,
+        'razon_social': cliente.nombre,
+        'impuesto': Decimal('0'),
+        'observaciones': None,
+        'numero_autorizacion': None,
+        'fecha_emision': timezone.now().date(),
+        'usuario_sesion': usuario_sesion,
+    }
+
+    nota, factura = solicita_generacion_registros(datos_validados, orden)
+    return retorna_confirmacion_general_y_urls_pdfs(nota, factura)
 
 
 # ==========================================

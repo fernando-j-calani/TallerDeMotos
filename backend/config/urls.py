@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path
 from taller.views import (
@@ -16,6 +18,7 @@ from taller.views import (
     motocicletas_api,
     motocicleta_detalle_api,
     mis_motocicletas_api,
+    mis_motocicletas_historial_api,
     proveedores_api,
     proveedor_detalle_api,
     productos_api,
@@ -41,6 +44,10 @@ from taller.views import (
     permisos_api,
     facturacion_api,
     facturacion_historial_api,
+    mis_pagos_api,
+    mis_pagos_qr_api,
+    mis_pagos_paypal_crear_api,
+    mis_pagos_paypal_capturar_api,
     HistorialMantenimientoAPI,
     SeguimientoClientesAPI,
     reportes_api,
@@ -76,6 +83,7 @@ urlpatterns = [
     path('api/motocicletas/', motocicletas_api, name='api_motocicletas'),
     path('api/motocicletas/<int:motocicleta_id>/', motocicleta_detalle_api, name='api_motocicleta_detalle'),
     path('api/mis-motocicletas/', mis_motocicletas_api, name='api_mis_motocicletas'),
+    path('api/mis-motocicletas/<int:moto_id>/historial/', mis_motocicletas_historial_api, name='api_mis_motocicletas_historial'),
     path('api/proveedores/', proveedores_api, name='api_proveedores'),
     path('api/proveedores/<int:proveedor_id>/', proveedor_detalle_api, name='api_proveedor_detalle'),
     path('api/productos/', productos_api, name='api_productos'),
@@ -93,6 +101,10 @@ urlpatterns = [
     path('api/permisos/', permisos_api, name='api_permisos'),
     path('api/facturacion/', facturacion_api, name='api_facturacion'),
     path('api/facturacion/historial/', facturacion_historial_api, name='api_facturacion_historial'),
+    path('api/mis-pagos/', mis_pagos_api, name='api_mis_pagos'),
+    path('api/mis-pagos/qr/', mis_pagos_qr_api, name='api_mis_pagos_qr'),
+    path('api/mis-pagos/paypal/crear-orden/', mis_pagos_paypal_crear_api, name='api_mis_pagos_paypal_crear'),
+    path('api/mis-pagos/paypal/capturar/', mis_pagos_paypal_capturar_api, name='api_mis_pagos_paypal_capturar'),
     path('api/historial-mantenimiento/', HistorialMantenimientoAPI.as_view(), name='api_historial_mantenimiento'),
     path('api/historial-mantenimiento/<int:orden_id>/', HistorialMantenimientoAPI.as_view(), name='api_historial_mantenimiento_detalle'),
     path('api/historial-mantenimiento/reporte/', HistorialMantenimientoAPI.as_view(), name='api_historial_mantenimiento_reporte'),
@@ -101,3 +113,5 @@ urlpatterns = [
     path('api/reportes/', reportes_api, name='api_reportes'),
     path('api/dashboard/', dashboard_api, name='api_dashboard'),
 ]
+
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

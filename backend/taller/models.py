@@ -333,6 +333,8 @@ class Factura(models.Model):
     total_facturado = models.DecimalField(max_digits=10, decimal_places=2)
     nit_cliente = models.CharField(max_length=30)
     razon_social = models.CharField(max_length=150)
+    metodo_pago = models.CharField(max_length=50, blank=True, null=True)
+    comprobante_pago = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
         managed = False

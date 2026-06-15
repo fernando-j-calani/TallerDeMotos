@@ -166,7 +166,12 @@ const Compras = () => {
             <div className="input-group"><label>Número factura</label><input value={nuevo.numero_factura} onChange={(e) => setNuevo({ ...nuevo, numero_factura: e.target.value })} /></div>
             <div className="input-group"><label>Fecha</label><input type="date" value={nuevo.fecha} onChange={(e) => setNuevo({ ...nuevo, fecha: e.target.value })} required /></div>
             <div className="input-group"><label>Impuesto</label><input type="number" step="0.01" value={nuevo.impuesto} onChange={(e) => setNuevo({ ...nuevo, impuesto: Number(e.target.value) })} /></div>
-            <div className="input-group"><label>Método de pago</label><input value={nuevo.metodo_pago} onChange={(e) => setNuevo({ ...nuevo, metodo_pago: e.target.value })} /></div>
+            <div className="input-group"><label>Método de pago</label><select value={nuevo.metodo_pago} onChange={(e) => setNuevo({ ...nuevo, metodo_pago: e.target.value })}>
+              <option value="">Seleccione</option>
+              <option value="Efectivo">Efectivo</option>
+              <option value="Transferencia">Transferencia</option>
+              <option value="QR">QR</option>
+            </select></div>
             <div className="input-group"><label>Estado</label><select value={nuevo.estado} onChange={(e) => setNuevo({ ...nuevo, estado: e.target.value })}>
               <option value="Pendiente">Pendiente</option>
               <option value="Aprobado">Aprobado</option>
