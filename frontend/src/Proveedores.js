@@ -4,6 +4,7 @@ import './Login.css';
 import { getHomeRouteByRole } from './navigation';
 import { API_BASE_URL } from './config';
 import { validarPermisoModulo } from './permissions';
+import { repairText } from './textNormalization';
 
 const API = `${API_BASE_URL}/api`;
 
@@ -147,20 +148,29 @@ const Proveedores = () => {
   };
 
   return (
-    <div style={{ padding: '30px', backgroundColor: '#121212', minHeight: '100vh', color: 'white' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <h2 style={{ color: '#ff6600', margin: 0 }}>Gestión de Proveedores (CU13)</h2>
-        <div>
-          <button onClick={() => navigate('/inicio')} style={{ marginRight: '10px', padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Inicio</button>
-          <button onClick={() => navigate('/perfil')} style={{ padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Mi Perfil</button>
+    <div className="app-container proveedores-page">
+      <div className="page-bg-layer page-bg-layer--a" style={{ backgroundImage: 'url(/static/img/proveedores/fondo-proveedores-1.png)' }}></div>
+      <div className="page-bg-layer page-bg-layer--b" style={{ backgroundImage: 'url(/static/img/proveedores/fondo-proveedores-2.png)' }}></div>
+      <div className="page-bg-overlay"></div>
+
+      <div className="top-panel">
+        <div className="page-title">
+          <h2>Gestión de Proveedores (CU13)</h2>
+          <div className="page-subtitle">Administración de proveedores y datos de contacto para compras del taller</div>
+        </div>
+        <div className="user-actions">
+          <span>👤 {repairText(usuarioLocal?.nombre)} ({repairText(usuarioLocal?.rol)})</span>
+          <button onClick={() => navigate('/inicio')} className="btn-secondary">Inicio</button>
+          <button onClick={() => navigate('/perfil')} className="btn-secondary">Mi Perfil</button>
+          <button onClick={() => navigate(-1)} className="btn-secondary">Atrás</button>
         </div>
       </div>
 
-      {error && <div className="error-box" style={{ marginBottom: '15px' }}>{error}</div>}
+      {error && <div className="error-box" style={{ marginTop: '20px' }}>{error}</div>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px' }}>
-        <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
-          <h3>Registrar proveedor</h3>
+      <div className="proveedores-content">
+        <div className="bitacora-panel proveedores-form-panel">
+          <h3 className="usuarios-panel-title">Registrar proveedor</h3>
           <form onSubmit={crearProveedor}>
             <div className="input-group"><label>Empresa</label><input value={nuevo.empresa} onChange={(e) => setNuevo({ ...nuevo, empresa: e.target.value })} required /></div>
             <div className="input-group"><label>NIT</label><input value={nuevo.nit} onChange={(e) => setNuevo({ ...nuevo, nit: e.target.value })} required /></div>
@@ -168,50 +178,56 @@ const Proveedores = () => {
             <div className="input-group"><label>Teléfono</label><input value={nuevo.telefono} onChange={(e) => setNuevo({ ...nuevo, telefono: e.target.value })} /></div>
             <div className="input-group"><label>Email</label><input type="email" value={nuevo.email} onChange={(e) => setNuevo({ ...nuevo, email: e.target.value })} /></div>
             <div className="input-group"><label>Dirección</label><input value={nuevo.direccion} onChange={(e) => setNuevo({ ...nuevo, direccion: e.target.value })} /></div>
-            <button type="submit" className="btn-login">Crear proveedor</button>
+            <button type="submit" className="bitacora-btn bitacora-btn--filter" style={{ marginTop: '4px' }}>Crear proveedor</button>
           </form>
         </div>
 
-        <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
-          <h3>Listado de proveedores</h3>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #444' }}>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Código</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Empresa</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>NIT</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Contacto</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Teléfono</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Email</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Dirección</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {proveedores.map((p) => (
-                <tr key={p.codigo} style={{ borderBottom: '1px solid #2c2c2c' }}>
-                  <td style={{ padding: '8px' }}>#{p.codigo}</td>
-                  <td style={{ padding: '8px' }}>{p.empresa}</td>
-                  <td style={{ padding: '8px' }}>{p.nit}</td>
-                  <td style={{ padding: '8px' }}>{p.contacto || '-'}</td>
-                  <td style={{ padding: '8px' }}>{p.telefono || '-'}</td>
-                  <td style={{ padding: '8px' }}>{p.email || '-'}</td>
-                  <td style={{ padding: '8px' }}>{p.direccion || '-'}</td>
-                  <td style={{ padding: '8px' }}>
-                    <button onClick={() => abrirEdicion(p)} style={{ marginRight: '6px', backgroundColor: '#2c5f8f', border: 'none', color: 'white', borderRadius: '4px', padding: '6px 10px', cursor: 'pointer' }}>Editar</button>
-                    <button onClick={() => eliminarProveedor(p)} style={{ backgroundColor: '#8f2d2d', border: 'none', color: 'white', borderRadius: '4px', padding: '6px 10px', cursor: 'pointer' }}>Eliminar</button>
-                  </td>
+        <div className="bitacora-panel proveedores-list-panel">
+          <h3 className="usuarios-panel-title">Listado de proveedores</h3>
+          <div className="bitacora-table-wrap">
+            <table className="bitacora-table">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Empresa</th>
+                  <th>NIT</th>
+                  <th>Contacto</th>
+                  <th>Teléfono</th>
+                  <th>Email</th>
+                  <th>Dirección</th>
+                  <th>Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {proveedores.length === 0 ? (
+                  <tr><td colSpan="8" style={{ textAlign: 'center' }}>No hay proveedores registrados.</td></tr>
+                ) : (
+                  proveedores.map((p) => (
+                    <tr key={p.codigo}>
+                      <td>#{p.codigo}</td>
+                      <td>{p.empresa}</td>
+                      <td>{p.nit}</td>
+                      <td>{p.contacto || '-'}</td>
+                      <td>{p.telefono || '-'}</td>
+                      <td>{p.email || '-'}</td>
+                      <td>{p.direccion || '-'}</td>
+                      <td>
+                        <button onClick={() => abrirEdicion(p)} className="table-action-btn table-action-btn--edit">Editar</button>
+                        <button onClick={() => eliminarProveedor(p)} className="table-action-btn table-action-btn--danger">Eliminar</button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
       {proveedorEdicion && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-          <div style={{ width: '100%', maxWidth: '480px', backgroundColor: '#1e1e1e', border: '1px solid #333', borderRadius: '10px', padding: '20px', maxHeight: '80vh', overflowY: 'auto' }}>
-            <h3 style={{ marginTop: 0, color: '#ff6600' }}>Editar proveedor</h3>
+        <div className="usuarios-modal-overlay">
+          <div className="usuarios-modal usuarios-modal--sm">
+            <h3 style={{ marginTop: 0, color: 'var(--color-accent)' }}>Editar proveedor</h3>
             <form onSubmit={guardarEdicion}>
               <div className="input-group"><label>Empresa</label><input value={editForm.empresa} onChange={(e) => setEditForm({ ...editForm, empresa: e.target.value })} required /></div>
               <div className="input-group"><label>Contacto</label><input value={editForm.contacto} onChange={(e) => setEditForm({ ...editForm, contacto: e.target.value })} /></div>
@@ -219,8 +235,8 @@ const Proveedores = () => {
               <div className="input-group"><label>Email</label><input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} /></div>
               <div className="input-group"><label>Dirección</label><input value={editForm.direccion} onChange={(e) => setEditForm({ ...editForm, direccion: e.target.value })} /></div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" onClick={() => setProveedorEdicion(null)} style={{ padding: '8px 12px', backgroundColor: '#444', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Cancelar</button>
-                <button type="submit" style={{ padding: '8px 12px', backgroundColor: '#ff6600', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Guardar</button>
+                <button type="button" onClick={() => setProveedorEdicion(null)} className="btn-secondary">Cancelar</button>
+                <button type="submit" className="bitacora-btn bitacora-btn--filter">Guardar</button>
               </div>
             </form>
           </div>

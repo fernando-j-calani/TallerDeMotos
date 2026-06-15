@@ -1,93 +1,483 @@
-/* frontend/src/Login.css */
-.login-bg {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-  background-color: #121212; /* Fondo oscuro */
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
+/* frontend/src/Login.css - Diseño profesional Taller La Roca */
 
-.login-card {
-  background-color: #1e1e1e;
-  padding: 40px;
-  border-radius: 10px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  width: 100%;
-  max-width: 400px;
-  text-align: center;
-}
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;500;600;700&display=swap');
 
-.login-card h2 {
-  color: #ff6600; /* Naranja Taller La Roca */
-  margin-bottom: 10px;
-  font-size: 28px;
-}
-
-.login-card p {
-  color: #888;
-  margin-bottom: 30px;
-  font-size: 14px;
-}
-
-.input-group {
-  margin-bottom: 20px;
-  text-align: left;
-}
-
-.input-group label {
-  display: block;
-  color: #ccc;
-  margin-bottom: 8px;
-  font-size: 14px;
-}
-
-.input-group input {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #333;
-  border-radius: 5px;
-  background-color: #2a2a2a;
-  color: #fff;
-  font-size: 16px;
+* {
   box-sizing: border-box;
-  transition: border-color 0.3s;
+  margin: 0;
+  padding: 0;
 }
 
-.input-group input:focus {
+html, body {
+  height: 100%;
+  font-family: 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.login-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: linear-gradient(to bottom, #e9f1fa, #ffffff);
+}
+
+/* Navbar */
+.navbar {
+  position: absolute;
+  top: 18px;
+  left: 0;
+  right: 0;
+  z-index: 16;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background: transparent;
+}
+
+.brand-small a {
+  text-decoration: none;
+}
+
+.brand-small img {
+  height: 52px;
+  width: auto;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25));
+}
+
+.btn-inicio {
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.btn-inicio:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: #0088b4;
+  color: #0088b4;
+}
+
+/* Background holder */
+.bg-holder {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1100px;
+  background-position: center top;
+  background-size: cover;
+  background-repeat: no-repeat;
+  padding-bottom: 40px;
+}
+
+.bg-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.12));
+  z-index: 5;
+}
+
+/* Large logo centered above form */
+.hero-logo {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 14;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: top 0.22s ease;
+}
+
+.hero-logo img {
+  width: 210px;
+  max-width: 34vw;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.25));
+}
+
+/* Form */
+.form-wrapper {
+  position: relative;
+  z-index: 12;
+  background: #fff;
+  border-radius: 10px;
+  padding: 36px 38px;
+  max-width: 520px;
+  width: 100%;
+  box-shadow: 0 20px 50px rgba(31, 39, 57, 0.16);
+  margin-top: 420px;
+  transition: all 0.18s ease;
+}
+
+.form-title {
+  text-align: center;
+  font-size: 26px;
+  margin-bottom: 20px;
+  color: #2f2e41;
+  font-weight: 800;
+}
+
+.confirm-title {
+  text-align: left;
+  font-size: 26px;
+  margin-bottom: 16px;
+  color: #2f2e41;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.confirm-text {
+  color: #44474e;
+  font-size: 14.5px;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 8px;
+  color: #44474e;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.form-control {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
+  font-size: 15.5px;
+  transition: box-shadow 0.18s ease, border-color 0.18s ease;
+  font-family: 'Roboto', sans-serif;
+}
+
+.form-control:focus {
   outline: none;
-  border-color: #ff6600;
+  border-color: #0088b4;
+  box-shadow: 0 6px 18px rgba(0, 136, 180, 0.12);
+}
+
+.password-wrapper {
+  position: relative;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #444;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 8px;
+  transition: color 0.2s ease;
+}
+
+.password-toggle:hover {
+  color: #0088b4;
 }
 
 .btn-login {
   width: 100%;
-  padding: 14px;
-  background-color: #ff6600;
-  color: white;
+  padding: 12px;
+  background: #0088b4;
+  color: #fff;
   border: none;
-  border-radius: 5px;
-  font-size: 16px;
-  font-weight: bold;
+  border-radius: 8px;
+  font-weight: 800;
+  margin-top: 12px;
+  box-shadow: 0 8px 18px rgba(0, 136, 180, 0.18);
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  font-size: 15px;
 }
 
-.btn-login:hover {
-  background-color: #e65c00;
+.btn-login:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(0, 136, 180, 0.22);
 }
 
 .btn-login:disabled {
-  background-color: #555;
+  opacity: 0.7;
   cursor: not-allowed;
+}
+
+.btn-outline {
+  width: 100%;
+  padding: 12px;
+  background: #fff;
+  color: #2f2e41;
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
+  font-weight: 800;
+  margin-top: 12px;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+  font-size: 15px;
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: #f5f7fa;
+  border-color: #c9d0db;
+}
+
+.btn-outline:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.forgot {
+  display: block;
+  margin-top: 12px;
+  color: #0088b4;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  width: 100%;
+  padding: 0;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.forgot:hover {
+  text-decoration: underline;
+  color: #006b92;
+}
+
+.forgot-center {
+  text-align: center;
+}
+
+.forgot-center:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.alert {
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.alert-danger {
+  background: #f8d7da;
+  color: #721c24;
+  border-color: #f5c6cb;
+}
+
+.alert-success {
+  background: #d4edda;
+  color: #155724;
+  border-color: #c3e6cb;
+}
+
+/* Footer */
+.footer {
+  z-index: 15;
+}
+
+.footer-top {
+  background: #353241;
+  color: #fff;
+  padding: 22px 16px;
+}
+
+.footer-top .container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.ft-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ft-left img {
+  height: 48px;
+}
+
+.ft-socials {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.ft-socials img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.ft-item {
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+}
+
+.ft-item i {
+  color: #f95c19;
+}
+
+.footer-bottom {
+  background: #262431;
+  color: #ddd;
+  padding: 18px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.footer-bottom .container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.footer-bottom a {
+  color: #0088b4;
+  text-decoration: none;
+}
+
+.footer-bottom i.fa-heart {
+  color: #f95c19;
+  margin: 0 6px;
+}
+
+/* Container helper */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+  width: 100%;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+  .navbar {
+    top: 18px;
+  }
+  
+  .form-wrapper {
+    margin-top: 340px;
+    padding: 26px;
+  }
+  
+  .hero-logo img {
+    width: 180px;
+  }
+  
+  .footer-top .container {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    top: 18px;
+    padding: 1rem 1.5rem;
+  }
+  
+  .navbar .btn-inicio {
+    padding: 0.4rem 0.8rem;
+    font-size: 14px;
+  }
+  
+  .form-wrapper {
+    margin-top: 280px;
+    padding: 20px;
+    max-width: 90%;
+  }
+  
+  .hero-logo img {
+    width: 160px;
+  }
+  
+  .footer-top .container,
+  .footer-bottom .container {
+    flex-direction: column;
+  }
+
+}
+
+/* ============================================= */
+/* Responsive admin layout (paneles internos)     */
+/* ============================================= */
+
+/* Tokens compartidos del tema oscuro del panel admin.
+   Reutilizables por cualquier página que importe Login.css
+   (Bitácora, Usuarios, Clientes, Motocicletas, etc.) */
+:root {
+  --color-accent: #ff6600;
+  --color-accent-hover: #e65c00;
+  --color-accent-soft: rgba(255, 102, 0, 0.12);
+  --color-accent-glow: rgba(255, 102, 0, 0.35);
+  --color-accent-2: #2ea0ff;
+  --color-accent-2-hover: #1c8ce6;
+  --color-accent-2-soft: rgba(46, 160, 255, 0.12);
+  --color-accent-2-glow: rgba(46, 160, 255, 0.35);
+  --color-bg: #121212;
+  --color-surface: #1b1b1b;
+  --color-surface-alt: #1e1e1e;
+  --color-input-bg: #2a2a2a;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.16);
+  --color-text: #f4f4f4;
+  --color-text-muted: #cfcfcf;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 14px;
+  --transition-base: all 0.25s ease;
+  --shadow-glow: 0 10px 28px var(--color-accent-glow);
+  --shadow-card: 0 4px 18px rgba(0, 0, 0, 0.45);
+  --font-display: 'Bebas Neue', 'Oswald', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .error-box {
   background-color: rgba(255, 77, 77, 0.1);
   color: #ff4d4d;
   padding: 10px;
-  border-radius: 5px;
+  border-radius: var(--radius-sm);
   margin-bottom: 20px;
   border: 1px solid rgba(255, 77, 77, 0.3);
+  font-size: 14px;
+}
+
+.success-box {
+  background-color: rgba(0, 255, 0, 0.1);
+  color: #7dff7d;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 20px;
+  border: 1px solid rgba(0, 255, 0, 0.3);
   font-size: 14px;
 }
 
@@ -102,15 +492,84 @@
 }
 
 .btn-link:hover {
-  color: #ff6600;
+  color: var(--color-accent);
 }
 
-/* Responsive admin layout */
 .app-container {
   min-height: 100vh;
   padding: 20px;
-  background-color: #121212;
-  color: #f4f4f4;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+/* Fondo alternante (Bitácora) */
+.app-container.bitacora-page {
+  position: relative;
+  background-color: transparent;
+  /* Paleta propia de la Bitácora: rojo racing en vez de naranja */
+  --color-accent: #ef4444;
+  --color-accent-hover: #dc2626;
+  --color-accent-soft: rgba(239, 68, 68, 0.12);
+  --color-accent-glow: rgba(239, 68, 68, 0.35);
+}
+
+.bitacora-bg-layer {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0;
+  animation: bitacora-bg-cycle 24s ease-in-out infinite;
+}
+
+.bitacora-bg-layer--moto {
+  animation-delay: -12s;
+}
+
+.bitacora-bg-layer--taller {
+  animation-delay: 0s;
+}
+
+.bitacora-bg-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgba(10, 10, 10, 0.38) 0%, rgba(10, 10, 10, 0.58) 100%);
+}
+
+@keyframes bitacora-bg-cycle {
+  0%, 37.5% { opacity: 1; }
+  50%, 87.5% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* Fondo cíclico reutilizable para otras páginas de CU (Usuarios, Clientes, etc.) */
+.page-bg-layer {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0;
+  animation: bitacora-bg-cycle 24s ease-in-out infinite;
+}
+
+.page-bg-layer--a {
+  animation-delay: 0s;
+}
+
+.page-bg-layer--b {
+  animation-delay: -12s;
+}
+
+.page-bg-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgba(10, 10, 10, 0.38) 0%, rgba(10, 10, 10, 0.58) 100%);
 }
 
 .top-panel {
@@ -120,16 +579,23 @@
   gap: 16px;
   flex-wrap: wrap;
   margin-bottom: 20px;
+  padding: 16px 20px;
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
 }
 
 .page-title h2 {
   margin: 0;
-  color: #ff6600;
+  color: var(--color-accent);
   font-size: 1.8rem;
+  text-shadow: 0 0 18px var(--color-accent-glow);
 }
 
 .page-subtitle {
-  color: #cfcfcf;
+  color: var(--color-text-muted);
   margin-top: 6px;
   font-size: 0.95rem;
 }
@@ -146,23 +612,24 @@
 .menu-item,
 .admin-menu-button {
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 10px 16px;
   cursor: pointer;
-  transition: transform 0.15s ease, background-color 0.15s ease;
+  transition: var(--transition-base);
 }
 
 .btn-primary,
 .menu-item {
-  background-color: #ff6600;
+  background-color: var(--color-accent);
   color: white;
 }
 
 .btn-primary:hover,
 .menu-item:hover,
 .admin-menu-button:hover {
-  background-color: #e65c00;
-  transform: translateY(-1px);
+  background-color: var(--color-accent-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
 }
 
 .btn-secondary {
@@ -172,16 +639,19 @@
 
 .btn-secondary:hover {
   background-color: #444;
+  transform: translateY(-2px);
 }
 
 .admin-menu-bar {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
-  background-color: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
   padding: 10px;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
 }
 
 .admin-menu-group {
@@ -189,21 +659,35 @@
 }
 
 .admin-menu-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   background-color: transparent;
   color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid var(--color-border-strong);
   min-width: 88px;
+  font-weight: 600;
+}
+
+.admin-menu-button i {
+  color: var(--color-accent);
+  font-size: 0.95rem;
+  transition: var(--transition-base);
+}
+
+.admin-menu-button:hover i {
+  color: #fff;
 }
 
 .admin-menu-report {
-  background-color: #ff6600;
+  background-color: var(--color-accent);
   color: #fff;
   border-color: transparent;
   margin-left: auto;
 }
 
 .admin-menu-report:hover {
-  background-color: #e65c00;
+  background-color: var(--color-accent-hover);
 }
 
 .admin-menu-dropdown {
@@ -211,32 +695,47 @@
   top: calc(100% + 8px);
   left: 0;
   min-width: 240px;
-  background-color: #1b1b1b;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
   padding: 10px;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow-card);
   z-index: 10;
+  animation: admin-menu-fade-in 0.18s ease;
+}
+
+@keyframes admin-menu-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .admin-menu-item {
   width: 100%;
   text-align: left;
   background-color: transparent;
-  color: #f4f4f4;
+  color: var(--color-text);
   border: none;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-base);
 }
 
 .admin-menu-item:hover {
-  background-color: rgba(255, 102, 0, 0.12);
+  background-color: var(--color-accent-soft);
+  padding-left: 16px;
 }
 
 .section-card {
-  background-color: #1b1b1b;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background-color: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card);
 }
 
 .portal-grid {
@@ -244,6 +743,316 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
   margin-top: 18px;
+}
+
+/* ---------- Bitácora de Auditoría (CU20) ---------- */
+
+.bitacora-panel {
+  background-color: var(--color-surface);
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card);
+}
+
+.bitacora-toolbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.bitacora-input {
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-strong);
+  background-color: var(--color-input-bg);
+  color: var(--color-text);
+  transition: var(--transition-base);
+}
+
+.bitacora-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.bitacora-input--usuario {
+  width: 130px;
+}
+
+.bitacora-input--accion {
+  width: 160px;
+}
+
+.bitacora-btn {
+  padding: 9px 14px;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  transition: var(--transition-base);
+}
+
+.bitacora-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
+}
+
+.bitacora-btn--filter {
+  background-color: var(--color-accent);
+}
+
+.bitacora-btn--filter:hover {
+  box-shadow: var(--shadow-glow);
+}
+
+.bitacora-btn--clear {
+  background-color: #444;
+}
+
+.bitacora-btn--export {
+  background-color: #2c5f8f;
+}
+
+.bitacora-table-wrap {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.bitacora-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.bitacora-table th,
+.bitacora-table td {
+  padding: 12px;
+}
+
+.bitacora-table thead tr {
+  border-bottom: 2px solid var(--color-accent);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+}
+
+.bitacora-table tbody tr {
+  border-bottom: 1px solid var(--color-border);
+  transition: background-color 0.15s ease;
+}
+
+.bitacora-table tbody tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.bitacora-table tbody tr:hover {
+  background-color: var(--color-accent-soft);
+}
+
+.bitacora-user {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.bitacora-badge {
+  display: inline-block;
+  background-color: var(--color-input-bg);
+  border: 1px solid var(--color-border-strong);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+}
+
+.bitacora-role-badge {
+  display: inline-block;
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.bitacora-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.bitacora-stat-card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 16px 18px;
+  text-align: center;
+  transition: var(--transition-base);
+}
+
+.bitacora-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+  border-color: var(--color-border-strong);
+}
+
+.bitacora-stat-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bitacora-stat-label {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.bitacora-row--clickable {
+  cursor: pointer;
+}
+
+.bitacora-expand-icon {
+  margin-left: 8px;
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+.bitacora-detail-row td {
+  background-color: var(--color-accent-soft);
+  color: var(--color-text);
+  white-space: pre-wrap;
+  font-size: 0.9rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.bitacora-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.bitacora-page-btn {
+  padding: 8px 14px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-input-bg);
+  color: var(--color-text);
+  cursor: pointer;
+  font-weight: 600;
+  transition: var(--transition-base);
+}
+
+.bitacora-page-btn:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  transform: translateY(-2px);
+}
+
+.bitacora-page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.bitacora-page-info {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+/* Recuadros translucidos con leve desenfoque, para que se vea el fondo pero los datos resalten */
+.bitacora-page .top-panel,
+.bitacora-page .admin-menu-bar,
+.bitacora-page .bitacora-panel,
+.bitacora-page .bitacora-stat-card {
+  background-color: rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: none;
+}
+
+.bitacora-page .bitacora-stat-card:hover {
+  box-shadow: none;
+  border-color: var(--color-accent);
+}
+
+/* El desenfoque crea un nuevo contexto de apilamiento; elevamos el menú
+   para que su desplegable se muestre por encima de los recuadros de la bitácora */
+.bitacora-page .admin-menu-bar {
+  position: relative;
+  z-index: 5;
+}
+
+.bitacora-page .bitacora-table-wrap {
+  background-color: rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.bitacora-page .bitacora-badge {
+  background-color: transparent;
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent);
+}
+
+.bitacora-page .bitacora-role-badge {
+  background-color: transparent;
+  border: 1px solid var(--color-accent-2);
+  color: var(--color-accent-2);
+}
+
+.bitacora-page .bitacora-table tbody tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.bitacora-page .bitacora-table tbody tr:hover {
+  background-color: rgba(239, 68, 68, 0.16);
+}
+
+.bitacora-page .bitacora-user {
+  color: var(--color-accent-2);
+}
+
+/* Sombra de texto para mantener la legibilidad sobre el fondo */
+.bitacora-page .top-panel,
+.bitacora-page .bitacora-stats,
+.bitacora-page .bitacora-panel {
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+}
+
+/* Tipografía a juego con el estilo del taller */
+.bitacora-page .page-title h2,
+.bitacora-page .bitacora-stat-value,
+.bitacora-page .bitacora-stat-label,
+.bitacora-page .bitacora-table thead tr,
+.bitacora-page .bitacora-badge,
+.bitacora-page .bitacora-role-badge,
+.bitacora-page .bitacora-btn,
+.bitacora-page .bitacora-page-btn,
+.bitacora-page .admin-menu-button,
+.bitacora-page .btn-primary,
+.bitacora-page .btn-secondary {
+  font-family: var(--font-display);
+}
+
+.bitacora-page .page-title h2 {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 @media (max-width: 992px) {
@@ -268,5 +1077,2930 @@
 
   .portal-grid {
     grid-template-columns: 1fr;
+  }
+
+  .bitacora-input--usuario,
+  .bitacora-input--accion {
+    width: 100%;
+  }
+
+  .bitacora-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bitacora-pagination {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+/* ---------- Gestión de Usuarios (CU02) ---------- */
+
+.app-container.usuarios-page,
+.app-container.roles-page,
+.app-container.clientes-page,
+.app-container.motos-page,
+.app-container.historial-page,
+.app-container.seguimiento-page,
+.app-container.cotizaciones-page,
+.app-container.ordenes-page,
+.app-container.notas-page,
+.app-container.facturacion-page,
+.app-container.compras-page,
+.app-container.productos-page,
+.app-container.inventario-page,
+.app-container.proveedores-page,
+.app-container.perfil-page,
+.app-container.reportes-page {
+  position: relative;
+  background-color: transparent;
+  /* Paleta propia de Usuarios/Roles/Clientes/Motos/Historial/Seguimiento/Cotizaciones/Órdenes/Notas/Facturación/Compras/Productos/Inventario/Proveedores/Perfil/Reportes: rojo racing en vez de naranja */
+  --color-accent: #ef4444;
+  --color-accent-hover: #dc2626;
+  --color-accent-soft: rgba(239, 68, 68, 0.12);
+  --color-accent-glow: rgba(239, 68, 68, 0.35);
+}
+
+.usuarios-page .top-panel,
+.usuarios-page .admin-menu-bar,
+.usuarios-page .bitacora-panel,
+.usuarios-page .usuarios-content .bitacora-table-wrap,
+.roles-page .top-panel,
+.roles-page .admin-menu-bar,
+.roles-page .bitacora-panel,
+.roles-page .bitacora-table-wrap,
+.clientes-page .top-panel,
+.clientes-page .admin-menu-bar,
+.clientes-page .bitacora-panel,
+.clientes-page .bitacora-table-wrap,
+.motos-page .top-panel,
+.motos-page .admin-menu-bar,
+.motos-page .bitacora-panel,
+.motos-page .bitacora-table-wrap,
+.historial-page .top-panel,
+.historial-page .admin-menu-bar,
+.historial-page .bitacora-panel,
+.historial-page .bitacora-table-wrap,
+.seguimiento-page .top-panel,
+.seguimiento-page .admin-menu-bar,
+.seguimiento-page .bitacora-panel,
+.seguimiento-page .bitacora-table-wrap,
+.cotizaciones-page .top-panel,
+.cotizaciones-page .admin-menu-bar,
+.cotizaciones-page .bitacora-panel,
+.cotizaciones-page .bitacora-table-wrap,
+.ordenes-page .top-panel,
+.ordenes-page .admin-menu-bar,
+.ordenes-page .bitacora-panel,
+.ordenes-page .bitacora-table-wrap,
+.notas-page .top-panel,
+.notas-page .admin-menu-bar,
+.notas-page .bitacora-panel,
+.notas-page .bitacora-table-wrap,
+.facturacion-page .top-panel,
+.facturacion-page .admin-menu-bar,
+.facturacion-page .bitacora-panel,
+.facturacion-page .bitacora-table-wrap,
+.compras-page .top-panel,
+.compras-page .admin-menu-bar,
+.compras-page .bitacora-panel,
+.compras-page .bitacora-table-wrap,
+.productos-page .top-panel,
+.productos-page .admin-menu-bar,
+.productos-page .bitacora-panel,
+.productos-page .bitacora-table-wrap,
+.inventario-page .top-panel,
+.inventario-page .admin-menu-bar,
+.inventario-page .bitacora-panel,
+.inventario-page .bitacora-table-wrap,
+.proveedores-page .top-panel,
+.proveedores-page .admin-menu-bar,
+.proveedores-page .bitacora-panel,
+.proveedores-page .bitacora-table-wrap,
+.perfil-page .top-panel,
+.perfil-page .admin-menu-bar,
+.perfil-page .bitacora-panel,
+.perfil-page .bitacora-table-wrap,
+.reportes-page .top-panel,
+.reportes-page .admin-menu-bar,
+.reportes-page .bitacora-panel,
+.reportes-page .bitacora-table-wrap {
+  background-color: rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: none;
+}
+
+.usuarios-page .admin-menu-bar,
+.roles-page .admin-menu-bar,
+.clientes-page .admin-menu-bar,
+.motos-page .admin-menu-bar,
+.historial-page .admin-menu-bar,
+.seguimiento-page .admin-menu-bar,
+.cotizaciones-page .admin-menu-bar,
+.ordenes-page .admin-menu-bar,
+.notas-page .admin-menu-bar,
+.facturacion-page .admin-menu-bar,
+.compras-page .admin-menu-bar,
+.productos-page .admin-menu-bar,
+.inventario-page .admin-menu-bar,
+.proveedores-page .admin-menu-bar,
+.perfil-page .admin-menu-bar,
+.reportes-page .admin-menu-bar {
+  position: relative;
+  z-index: 5;
+}
+
+.usuarios-page .bitacora-table tbody tr:nth-child(even),
+.roles-page .bitacora-table tbody tr:nth-child(even),
+.clientes-page .bitacora-table tbody tr:nth-child(even),
+.motos-page .bitacora-table tbody tr:nth-child(even),
+.historial-page .bitacora-table tbody tr:nth-child(even),
+.seguimiento-page .bitacora-table tbody tr:nth-child(even),
+.cotizaciones-page .bitacora-table tbody tr:nth-child(even),
+.ordenes-page .bitacora-table tbody tr:nth-child(even),
+.notas-page .bitacora-table tbody tr:nth-child(even),
+.facturacion-page .bitacora-table tbody tr:nth-child(even),
+.compras-page .bitacora-table tbody tr:nth-child(even),
+.productos-page .bitacora-table tbody tr:nth-child(even),
+.inventario-page .bitacora-table tbody tr:nth-child(even),
+.proveedores-page .bitacora-table tbody tr:nth-child(even),
+.perfil-page .bitacora-table tbody tr:nth-child(even),
+.reportes-page .bitacora-table tbody tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.usuarios-page .bitacora-table tbody tr:hover,
+.roles-page .bitacora-table tbody tr:hover,
+.clientes-page .bitacora-table tbody tr:hover,
+.motos-page .bitacora-table tbody tr:hover,
+.historial-page .bitacora-table tbody tr:hover,
+.seguimiento-page .bitacora-table tbody tr:hover,
+.cotizaciones-page .bitacora-table tbody tr:hover,
+.ordenes-page .bitacora-table tbody tr:hover,
+.notas-page .bitacora-table tbody tr:hover,
+.facturacion-page .bitacora-table tbody tr:hover,
+.compras-page .bitacora-table tbody tr:hover,
+.productos-page .bitacora-table tbody tr:hover,
+.inventario-page .bitacora-table tbody tr:hover,
+.proveedores-page .bitacora-table tbody tr:hover,
+.perfil-page .bitacora-table tbody tr:hover,
+.reportes-page .bitacora-table tbody tr:hover {
+  background-color: var(--color-accent-soft);
+}
+
+/* Tipografía a juego con la Bitácora */
+.usuarios-page .page-title h2,
+.usuarios-page .bitacora-table thead tr,
+.usuarios-page .usuario-status-badge,
+.usuarios-page .bitacora-btn,
+.usuarios-page .admin-menu-button,
+.usuarios-page .btn-primary,
+.usuarios-page .btn-secondary,
+.roles-page .page-title h2,
+.roles-page .bitacora-table thead tr,
+.roles-page .bitacora-btn,
+.roles-page .admin-menu-button,
+.roles-page .btn-primary,
+.roles-page .btn-secondary,
+.clientes-page .page-title h2,
+.clientes-page .bitacora-table thead tr,
+.clientes-page .usuario-status-badge,
+.clientes-page .bitacora-btn,
+.clientes-page .admin-menu-button,
+.clientes-page .btn-primary,
+.clientes-page .btn-secondary,
+.motos-page .page-title h2,
+.motos-page .bitacora-table thead tr,
+.motos-page .usuario-status-badge,
+.motos-page .bitacora-btn,
+.motos-page .admin-menu-button,
+.motos-page .btn-primary,
+.motos-page .btn-secondary,
+.historial-page .page-title h2,
+.historial-page .bitacora-table thead tr,
+.historial-page .bitacora-btn,
+.historial-page .admin-menu-button,
+.historial-page .btn-primary,
+.historial-page .btn-secondary,
+.seguimiento-page .page-title h2,
+.seguimiento-page .bitacora-table thead tr,
+.seguimiento-page .bitacora-btn,
+.seguimiento-page .admin-menu-button,
+.seguimiento-page .btn-primary,
+.seguimiento-page .btn-secondary,
+.cotizaciones-page .page-title h2,
+.cotizaciones-page .bitacora-table thead tr,
+.cotizaciones-page .bitacora-btn,
+.cotizaciones-page .admin-menu-button,
+.cotizaciones-page .btn-primary,
+.cotizaciones-page .btn-secondary,
+.ordenes-page .page-title h2,
+.ordenes-page .bitacora-table thead tr,
+.ordenes-page .bitacora-btn,
+.ordenes-page .admin-menu-button,
+.ordenes-page .btn-primary,
+.ordenes-page .btn-secondary,
+.notas-page .page-title h2,
+.notas-page .bitacora-table thead tr,
+.notas-page .bitacora-btn,
+.notas-page .admin-menu-button,
+.notas-page .btn-primary,
+.notas-page .btn-secondary,
+.facturacion-page .page-title h2,
+.facturacion-page .bitacora-table thead tr,
+.facturacion-page .bitacora-btn,
+.facturacion-page .admin-menu-button,
+.facturacion-page .btn-primary,
+.facturacion-page .btn-secondary,
+.compras-page .page-title h2,
+.compras-page .bitacora-table thead tr,
+.compras-page .bitacora-btn,
+.compras-page .admin-menu-button,
+.compras-page .btn-primary,
+.compras-page .btn-secondary,
+.productos-page .page-title h2,
+.productos-page .bitacora-table thead tr,
+.productos-page .usuario-status-badge,
+.productos-page .bitacora-btn,
+.productos-page .admin-menu-button,
+.productos-page .btn-primary,
+.productos-page .btn-secondary,
+.inventario-page .page-title h2,
+.inventario-page .bitacora-table thead tr,
+.inventario-page .usuario-status-badge,
+.inventario-page .bitacora-btn,
+.inventario-page .admin-menu-button,
+.inventario-page .btn-primary,
+.inventario-page .btn-secondary,
+.proveedores-page .page-title h2,
+.proveedores-page .bitacora-table thead tr,
+.proveedores-page .bitacora-btn,
+.proveedores-page .admin-menu-button,
+.proveedores-page .btn-primary,
+.proveedores-page .btn-secondary,
+.perfil-page .page-title h2,
+.perfil-page .bitacora-table thead tr,
+.perfil-page .bitacora-btn,
+.perfil-page .admin-menu-button,
+.perfil-page .btn-primary,
+.perfil-page .btn-secondary,
+.reportes-page .page-title h2,
+.reportes-page .bitacora-table thead tr,
+.reportes-page .bitacora-btn,
+.reportes-page .admin-menu-button,
+.reportes-page .btn-primary,
+.reportes-page .btn-secondary {
+  font-family: var(--font-display);
+}
+
+.usuarios-page .page-title h2,
+.roles-page .page-title h2,
+.clientes-page .page-title h2,
+.motos-page .page-title h2,
+.historial-page .page-title h2,
+.seguimiento-page .page-title h2,
+.cotizaciones-page .page-title h2,
+.ordenes-page .page-title h2,
+.notas-page .page-title h2,
+.facturacion-page .page-title h2,
+.compras-page .page-title h2,
+.productos-page .page-title h2,
+.inventario-page .page-title h2,
+.proveedores-page .page-title h2,
+.perfil-page .page-title h2,
+.reportes-page .page-title h2 {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.usuarios-page .top-panel,
+.usuarios-page .bitacora-panel,
+.roles-page .top-panel,
+.roles-page .bitacora-panel,
+.clientes-page .top-panel,
+.clientes-page .bitacora-panel,
+.motos-page .top-panel,
+.motos-page .bitacora-panel,
+.historial-page .top-panel,
+.historial-page .bitacora-panel,
+.seguimiento-page .top-panel,
+.seguimiento-page .bitacora-panel,
+.cotizaciones-page .top-panel,
+.cotizaciones-page .bitacora-panel,
+.ordenes-page .top-panel,
+.ordenes-page .bitacora-panel,
+.notas-page .top-panel,
+.notas-page .bitacora-panel,
+.facturacion-page .top-panel,
+.facturacion-page .bitacora-panel,
+.compras-page .top-panel,
+.compras-page .bitacora-panel,
+.productos-page .top-panel,
+.productos-page .bitacora-panel,
+.inventario-page .top-panel,
+.inventario-page .bitacora-panel,
+.proveedores-page .top-panel,
+.proveedores-page .bitacora-panel,
+.perfil-page .top-panel,
+.perfil-page .bitacora-panel,
+.reportes-page .top-panel,
+.reportes-page .bitacora-panel {
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+}
+
+.usuarios-content {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.usuarios-form-panel {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.usuarios-table-panel {
+  flex: 2 1 420px;
+  min-width: 0;
+}
+
+.usuarios-panel-title {
+  color: var(--color-text-muted);
+  margin-bottom: 18px;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.usuarios-page .input-group,
+.roles-page .input-group,
+.clientes-page .input-group,
+.motos-page .input-group,
+.historial-page .input-group,
+.seguimiento-page .input-group,
+.cotizaciones-page .input-group,
+.ordenes-page .input-group,
+.notas-page .input-group,
+.facturacion-page .input-group,
+.compras-page .input-group,
+.productos-page .input-group,
+.inventario-page .input-group,
+.proveedores-page .input-group,
+.perfil-page .input-group,
+.reportes-page .input-group {
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.usuarios-page .input-group label,
+.roles-page .input-group label,
+.clientes-page .input-group label,
+.motos-page .input-group label,
+.historial-page .input-group label,
+.seguimiento-page .input-group label,
+.cotizaciones-page .input-group label,
+.ordenes-page .input-group label,
+.notas-page .input-group label,
+.facturacion-page .input-group label,
+.compras-page .input-group label,
+.productos-page .input-group label,
+.inventario-page .input-group label,
+.proveedores-page .input-group label,
+.perfil-page .input-group label,
+.reportes-page .input-group label {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.usuarios-page .input-group input,
+.usuarios-page .input-group select,
+.roles-page .input-group input,
+.roles-page .input-group select,
+.clientes-page .input-group input,
+.clientes-page .input-group select,
+.motos-page .input-group input,
+.motos-page .input-group select,
+.historial-page .input-group input,
+.historial-page .input-group select,
+.seguimiento-page .input-group input,
+.seguimiento-page .input-group select,
+.seguimiento-page .input-group textarea,
+.cotizaciones-page .input-group input,
+.cotizaciones-page .input-group select,
+.cotizaciones-page .input-group textarea,
+.ordenes-page .input-group input,
+.ordenes-page .input-group select,
+.ordenes-page .input-group textarea,
+.notas-page .input-group input,
+.notas-page .input-group select,
+.notas-page .input-group textarea,
+.facturacion-page .input-group input,
+.facturacion-page .input-group select,
+.facturacion-page .input-group textarea,
+.compras-page .input-group input,
+.compras-page .input-group select,
+.compras-page .input-group textarea,
+.productos-page .input-group input,
+.productos-page .input-group select,
+.inventario-page .input-group input,
+.proveedores-page .input-group input,
+.perfil-page .input-group input,
+.reportes-page .input-group input,
+.reportes-page .input-group select {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-strong);
+  background-color: var(--color-input-bg);
+  color: var(--color-text);
+  font-size: 0.95rem;
+  transition: var(--transition-base);
+}
+
+.usuarios-page .input-group input:focus,
+.usuarios-page .input-group select:focus,
+.roles-page .input-group input:focus,
+.roles-page .input-group select:focus,
+.clientes-page .input-group input:focus,
+.clientes-page .input-group select:focus,
+.motos-page .input-group input:focus,
+.motos-page .input-group select:focus,
+.historial-page .input-group input:focus,
+.historial-page .input-group select:focus,
+.seguimiento-page .input-group input:focus,
+.seguimiento-page .input-group select:focus,
+.seguimiento-page .input-group textarea:focus,
+.cotizaciones-page .input-group input:focus,
+.cotizaciones-page .input-group select:focus,
+.cotizaciones-page .input-group textarea:focus,
+.ordenes-page .input-group input:focus,
+.ordenes-page .input-group select:focus,
+.ordenes-page .input-group textarea:focus,
+.notas-page .input-group input:focus,
+.notas-page .input-group select:focus,
+.notas-page .input-group textarea:focus,
+.facturacion-page .input-group input:focus,
+.facturacion-page .input-group select:focus,
+.facturacion-page .input-group textarea:focus,
+.compras-page .input-group input:focus,
+.compras-page .input-group select:focus,
+.compras-page .input-group textarea:focus,
+.productos-page .input-group input:focus,
+.productos-page .input-group select:focus,
+.inventario-page .input-group input:focus,
+.proveedores-page .input-group input:focus,
+.perfil-page .input-group input:focus,
+.reportes-page .input-group input:focus,
+.reportes-page .input-group select:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.usuario-status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.usuario-status-badge--activo {
+  background-color: rgba(0, 255, 0, 0.1);
+  color: #00ff00;
+}
+
+.usuario-status-badge--inactivo {
+  background-color: rgba(255, 0, 0, 0.1);
+  color: #ff4d4d;
+}
+
+.table-action-btn {
+  border: none;
+  border-radius: var(--radius-sm);
+  color: white;
+  padding: 6px 10px;
+  margin-right: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-base);
+}
+
+.table-action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-card);
+}
+
+.table-action-btn--edit {
+  background-color: var(--color-accent-2);
+}
+
+.table-action-btn--danger {
+  background-color: #8f2d2d;
+}
+
+.table-action-btn--success {
+  background-color: #2d8f5a;
+}
+
+.usuarios-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 50;
+}
+
+.usuarios-modal {
+  width: 100%;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: var(--shadow-card);
+}
+
+.usuarios-modal--sm {
+  max-width: 460px;
+  max-height: 85vh;
+  overflow: auto;
+}
+
+.usuarios-modal--lg {
+  max-width: 860px;
+  max-height: 85vh;
+  overflow: auto;
+}
+
+@media (max-width: 720px) {
+  .usuarios-content {
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
+
+  .usuarios-form-panel,
+  .usuarios-table-panel {
+    flex: 1 1 auto;
+  }
+}
+
+/* ---------- Roles y Permisos (CU03/CU04) ---------- */
+
+.roles-content {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.roles-panel {
+  flex: 1 1 360px;
+  min-width: 0;
+}
+
+.roles-assign-panel {
+  margin-top: 20px;
+}
+
+.roles-panel .bitacora-table-wrap,
+.roles-assign-panel .bitacora-table-wrap {
+  margin-top: 16px;
+}
+
+.roles-assign-form {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.roles-assign-form .input-group {
+  flex: 1 1 220px;
+  margin-bottom: 0;
+}
+
+@media (max-width: 720px) {
+  .roles-content {
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
+
+  .roles-panel {
+    flex: 1 1 auto;
+  }
+
+  .roles-assign-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .roles-assign-form .input-group {
+    flex: 1 1 auto;
+  }
+}
+
+/* ---------- Gestión de Clientes (CU05) ---------- */
+
+.clientes-content {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.clientes-form-panel {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.clientes-list-panel {
+  flex: 2 1 420px;
+  min-width: 0;
+}
+
+.clientes-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.clientes-list-header h3 {
+  margin: 0;
+}
+
+.clientes-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.clientes-search-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.clientes-page .bitacora-table tbody tr.clientes-row--inactiva {
+  opacity: 0.55;
+}
+
+@media (max-width: 720px) {
+  .clientes-content {
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
+
+  .clientes-form-panel,
+  .clientes-list-panel {
+    flex: 1 1 auto;
+  }
+
+  .clientes-search {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .clientes-search .bitacora-input {
+    width: 100%;
+  }
+}
+
+/* ---------- Gestión de Motocicletas (CU06) ---------- */
+
+.motos-content {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.motos-form-panel {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.motos-list-panel {
+  flex: 2 1 420px;
+  min-width: 0;
+}
+
+.motos-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.motos-list-header h3 {
+  margin: 0;
+}
+
+.motos-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.motos-search-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.motos-page .bitacora-table tbody tr.motos-row--inactiva {
+  opacity: 0.55;
+}
+
+.table-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+@media (max-width: 720px) {
+  .motos-content {
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
+
+  .motos-form-panel,
+  .motos-list-panel {
+    flex: 1 1 auto;
+  }
+
+  .motos-search {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .motos-search .bitacora-input {
+    width: 100%;
+  }
+}
+
+/* ---------- Historial de Mantenimiento (CU15) ---------- */
+
+.historial-search-panel {
+  margin-bottom: 20px;
+}
+
+.historial-search-bar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.historial-search-bar .bitacora-input {
+  flex: 1;
+  min-width: 220px;
+}
+
+.historial-warning-box {
+  background-color: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  margin-top: 16px;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.historial-vehiculo-panel {
+  margin-bottom: 20px;
+}
+
+.historial-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px 24px;
+  margin-top: 12px;
+}
+
+.historial-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.historial-info-label {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.historial-content {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.historial-ordenes-panel {
+  flex: 2 1 420px;
+  min-width: 0;
+}
+
+.historial-desglose-panel {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.historial-detalle-item {
+  border-bottom: 1px solid var(--color-border);
+  padding: 8px 0;
+}
+
+.historial-detalle-item:last-child {
+  border-bottom: none;
+}
+
+@media (max-width: 720px) {
+  .historial-content {
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
+
+  .historial-ordenes-panel,
+  .historial-desglose-panel {
+    flex: 1 1 auto;
+  }
+
+  .historial-search-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .historial-search-bar .bitacora-input,
+  .historial-search-bar .bitacora-btn {
+    width: 100%;
+  }
+}
+
+/* ---------- Seguimiento de Clientes (CU16) ---------- */
+
+.seguimiento-content {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.seguimiento-list-panel {
+  flex: 2 1 420px;
+  min-width: 0;
+}
+
+.seguimiento-detail-panel {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.seguimiento-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.seguimiento-list-header h3 {
+  margin: 0;
+}
+
+.seguimiento-page .input-group textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
+@media (max-width: 720px) {
+  .seguimiento-content {
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
+
+  .seguimiento-list-panel,
+  .seguimiento-detail-panel {
+    flex: 1 1 auto;
+  }
+}
+
+/* ---------- Elaborar Cotizaciones (CU07) ---------- */
+
+.cotizaciones-content {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.cotizaciones-form-panel {
+  flex: 1 1 360px;
+  min-width: 0;
+}
+
+.cotizaciones-list-panel {
+  flex: 2 1 480px;
+  min-width: 0;
+}
+
+.cotizaciones-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.cotizaciones-list-header h3 {
+  margin: 0;
+}
+
+.cotizaciones-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.cotizaciones-search .bitacora-input {
+  flex: 1;
+  min-width: 220px;
+}
+
+.cotizaciones-items-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 18px 0 10px;
+}
+
+.cotizaciones-items-header h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+
+.cotizaciones-detalle-item {
+  background-color: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.cotizaciones-detalle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.cotizaciones-detalle-grid .input-group {
+  margin-bottom: 0;
+}
+
+.cotizaciones-detalle-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.cotizaciones-page .input-group input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cotizaciones-totales {
+  margin-top: 12px;
+  padding: 12px;
+  background-color: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+@media (max-width: 720px) {
+  .cotizaciones-content {
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
+
+  .cotizaciones-form-panel,
+  .cotizaciones-list-panel {
+    flex: 1 1 auto;
+  }
+
+  .cotizaciones-search {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cotizaciones-search .bitacora-input,
+  .cotizaciones-search .bitacora-btn {
+    width: 100%;
+  }
+}
+
+/* ---------- Gestión de Órdenes de Trabajo (CU08) ---------- */
+
+.ordenes-content {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.ordenes-form-panel {
+  flex: 1 1 360px;
+  min-width: 0;
+}
+
+.ordenes-list-panel {
+  flex: 2 1 480px;
+  min-width: 0;
+}
+
+.ordenes-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.ordenes-list-header h3 {
+  margin: 0;
+}
+
+.ordenes-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.ordenes-search .bitacora-input {
+  flex: 1;
+  min-width: 220px;
+}
+
+.ordenes-page .input-group input:read-only {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 720px) {
+  .ordenes-content {
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
+
+  .ordenes-form-panel,
+  .ordenes-list-panel {
+    flex: 1 1 auto;
+  }
+
+  .ordenes-search {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ordenes-search .bitacora-input,
+  .ordenes-search .bitacora-btn {
+    width: 100%;
+  }
+}
+
+/* ---------- Notas de Trabajo (CU09) ---------- */
+
+.notas-content {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.notas-form-panel {
+  flex: 1 1 360px;
+  min-width: 0;
+}
+
+.notas-list-panel {
+  flex: 2 1 480px;
+  min-width: 0;
+}
+
+.notas-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.notas-list-header h3 {
+  margin: 0;
+}
+
+.notas-contenido-cell {
+  max-width: 280px;
+  white-space: normal;
+  word-break: break-word;
+}
+
+@media (max-width: 720px) {
+  .notas-content {
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
+
+  .notas-form-panel,
+  .notas-list-panel {
+    flex: 1 1 auto;
+  }
+}
+
+/* ---------- Emisión de Facturación (CU14) ---------- */
+
+.facturacion-content {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.facturacion-form-panel {
+  flex: 1 1 360px;
+  min-width: 0;
+}
+
+.facturacion-detail-panel {
+  flex: 2 1 480px;
+  min-width: 0;
+}
+
+.facturacion-detail-info p {
+  margin: 6px 0;
+}
+
+.facturacion-result-box {
+  margin-top: 20px;
+  background-color: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+}
+
+.facturacion-result-box h4 {
+  margin: 0 0 8px;
+  color: var(--color-accent);
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.facturacion-result-box p {
+  margin: 4px 0;
+}
+
+.facturacion-history-panel {
+  margin-top: 24px;
+}
+
+@media (max-width: 720px) {
+  .facturacion-content {
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
+
+  .facturacion-form-panel,
+  .facturacion-detail-panel {
+    flex: 1 1 auto;
+  }
+}
+
+/* ---------- Compras a Proveedores (CU12) ---------- */
+
+/* fondo-compras-2 trae texto incrustado a la izquierda; se ancla a la derecha
+   para mostrar la zona libre de texto (repuestos/llave) */
+.compras-page .page-bg-layer--b {
+  background-position: right center;
+}
+
+/* fondo-reportes-2 tiene la moto desplazada hacia el centro-derecha; con
+   "center" queda casi fuera de cuadro en pantallas angostas, se reubica */
+.reportes-page .page-bg-layer--b {
+  background-position: 65% center;
+}
+
+.compras-content {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.compras-form-panel {
+  flex: 1 1 360px;
+  min-width: 0;
+}
+
+.compras-list-panel {
+  flex: 2 1 480px;
+  min-width: 0;
+}
+
+.compras-detalles-title {
+  margin: 16px 0 12px;
+  color: var(--color-text-muted);
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 1rem;
+}
+
+.compras-detalle-item {
+  background-color: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.compras-detalle-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.compras-totales {
+  margin-top: 12px;
+}
+
+.compras-totales p {
+  margin: 4px 0;
+}
+
+@media (max-width: 720px) {
+  .compras-content {
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
+
+  .compras-form-panel,
+  .compras-list-panel {
+    flex: 1 1 auto;
+  }
+}
+
+/* ---------- Gestión de Productos (CU10) ---------- */
+
+.productos-content {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.productos-form-panel {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.productos-list-panel {
+  flex: 2 1 480px;
+  min-width: 0;
+}
+
+.productos-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.productos-list-header h3 {
+  margin: 0;
+}
+
+.productos-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.productos-search-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.productos-page .bitacora-table tbody tr.productos-row--inactiva {
+  opacity: 0.55;
+}
+
+@media (max-width: 720px) {
+  .productos-content {
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
+
+  .productos-form-panel,
+  .productos-list-panel {
+    flex: 1 1 auto;
+  }
+
+  .productos-search {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .productos-search .bitacora-input {
+    width: 100%;
+  }
+}
+
+/* ---------- Monitoreo de Inventario (CU11) ---------- */
+
+.inventario-table-panel {
+  margin-top: 20px;
+}
+
+.inventario-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.inventario-filter-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.inventario-toolbar-note {
+  flex: 1 1 220px;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.inventario-total {
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.inventario-content {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.inventario-form-panel {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.inventario-mensaje {
+  margin-top: 12px;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.inventario-historial-list {
+  margin-top: 16px;
+}
+
+.inventario-historial-list h4 {
+  margin: 0 0 8px 0;
+}
+
+.inventario-historial-list ul {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.inventario-page .bitacora-table tbody tr.inventario-row--bajo {
+  background-color: rgba(239, 68, 68, 0.18);
+}
+
+.inventario-page .bitacora-table tbody tr.inventario-row--bajo td:nth-child(6) {
+  color: #ff6b6b;
+  font-weight: 700;
+}
+
+@media (max-width: 720px) {
+  .inventario-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .inventario-toolbar-note,
+  .inventario-total {
+    flex: 0 0 auto;
+  }
+
+  .inventario-content {
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
+
+  .inventario-form-panel {
+    flex: 1 1 auto;
+  }
+}
+
+/* ---------- Gestión de Proveedores (CU13) ---------- */
+
+.proveedores-content {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.proveedores-form-panel {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.proveedores-list-panel {
+  flex: 2 1 480px;
+  min-width: 0;
+}
+
+.proveedores-page .bitacora-table td:nth-child(6) {
+  word-break: break-word;
+}
+
+@media (max-width: 720px) {
+  .proveedores-content {
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
+
+  .proveedores-form-panel,
+  .proveedores-list-panel {
+    flex: 1 1 auto;
+  }
+}
+
+/* ---------- Mi Perfil (CU17) ---------- */
+
+.perfil-content {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.perfil-panel {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.perfil-page .input-group input:read-only {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.perfil-password-hint {
+  margin-top: -4px;
+  margin-bottom: 14px;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.perfil-permisos-list {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.perfil-permiso-item {
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.perfil-permiso-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.perfil-permiso-item strong {
+  color: var(--color-accent);
+}
+
+.perfil-permiso-acciones {
+  margin-top: 6px;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 720px) {
+  .perfil-content {
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
+
+  .perfil-panel {
+    flex: 1 1 auto;
+  }
+}
+
+/* ---------- Generar Reportes (CU18) ---------- */
+
+.reportes-filtros-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.reportes-filtros-grid .input-group {
+  margin-bottom: 0;
+}
+
+.reportes-export-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.reportes-hint {
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+/* ---------- Dashboard Analítico (CU19) ---------- */
+
+.app-container.dashboard-page {
+  position: relative;
+  background-color: transparent;
+  /* Paleta propia del Dashboard Analítico: rojo racing en vez de naranja */
+  --color-accent: #ef4444;
+  --color-accent-hover: #dc2626;
+  --color-accent-soft: rgba(239, 68, 68, 0.12);
+  --color-accent-glow: rgba(239, 68, 68, 0.35);
+}
+
+/* Ambos fondos tienen el sujeto (moto/piloto) desplazado del centro;
+   con "center" queda casi fuera de cuadro en pantallas angostas */
+.dashboard-page .page-bg-layer--a,
+.dashboard-page .page-bg-layer--b {
+  background-position: 65% center;
+}
+
+.dashboard-page .top-panel,
+.dashboard-page .bitacora-panel,
+.dashboard-page .bitacora-stat-card {
+  background-color: rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: none;
+}
+
+.dashboard-page .bitacora-stat-card:hover {
+  box-shadow: none;
+  border-color: var(--color-accent);
+}
+
+.dashboard-page .bitacora-stat-card.dashboard-stat-card--alert {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 14px var(--color-accent-glow);
+}
+
+.dashboard-page .top-panel,
+.dashboard-page .bitacora-stats,
+.dashboard-page .bitacora-panel {
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+}
+
+.dashboard-page .page-title h2,
+.dashboard-page .bitacora-stat-value,
+.dashboard-page .bitacora-stat-label,
+.dashboard-page .bitacora-btn,
+.dashboard-page .btn-secondary {
+  font-family: var(--font-display);
+}
+
+.dashboard-page .page-title h2 {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.dashboard-charts-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.dashboard-charts-grid > .bitacora-panel {
+  min-width: 0;
+}
+
+.dashboard-chart-wrap {
+  height: 260px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.dashboard-alerts-list {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.dashboard-alert-item {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.dashboard-alert-item:last-child {
+  border-bottom: none;
+}
+
+.dashboard-alert-product {
+  font-weight: 700;
+}
+
+.dashboard-alert-meta {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  margin-top: 2px;
+}
+
+.dashboard-empty-hint {
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 900px) {
+  .dashboard-charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Asignar Privilegios (CU03/CU04) ---------- */
+
+.app-container.privilegios-page {
+  position: relative;
+  background-color: transparent;
+  /* Paleta propia de Asignar Privilegios: rojo racing en vez de naranja */
+  --color-accent: #ef4444;
+  --color-accent-hover: #dc2626;
+  --color-accent-soft: rgba(239, 68, 68, 0.12);
+  --color-accent-glow: rgba(239, 68, 68, 0.35);
+}
+
+/* Ambos fondos tienen su sujeto principal corrido hacia la izquierda;
+   con "center" se pierde en pantallas angostas */
+.privilegios-page .page-bg-layer--a {
+  background-position: 35% center;
+}
+
+.privilegios-page .page-bg-layer--b {
+  background-position: 40% center;
+}
+
+.privilegios-page .top-panel,
+.privilegios-page .bitacora-panel,
+.privilegios-page .bitacora-table-wrap {
+  background-color: rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: none;
+}
+
+.privilegios-page .bitacora-table tbody tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.privilegios-page .bitacora-table tbody tr:hover {
+  background-color: var(--color-accent-soft);
+}
+
+.privilegios-page .top-panel,
+.privilegios-page .bitacora-panel {
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+}
+
+.privilegios-page .page-title h2,
+.privilegios-page .usuarios-panel-title,
+.privilegios-page .bitacora-btn,
+.privilegios-page .btn-secondary {
+  font-family: var(--font-display);
+}
+
+.privilegios-page .page-title h2 {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.privilegios-page .bitacora-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.privilegios-table {
+  min-width: 760px;
+}
+
+.privilegios-table th:first-child,
+.privilegios-table td:first-child {
+  text-align: left;
+  width: 40%;
+  min-width: 220px;
+}
+
+.privilegios-table th {
+  text-align: center;
+  min-width: 110px;
+}
+
+.privilegios-select-row th {
+  padding: 8px 6px;
+}
+
+.privilegios-select-all {
+  width: 100%;
+  font-size: 0.78rem;
+  padding: 7px 4px;
+  text-align: center;
+}
+
+.privilegios-row--modulo td {
+  font-weight: 700;
+  color: var(--color-accent);
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.privilegios-accion-label {
+  padding-left: 32px !important;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  font-weight: 400;
+}
+
+.privilegios-cell {
+  text-align: center;
+}
+
+.privilegios-cell input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--color-accent);
+}
+
+.privilegios-cell input[type='checkbox']:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* ---------- Mi Garaje (Cliente - Mis Motocicletas) ---------- */
+
+.garage-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+  padding: 28px 32px;
+  background: linear-gradient(135deg, rgba(255, 102, 0, 0.16) 0%, rgba(27, 27, 27, 0.92) 60%);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.garage-hero-kicker {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--color-accent);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.garage-hero-text h1 {
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  letter-spacing: 0.04em;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.garage-hero-text p {
+  color: var(--color-text-muted);
+  max-width: 480px;
+  margin: 0;
+}
+
+.garage-hero-stats {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.garage-hero-stat {
+  min-width: 110px;
+  text-align: center;
+  background-color: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+}
+
+.garage-hero-stat-value {
+  display: block;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  line-height: 1.1;
+}
+
+.garage-hero-stat-label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 4px;
+}
+
+.garage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.garage-card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  transition: var(--transition-base);
+}
+
+.garage-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-glow);
+  border-color: var(--color-border-strong);
+}
+
+.garage-card--inactivo {
+  opacity: 0.65;
+}
+
+.garage-card-media {
+  position: relative;
+  height: 130px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(255, 102, 0, 0.35) 0%, rgba(20, 20, 20, 0.9) 100%);
+}
+
+.garage-card-media i {
+  font-size: 3.6rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.garage-card-status {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  backdrop-filter: blur(4px);
+}
+
+.garage-card-status--activo {
+  background-color: rgba(0, 255, 0, 0.16);
+  color: #7dff9b;
+  border: 1px solid rgba(0, 255, 0, 0.3);
+}
+
+.garage-card-status--inactivo {
+  background-color: rgba(255, 0, 0, 0.16);
+  color: #ff8f8f;
+  border: 1px solid rgba(255, 0, 0, 0.3);
+}
+
+.garage-card-plate {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  font-family: var(--font-display);
+  background-color: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  font-size: 1rem;
+  letter-spacing: 0.12em;
+  color: #fff;
+}
+
+.garage-card-body {
+  padding: 16px 18px 18px;
+}
+
+.garage-card-title {
+  margin: 0;
+  font-size: 1.15rem;
+  color: var(--color-text);
+}
+
+.garage-card-subtitle {
+  margin: 4px 0 14px;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.garage-card-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.garage-card-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  min-width: 0;
+}
+
+.garage-card-meta-item i {
+  color: var(--color-accent);
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.garage-card-meta-item span {
+  color: var(--color-text);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.garage-empty {
+  margin-top: 20px;
+  text-align: center;
+  padding: 50px 20px;
+  color: var(--color-text-muted);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.garage-empty i {
+  font-size: 2.6rem;
+  color: var(--color-accent);
+  margin-bottom: 12px;
+  display: block;
+}
+
+@media (max-width: 720px) {
+  .garage-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 22px;
+  }
+
+  .garage-hero-text h1 {
+    font-size: 1.8rem;
+  }
+
+  .garage-hero-stats {
+    width: 100%;
+  }
+
+  .garage-hero-stat {
+    flex: 1;
+  }
+
+  .garage-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 420px) {
+  .garage-card-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .garage-hero-stats {
+    flex-direction: column;
+  }
+}
+
+/* ---------- Panel del Mecánico (Inicio Operativo) ---------- */
+
+.app-container.taller-page {
+  position: relative;
+  background-color: transparent;
+}
+
+/* Paleta propia del Panel de Recepción: rojo en vez de naranja */
+.app-container.recepcion-page {
+  --color-accent: #ef4444;
+  --color-accent-hover: #dc2626;
+  --color-accent-soft: rgba(239, 68, 68, 0.12);
+  --color-accent-glow: rgba(239, 68, 68, 0.35);
+}
+
+.taller-page .top-panel {
+  background-color: rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.taller-loading {
+  margin-top: 20px;
+  text-align: center;
+  padding: 50px 20px;
+  color: var(--color-text-muted);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.taller-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.taller-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding: 28px 32px;
+  background: linear-gradient(135deg, rgba(255, 102, 0, 0.18) 0%, rgba(27, 27, 27, 0.92) 60%);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.taller-hero-kicker {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--color-accent);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.taller-hero-text h1 {
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  letter-spacing: 0.04em;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.taller-hero-text p {
+  color: var(--color-text-muted);
+  max-width: 520px;
+  margin: 0;
+}
+
+.taller-hero-clock {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background-color: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  padding: 14px 22px;
+}
+
+.taller-hero-clock i {
+  font-size: 1.8rem;
+  color: var(--color-accent);
+}
+
+.taller-hero-clock-value {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  letter-spacing: 0.08em;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.taller-hero-clock-label {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 2px;
+}
+
+.taller-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.taller-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 16px 18px;
+  transition: var(--transition-base);
+}
+
+.taller-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+  border-color: var(--color-border-strong);
+}
+
+.taller-stat-card i {
+  font-size: 1.6rem;
+  color: var(--color-accent);
+  width: 36px;
+  text-align: center;
+}
+
+.taller-stat-card--alert {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 14px var(--color-accent-glow);
+}
+
+.taller-stat-card--alert i {
+  color: #ff4d4d;
+}
+
+.taller-stat-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.taller-stat-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.1;
+}
+
+.taller-stat-label {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+
+.taller-main {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.taller-panel {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 20px;
+}
+
+.taller-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.taller-panel-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.taller-panel-header h3 i {
+  color: var(--color-accent);
+}
+
+.taller-order-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.taller-order-card {
+  background-color: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  cursor: pointer;
+  transition: var(--transition-base);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.taller-order-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-glow);
+  border-color: var(--color-border-strong);
+}
+
+.taller-order-card--active {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-soft), var(--shadow-glow);
+}
+
+.taller-order-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.taller-order-code {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  letter-spacing: 0.06em;
+  color: var(--color-text);
+}
+
+.taller-order-vehicle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.taller-order-vehicle i {
+  font-size: 1.8rem;
+  color: var(--color-accent);
+  width: 36px;
+  text-align: center;
+}
+
+.taller-order-vehicle div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.taller-order-vehicle strong {
+  color: var(--color-text);
+  font-size: 0.95rem;
+}
+
+.taller-order-vehicle span {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+}
+
+.taller-order-client {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.taller-order-client i {
+  color: var(--color-accent);
+}
+
+.taller-order-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.taller-order-dates i {
+  color: var(--color-accent);
+  width: 16px;
+  text-align: center;
+}
+
+.taller-order-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+}
+
+.taller-order-total {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.taller-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.taller-badge--prioridad-alta {
+  background-color: rgba(255, 153, 0, 0.16);
+  color: #ffb84d;
+  border-color: rgba(255, 153, 0, 0.35);
+}
+
+.taller-badge--prioridad-urgente {
+  background-color: rgba(255, 0, 0, 0.16);
+  color: #ff8f8f;
+  border-color: rgba(255, 0, 0, 0.35);
+}
+
+.taller-badge--estado-finalizado {
+  background-color: rgba(0, 255, 0, 0.16);
+  color: #7dff9b;
+  border-color: rgba(0, 255, 0, 0.3);
+}
+
+.taller-badge--estado-en-progreso,
+.taller-badge--estado-abierta,
+.taller-badge--estado-aprobado,
+.taller-badge--estado-aprobada {
+  background-color: var(--color-accent-2-soft);
+  color: var(--color-accent-2);
+  border-color: rgba(46, 160, 255, 0.35);
+}
+
+.taller-badge--estado-esperando-repuesto,
+.taller-badge--estado-pendiente {
+  background-color: rgba(255, 204, 0, 0.14);
+  color: #ffd84d;
+  border-color: rgba(255, 204, 0, 0.32);
+}
+
+.taller-badge--estado-rechazado,
+.taller-badge--estado-rechazada {
+  background-color: rgba(255, 0, 0, 0.16);
+  color: #ff8f8f;
+  border-color: rgba(255, 0, 0, 0.3);
+}
+
+.taller-empty,
+.taller-empty-inline {
+  text-align: center;
+  padding: 30px 16px;
+  color: var(--color-text-muted);
+}
+
+.taller-empty i {
+  display: block;
+  font-size: 2.2rem;
+  color: var(--color-accent);
+  margin-bottom: 10px;
+}
+
+.taller-empty-inline {
+  padding: 16px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-sm);
+}
+
+.taller-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 4px;
+  margin-bottom: 16px;
+}
+
+.taller-task-item {
+  background-color: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+}
+
+.taller-task-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.taller-task-tipo {
+  font-weight: 700;
+  color: var(--color-accent);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.taller-task-fecha {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.taller-task-item p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--color-text);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.taller-task-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.taller-task-form .input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.taller-task-form .input-group label {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.taller-task-form .input-group select,
+.taller-task-form .input-group textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-strong);
+  background-color: var(--color-input-bg);
+  color: var(--color-text);
+  font-family: inherit;
+}
+
+.taller-task-form .input-group select:focus,
+.taller-task-form .input-group textarea:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.taller-task-form .input-group textarea {
+  resize: vertical;
+}
+
+.taller-alerts-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.taller-alerts-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  flex-wrap: wrap;
+}
+
+.taller-alerts-list i {
+  color: var(--color-accent);
+  font-size: 1.1rem;
+}
+
+.taller-alert-nombre {
+  flex: 1;
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.taller-alert-stock {
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+}
+
+/* ---------- Panel de Recepción (Inicio Operativo) ---------- */
+
+.recepcion-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.recepcion-quick-action {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 18px 20px;
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: left;
+  transition: var(--transition-base);
+}
+
+.recepcion-quick-action:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+  border-color: var(--color-accent);
+}
+
+.recepcion-quick-action i {
+  font-size: 1.8rem;
+  color: var(--color-accent);
+  width: 40px;
+  text-align: center;
+}
+
+.recepcion-quick-action-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.recepcion-quick-action-kicker {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.recepcion-quick-action-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.recepcion-orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.recepcion-order-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background-color: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: var(--transition-base);
+  flex-wrap: wrap;
+}
+
+.recepcion-order-row:hover {
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-glow);
+}
+
+.recepcion-order-row-id {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 80px;
+}
+
+.recepcion-order-row-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 180px;
+}
+
+.recepcion-order-row-main i {
+  font-size: 1.6rem;
+  color: var(--color-accent);
+  width: 34px;
+  text-align: center;
+}
+
+.recepcion-order-row-main div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.recepcion-order-row-main strong {
+  color: var(--color-text);
+  font-size: 0.92rem;
+}
+
+.recepcion-order-row-main span {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+.recepcion-order-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.recepcion-order-row-fecha {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.recepcion-order-row-fecha i {
+  color: var(--color-accent);
+}
+
+.recepcion-module-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.recepcion-module-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 16px 10px;
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: center;
+  transition: var(--transition-base);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.recepcion-module-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-glow);
+  color: var(--color-accent);
+}
+
+.recepcion-module-card i {
+  font-size: 1.5rem;
+  color: var(--color-accent);
+}
+
+.recepcion-secondary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.recepcion-quote-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.recepcion-quote-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background-color: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  flex-wrap: wrap;
+}
+
+.recepcion-quote-row div:first-child {
+  display: flex;
+  flex-direction: column;
+}
+
+.recepcion-quote-row strong {
+  color: var(--color-text);
+  font-size: 0.9rem;
+}
+
+.recepcion-quote-row span {
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+}
+
+.recepcion-quote-row-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.recepcion-quote-total {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.recepcion-reorder-btn {
+  background-color: var(--color-accent);
+  color: #1b1b1b;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: var(--transition-base);
+  white-space: nowrap;
+}
+
+.recepcion-reorder-btn:hover {
+  opacity: 0.85;
+}
+
+@media (max-width: 960px) {
+  .taller-main {
+    grid-template-columns: 1fr;
+  }
+
+  .recepcion-secondary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .taller-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 22px;
+  }
+
+  .taller-hero-text h1 {
+    font-size: 1.8rem;
+  }
+
+  .taller-hero-clock {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .taller-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .recepcion-quick-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .recepcion-order-row {
+    align-items: flex-start;
+  }
+
+  .recepcion-order-row-main {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .taller-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .taller-order-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .taller-panel {
+    padding: 16px;
+  }
+
+  .taller-panel-header {
+    flex-wrap: wrap;
+  }
+
+  .taller-panel-header button {
+    flex: 1;
+  }
+
+  .recepcion-module-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .recepcion-quote-row {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

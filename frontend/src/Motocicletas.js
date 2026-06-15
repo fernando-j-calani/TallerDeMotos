@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Login.css';
 import { getHomeRouteByRole } from './navigation';
+import { repairText } from './textNormalization';
 import { API_BASE_URL } from './config';
 
 const API = `${API_BASE_URL}/api`;
@@ -132,21 +133,30 @@ const Motocicletas = () => {
   };
 
   return (
-    <div style={{ padding: '30px', backgroundColor: '#121212', minHeight: '100vh', color: 'white' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <h2 style={{ color: '#ff6600', margin: 0 }}>Gestión de Motocicletas (CU06)</h2>
-        <div>
-          <button onClick={() => navigate('/clientes')} style={{ marginRight: '10px', padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Clientes</button>
-          <button onClick={() => navigate('/perfil')} style={{ marginRight: '10px', padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Mi Perfil</button>
-          <button onClick={() => navigate(getHomeRouteByRole(usuarioLocal?.rol))} style={{ padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Inicio</button>
+    <div className="app-container motos-page">
+      <div className="page-bg-layer page-bg-layer--a" style={{ backgroundImage: 'url(/static/img/motocicletas/fondo-motocicletas-1.png)' }}></div>
+      <div className="page-bg-layer page-bg-layer--b" style={{ backgroundImage: 'url(/static/img/motocicletas/fondo-motocicletas-2.png)' }}></div>
+      <div className="page-bg-overlay"></div>
+
+      <div className="top-panel">
+        <div className="page-title">
+          <h2>Gestión de Motocicletas (CU06)</h2>
+          <div className="page-subtitle">Administración de motocicletas registradas</div>
+        </div>
+        <div className="user-actions">
+          <span>👤 {repairText(usuarioLocal?.nombre)} ({repairText(usuarioLocal?.rol)})</span>
+          <button onClick={() => navigate('/clientes')} className="btn-secondary">Clientes</button>
+          <button onClick={() => navigate('/perfil')} className="btn-secondary">Mi Perfil</button>
+          <button onClick={() => navigate(getHomeRouteByRole(usuarioLocal?.rol))} className="btn-secondary">Inicio</button>
+          <button onClick={() => navigate(-1)} className="btn-secondary">Atrás</button>
         </div>
       </div>
 
-      {error && <div className="error-box" style={{ marginBottom: '15px' }}>{error}</div>}
+      {error && <div className="error-box" style={{ marginTop: '20px' }}>{error}</div>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px' }}>
-        <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
-          <h3>Registrar Motocicleta</h3>
+      <div className="motos-content">
+        <div className="bitacora-panel motos-form-panel">
+          <h3 className="usuarios-panel-title">Registrar Motocicleta</h3>
           <form onSubmit={crearMoto}>
             <div className="input-group">
               <label>Cliente</label>
@@ -154,7 +164,6 @@ const Motocicletas = () => {
                 value={nuevo.id_cliente}
                 onChange={(e) => setNuevo({ ...nuevo, id_cliente: e.target.value })}
                 required
-                style={{ width: '100%', padding: '12px', borderRadius: '5px', backgroundColor: '#2a2a2a', color: 'white', border: '1px solid #333' }}
               >
                 <option value="">Selecciona cliente</option>
                 {clientes.map((c) => (
@@ -166,21 +175,21 @@ const Motocicletas = () => {
             <div className="input-group"><label>Marca</label><input value={nuevo.marca} onChange={(e) => setNuevo({ ...nuevo, marca: e.target.value })} /></div>
             <div className="input-group"><label>Modelo</label><input value={nuevo.modelo} onChange={(e) => setNuevo({ ...nuevo, modelo: e.target.value })} /></div>
             <div className="input-group"><label>Año</label><input type="number" value={nuevo.anio} onChange={(e) => setNuevo({ ...nuevo, anio: e.target.value })} /></div>
-            <button type="submit" className="btn-login">Crear motocicleta</button>
+            <button type="submit" className="bitacora-btn bitacora-btn--filter">Crear motocicleta</button>
           </form>
         </div>
 
-        <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
-            <h3 style={{ margin: 0 }}>Listado</h3>
-            <div>
+        <div className="bitacora-panel motos-list-panel">
+          <div className="motos-list-header">
+            <h3 className="usuarios-panel-title">Listado</h3>
+            <div className="motos-search">
               <input
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
                 placeholder="Buscar por placa"
-                style={{ padding: '8px', width: '260px', marginRight: '10px', borderRadius: '5px', border: '1px solid #444', backgroundColor: '#2a2a2a', color: 'white' }}
+                className="bitacora-input"
               />
-              <label style={{ marginRight: '10px', fontSize: '13px' }}>
+              <label className="motos-search-checkbox">
                 <input
                   type="checkbox"
                   checked={mostrarInactivos}
@@ -189,85 +198,63 @@ const Motocicletas = () => {
                     setMostrarInactivos(checked);
                     cargarMotos(busqueda, checked);
                   }}
-                  style={{ marginRight: '6px' }}
                 />
                 Mostrar inactivas
               </label>
-              <button onClick={() => cargarMotos(busqueda, mostrarInactivos)} style={{ padding: '8px 12px', backgroundColor: '#ff6600', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Buscar</button>
+              <button onClick={() => cargarMotos(busqueda, mostrarInactivos)} className="bitacora-btn bitacora-btn--filter">Buscar</button>
             </div>
           </div>
 
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #444' }}>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Placa</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Marca/Modelo</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Cliente</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Estado</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {motos.map((m) => (
-                <tr
-                  key={m.codigo}
-                  style={{
-                    borderBottom: '1px solid #2c2c2c',
-                    opacity: (m.estado || 'Activo') === 'Inactivo' ? 0.55 : 1,
-                    color: (m.estado || 'Activo') === 'Inactivo' ? '#ff8f8f' : 'white',
-                  }}
-                >
-                  <td style={{ padding: '8px' }}>{m.placa}</td>
-                  <td style={{ padding: '8px' }}>{(m.marca || '-') + ' / ' + (m.modelo || '-')}</td>
-                  <td style={{ padding: '8px' }}>{m.cliente_nombre || '-'}</td>
-                  <td style={{ padding: '8px' }}>
-                    <span
-                      style={{
-                        backgroundColor: (m.estado || 'Activo') === 'Activo' ? 'rgba(0,255,0,0.15)' : 'rgba(255,0,0,0.15)',
-                        color: (m.estado || 'Activo') === 'Activo' ? '#7dff7d' : '#ff8f8f',
-                        borderRadius: '4px',
-                        padding: '4px 8px',
-                        fontSize: '12px',
-                      }}
-                    >
-                      {m.estado || 'Activo'}
-                    </span>
-                  </td>
-                  <td style={{ padding: '8px' }}>
-                    <button onClick={() => abrirEdicion(m)} style={{ marginRight: '6px', backgroundColor: '#2c5f8f', border: 'none', color: 'white', borderRadius: '4px', padding: '6px 10px', cursor: 'pointer' }}>Editar</button>
-                    <button
-                      onClick={() => cambiarEstadoMoto(m)}
-                      disabled={(m.estado || 'Activo') === 'Inactivo'}
-                      style={{
-                        backgroundColor: '#8f2d2d',
-                        border: 'none',
-                        color: 'white',
-                        borderRadius: '4px',
-                        padding: '6px 10px',
-                        cursor: (m.estado || 'Activo') === 'Inactivo' ? 'not-allowed' : 'pointer',
-                        opacity: (m.estado || 'Activo') === 'Inactivo' ? 0.5 : 1,
-                      }}
-                    >
-                      Desactivar
-                    </button>
-                  </td>
+          <div className="bitacora-table-wrap">
+            <table className="bitacora-table">
+              <thead>
+                <tr>
+                  <th>Placa</th>
+                  <th>Marca/Modelo</th>
+                  <th>Cliente</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {motos.map((m) => (
+                  <tr key={m.codigo} className={(m.estado || 'Activo') === 'Inactivo' ? 'motos-row--inactiva' : ''}>
+                    <td>{m.placa}</td>
+                    <td>{(m.marca || '-') + ' / ' + (m.modelo || '-')}</td>
+                    <td>{m.cliente_nombre || '-'}</td>
+                    <td>
+                      <span className={`usuario-status-badge ${(m.estado || 'Activo') === 'Activo' ? 'usuario-status-badge--activo' : 'usuario-status-badge--inactivo'}`}>
+                        {m.estado || 'Activo'}
+                      </span>
+                    </td>
+                    <td>
+                      <button onClick={() => abrirEdicion(m)} className="table-action-btn table-action-btn--edit">Editar</button>
+                      <button
+                        onClick={() => cambiarEstadoMoto(m)}
+                        disabled={(m.estado || 'Activo') === 'Inactivo'}
+                        className="table-action-btn table-action-btn--danger"
+                      >
+                        Desactivar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
       {motoEdicion && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-          <div style={{ width: '100%', maxWidth: '460px', backgroundColor: '#1e1e1e', border: '1px solid #333', borderRadius: '10px', padding: '20px' }}>
-            <h3 style={{ marginTop: 0, color: '#ff6600' }}>Editar motocicleta</h3>
+        <div className="usuarios-modal-overlay">
+          <div className="usuarios-modal usuarios-modal--sm">
+            <h3 style={{ marginTop: 0, color: 'var(--color-accent)' }}>Editar motocicleta</h3>
             <form onSubmit={guardarEdicion}>
               <div className="input-group"><label>Marca</label><input value={editForm.marca} onChange={(e) => setEditForm({ ...editForm, marca: e.target.value })} /></div>
               <div className="input-group"><label>Modelo</label><input value={editForm.modelo} onChange={(e) => setEditForm({ ...editForm, modelo: e.target.value })} /></div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" onClick={() => setMotoEdicion(null)} style={{ padding: '8px 12px', backgroundColor: '#444', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Cancelar</button>
-                <button type="submit" style={{ padding: '8px 12px', backgroundColor: '#ff6600', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Guardar</button>
+                <button type="button" onClick={() => setMotoEdicion(null)} className="btn-secondary">Cancelar</button>
+                <button type="submit" className="bitacora-btn bitacora-btn--filter">Guardar</button>
               </div>
             </form>
           </div>

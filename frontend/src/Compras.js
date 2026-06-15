@@ -4,6 +4,7 @@ import './Login.css';
 import { getHomeRouteByRole } from './navigation';
 import { API_BASE_URL } from './config';
 import { validarPermisoModulo } from './permissions';
+import { repairText } from './textNormalization';
 
 const API = `${API_BASE_URL}/api`;
 
@@ -137,20 +138,29 @@ const Compras = () => {
   };
 
   return (
-    <div style={{ padding: '30px', backgroundColor: '#121212', minHeight: '100vh', color: 'white' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <h2 style={{ color: '#ff6600', margin: 0 }}>Compras a Proveedores (CU12)</h2>
-        <div>
-          <button onClick={() => navigate('/inicio')} style={{ marginRight: '10px', padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Inicio</button>
-          <button onClick={() => navigate('/perfil')} style={{ padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Mi Perfil</button>
+    <div className="app-container compras-page">
+      <div className="page-bg-layer page-bg-layer--a" style={{ backgroundImage: 'url(/static/img/compras/fondo-compras-1.png)' }}></div>
+      <div className="page-bg-layer page-bg-layer--b" style={{ backgroundImage: 'url(/static/img/compras/fondo-compras-2.png)' }}></div>
+      <div className="page-bg-overlay"></div>
+
+      <div className="top-panel">
+        <div className="page-title">
+          <h2>Compras a Proveedores (CU12)</h2>
+          <div className="page-subtitle">Registro de compras de productos a proveedores para reposición de inventario</div>
+        </div>
+        <div className="user-actions">
+          <span>👤 {repairText(usuarioLocal?.nombre)} ({repairText(usuarioLocal?.rol)})</span>
+          <button onClick={() => navigate('/inicio')} className="btn-secondary">Inicio</button>
+          <button onClick={() => navigate('/perfil')} className="btn-secondary">Mi Perfil</button>
+          <button onClick={() => navigate(-1)} className="btn-secondary">Atrás</button>
         </div>
       </div>
 
-      {error && <div className="error-box" style={{ marginBottom: '15px' }}>{error}</div>}
+      {error && <div className="error-box" style={{ marginTop: '20px' }}>{error}</div>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px' }}>
-        <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
-          <h3>Registrar Compra</h3>
+      <div className="compras-content">
+        <div className="bitacora-panel compras-form-panel">
+          <h3 className="usuarios-panel-title">Registrar compra</h3>
           <form onSubmit={crearCompra}>
             <div className="input-group"><label>Proveedor</label><select value={nuevo.id_proveedor} onChange={(e) => setNuevo({ ...nuevo, id_proveedor: Number(e.target.value) })} required><option value="">Seleccione</option>{proveedores.map((p) => (<option key={p.codigo} value={p.codigo}>{p.empresa}</option>))}</select></div>
             <div className="input-group"><label>Número factura</label><input value={nuevo.numero_factura} onChange={(e) => setNuevo({ ...nuevo, numero_factura: e.target.value })} /></div>
@@ -162,59 +172,68 @@ const Compras = () => {
               <option value="Aprobado">Aprobado</option>
               <option value="Negado">Negado</option>
             </select></div>
-            <div style={{ marginTop: '15px' }}>
-              <h4>Detalles de compra</h4>
+
+            <div className="compras-detalles">
+              <h4 className="compras-detalles-title">Detalles de compra</h4>
               {nuevo.detalles.map((detalle, index) => (
-                <div key={index} style={{ backgroundColor: '#121212', padding: '12px', borderRadius: '8px', marginBottom: '10px' }}>
+                <div key={index} className="compras-detalle-item">
                   <div className="input-group"><label>Producto</label><select value={detalle.id_producto} onChange={(e) => actualizarDetalle(index, 'id_producto', Number(e.target.value))} required><option value="">Seleccione</option>{productos.map((prod) => (<option key={prod.codigo} value={prod.codigo}>{prod.nombre}</option>))}</select></div>
                   <div className="input-group"><label>Cantidad</label><input type="number" min="1" value={detalle.cantidad} onChange={(e) => actualizarDetalle(index, 'cantidad', Number(e.target.value))} required /></div>
                   <div className="input-group"><label>Precio compra</label><input type="number" step="0.01" value={detalle.precio_compra} onChange={(e) => actualizarDetalle(index, 'precio_compra', Number(e.target.value))} required /></div>
                   <div className="input-group"><label>Subtotal</label><input type="number" step="0.01" value={detalle.subtotal} disabled /></div>
-                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" onClick={() => eliminarLinea(index)} style={{ backgroundColor: '#8f2d2d', border: 'none', color: 'white', borderRadius: '5px', padding: '6px 10px', cursor: 'pointer' }}>Eliminar</button></div>
+                  <div className="compras-detalle-actions"><button type="button" onClick={() => eliminarLinea(index)} className="table-action-btn table-action-btn--danger">Eliminar</button></div>
                 </div>
               ))}
-              <button type="button" onClick={agregarLinea} style={{ padding: '8px 12px', borderRadius: '5px', border: 'none', backgroundColor: '#2c5f8f', color: 'white', cursor: 'pointer' }}>Agregar línea</button>
+              <button type="button" onClick={agregarLinea} className="bitacora-btn bitacora-btn--export" style={{ marginBottom: '4px' }}>Agregar línea</button>
             </div>
-            <div style={{ marginTop: '12px' }}>
-              <strong>Subtotal:</strong> ${calcularTotales().subtotal} <br />
-              <strong>Total:</strong> ${calcularTotales().total}
+
+            <div className="compras-totales">
+              <p><strong>Subtotal:</strong> ${calcularTotales().subtotal}</p>
+              <p><strong>Total:</strong> ${calcularTotales().total}</p>
             </div>
-            <button type="submit" className="btn-login" style={{ marginTop: '16px' }}>Crear compra</button>
+
+            <button type="submit" className="bitacora-btn bitacora-btn--filter" style={{ marginTop: '16px' }}>Crear compra</button>
           </form>
         </div>
 
-        <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
-          <h3>Compras registradas</h3>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #444' }}>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Código</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Proveedor</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Número factura</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Fecha</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Subtotal</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Impuesto</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Total</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Método de pago</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {compras.map((c) => (
-                <tr key={c.codigo} style={{ borderBottom: '1px solid #2c2c2c' }}>
-                  <td style={{ padding: '8px' }}>#{c.codigo}</td>
-                  <td style={{ padding: '8px' }}>{c.proveedor_empresa || '-'}</td>
-                  <td style={{ padding: '8px' }}>{c.numero_factura || '-'}</td>
-                  <td style={{ padding: '8px' }}>{c.fecha || '-'}</td>
-                  <td style={{ padding: '8px' }}>${c.subtotal || 0}</td>
-                  <td style={{ padding: '8px' }}>${c.impuesto || 0}</td>
-                  <td style={{ padding: '8px' }}>${c.total || 0}</td>
-                  <td style={{ padding: '8px' }}>{c.metodo_pago || '-'}</td>
-                  <td style={{ padding: '8px' }}>{c.estado || '-'}</td>
+        <div className="bitacora-panel compras-list-panel">
+          <h3 className="usuarios-panel-title">Compras registradas</h3>
+          <div className="bitacora-table-wrap">
+            <table className="bitacora-table">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Proveedor</th>
+                  <th>N° Factura</th>
+                  <th>Fecha</th>
+                  <th>Subtotal</th>
+                  <th>Impuesto</th>
+                  <th>Total</th>
+                  <th>Método de pago</th>
+                  <th>Estado</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {compras.length === 0 ? (
+                  <tr><td colSpan="9" style={{ textAlign: 'center' }}>No hay compras registradas.</td></tr>
+                ) : (
+                  compras.map((c) => (
+                    <tr key={c.codigo}>
+                      <td>#{c.codigo}</td>
+                      <td>{c.proveedor_empresa || '-'}</td>
+                      <td>{c.numero_factura || '-'}</td>
+                      <td>{c.fecha || '-'}</td>
+                      <td>${c.subtotal || 0}</td>
+                      <td>${c.impuesto || 0}</td>
+                      <td>${c.total || 0}</td>
+                      <td>{c.metodo_pago || '-'}</td>
+                      <td>{c.estado || '-'}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

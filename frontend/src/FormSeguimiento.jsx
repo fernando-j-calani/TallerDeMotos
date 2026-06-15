@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Login.css';
 import { getHomeRouteByRole } from './navigation';
+import { repairText } from './textNormalization';
 import { API_BASE_URL } from './config';
 import { validarPermisoModulo } from './permissions';
 
@@ -139,75 +140,86 @@ const FormSeguimiento = () => {
   };
 
   return (
-    <div style={{ padding: '30px', backgroundColor: '#121212', minHeight: '100vh', color: 'white' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <h2 style={{ color: '#ff6600', margin: 0 }}>Seguimiento para Clientes (CU16)</h2>
-        <div>
-          <button onClick={() => navigate('/inicio')} style={{ marginRight: '10px', padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Inicio</button>
-          <button onClick={() => navigate('/perfil')} style={{ padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Mi Perfil</button>
+    <div className="app-container seguimiento-page">
+      <div className="page-bg-layer page-bg-layer--a" style={{ backgroundImage: 'url(/static/img/seguimiento-clientes/fondo-seguimiento-clientes-1.png)' }}></div>
+      <div className="page-bg-layer page-bg-layer--b" style={{ backgroundImage: 'url(/static/img/seguimiento-clientes/fondo-seguimiento-clientes-2.png)' }}></div>
+      <div className="page-bg-overlay"></div>
+
+      <div className="top-panel">
+        <div className="page-title">
+          <h2>Seguimiento para Clientes (CU16)</h2>
+          <div className="page-subtitle">Gestión de seguimiento y fidelización de clientes</div>
+        </div>
+        <div className="user-actions">
+          <span>👤 {repairText(usuarioLocal?.nombre)} ({repairText(usuarioLocal?.rol)})</span>
+          <button onClick={() => navigate('/inicio')} className="btn-secondary">Inicio</button>
+          <button onClick={() => navigate('/perfil')} className="btn-secondary">Mi Perfil</button>
+          <button onClick={() => navigate(-1)} className="btn-secondary">Atrás</button>
         </div>
       </div>
 
-      {error && <div className="error-box" style={{ marginBottom: '15px' }}>{error}</div>}
-      {exito && <div className="alert alert-success" style={{ marginBottom: '15px', backgroundColor: '#2a2a2a', padding: '10px', borderRadius: '6px' }}>{exito}</div>}
+      {error && <div className="error-box" style={{ marginTop: '20px' }}>{error}</div>}
+      {exito && <div className="success-box" style={{ marginTop: '20px' }}>{exito}</div>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
-        <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <h3 style={{ margin: 0 }}>Clientes segmentados</h3>
+      <div className="seguimiento-content">
+        <div className="bitacora-panel seguimiento-list-panel">
+          <div className="seguimiento-list-header">
+            <h3 className="usuarios-panel-title">Clientes segmentados</h3>
             <button
               type="button"
               onClick={iniciaPanelFiltraRecordatorios}
-              style={{ padding: '6px 12px', backgroundColor: '#444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+              className="bitacora-btn bitacora-btn--clear"
               disabled={cargando}
             >
               Refrescar
             </button>
           </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #444' }}>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Cliente</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Segmento</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Ultima visita</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Accion</th>
-              </tr>
-            </thead>
-            <tbody>
-              {clientes.length === 0 ? (
+          <div className="bitacora-table-wrap">
+            <table className="bitacora-table">
+              <thead>
                 <tr>
-                  <td colSpan="4" style={{ padding: '12px', textAlign: 'center' }}>No hay clientes para seguimiento.</td>
+                  <th>Cliente</th>
+                  <th>Segmento</th>
+                  <th>Última visita</th>
+                  <th>Acción</th>
                 </tr>
-              ) : (
-                clientes.map((item) => (
-                  <tr key={item.cliente?.codigo || item.ultima_visita || item.segmento} style={{ borderBottom: '1px solid #2c2c2c' }}>
-                    <td style={{ padding: '8px' }}>{item.cliente?.nombre || '-'}</td>
-                    <td style={{ padding: '8px' }}>{item.segmento || '-'}</td>
-                    <td style={{ padding: '8px' }}>{item.ultima_visita || '-'}</td>
-                    <td style={{ padding: '8px' }}>
-                      <button
-                        type="button"
-                        onClick={() => seleccionaClienteYRedactaMensaje(item)}
-                        style={{ backgroundColor: '#2c5f8f', border: 'none', color: 'white', borderRadius: '4px', padding: '6px 10px', cursor: 'pointer' }}
-                      >
-                        Seleccionar
-                      </button>
-                    </td>
+              </thead>
+              <tbody>
+                {clientes.length === 0 ? (
+                  <tr>
+                    <td colSpan="4" style={{ textAlign: 'center' }}>No hay clientes para seguimiento.</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  clientes.map((item) => (
+                    <tr key={item.cliente?.codigo || item.ultima_visita || item.segmento}>
+                      <td>{item.cliente?.nombre || '-'}</td>
+                      <td>{item.segmento || '-'}</td>
+                      <td>{item.ultima_visita || '-'}</td>
+                      <td>
+                        <button
+                          type="button"
+                          onClick={() => seleccionaClienteYRedactaMensaje(item)}
+                          className="table-action-btn table-action-btn--edit"
+                        >
+                          Seleccionar
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
-          <h3>Mensaje de seguimiento</h3>
+        <div className="bitacora-panel seguimiento-detail-panel">
+          <h3 className="usuarios-panel-title">Mensaje de seguimiento</h3>
           {clienteSeleccionado ? (
             <div>
               <p><strong>Cliente:</strong> {clienteSeleccionado.nombre}</p>
               <p><strong>Email:</strong> {clienteSeleccionado.email || '-'}</p>
               <div className="input-group">
-                <label>Tipo de gestion</label>
+                <label>Tipo de gestión</label>
                 <input value={tipoGestion} onChange={(e) => setTipoGestion(e.target.value)} />
               </div>
               <div className="input-group">
@@ -221,7 +233,7 @@ const FormSeguimiento = () => {
               <button
                 type="button"
                 onClick={ejecutaEnvioYAnotaRespuesta}
-                className="btn-login"
+                className="bitacora-btn bitacora-btn--filter"
                 disabled={cargando}
               >
                 {cargando ? 'Enviando...' : 'Enviar seguimiento'}

@@ -5,6 +5,7 @@ import './Login.css';
 import { getHomeRouteByRole } from './navigation';
 import { API_BASE_URL } from './config';
 import { validarPermisoModulo } from './permissions';
+import { repairText } from './textNormalization';
 
 const API = `${API_BASE_URL}/api`;
 
@@ -607,20 +608,29 @@ const FormFacturacion = () => {
   };
 
   return (
-    <div style={{ padding: '30px', backgroundColor: '#121212', minHeight: '100vh', color: 'white' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <h2 style={{ color: '#ff6600', margin: 0 }}>Emitir Facturacion (CU14)</h2>
-        <div>
-          <button onClick={() => navigate('/inicio')} style={{ marginRight: '10px', padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Inicio</button>
-          <button onClick={() => navigate('/perfil')} style={{ padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Mi Perfil</button>
+    <div className="app-container facturacion-page">
+      <div className="page-bg-layer page-bg-layer--a" style={{ backgroundImage: 'url(/static/img/facturacion/fondo-facturacion-1.png)' }}></div>
+      <div className="page-bg-layer page-bg-layer--b" style={{ backgroundImage: 'url(/static/img/facturacion/fondo-facturacion-2.png)' }}></div>
+      <div className="page-bg-overlay"></div>
+
+      <div className="top-panel">
+        <div className="page-title">
+          <h2>Emitir Facturación (CU14)</h2>
+          <div className="page-subtitle">Generación de notas de servicio y facturas a partir de órdenes finalizadas</div>
+        </div>
+        <div className="user-actions">
+          <span>👤 {repairText(usuarioLocal?.nombre)} ({repairText(usuarioLocal?.rol)})</span>
+          <button onClick={() => navigate('/inicio')} className="btn-secondary">Inicio</button>
+          <button onClick={() => navigate('/perfil')} className="btn-secondary">Mi Perfil</button>
+          <button onClick={() => navigate(-1)} className="btn-secondary">Atrás</button>
         </div>
       </div>
 
-      {error && <div className="error-box" style={{ marginBottom: '15px' }}>{error}</div>}
+      {error && <div className="error-box" style={{ marginTop: '20px' }}>{error}</div>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px' }}>
-        <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
-          <h3>Procesar facturacion</h3>
+      <div className="facturacion-content">
+        <div className="bitacora-panel facturacion-form-panel">
+          <h3 className="usuarios-panel-title">Procesar facturación</h3>
           <form onSubmit={solicitaEmitirComprobantes}>
             <div className="input-group">
               <label>Orden finalizada</label>
@@ -634,7 +644,7 @@ const FormFacturacion = () => {
               </select>
             </div>
             <div className="input-group">
-              <label>Metodo de pago</label>
+              <label>Método de pago</label>
               <input
                 value={form.metodo_pago}
                 onChange={(e) => registraPagoYDatosFiscales(form.nit_cliente, form.razon_social, e.target.value)}
@@ -658,7 +668,7 @@ const FormFacturacion = () => {
               />
             </div>
             <div className="input-group">
-              <label>Razon social</label>
+              <label>Razón social</label>
               <input
                 value={form.razon_social}
                 onChange={(e) => registraPagoYDatosFiscales(form.nit_cliente, e.target.value, form.metodo_pago)}
@@ -673,16 +683,16 @@ const FormFacturacion = () => {
               <label>Observaciones</label>
               <textarea rows="3" value={form.observaciones} onChange={(e) => setForm({ ...form, observaciones: e.target.value })} />
             </div>
-            <button type="submit" className="btn-login" disabled={cargando}>
-              {cargando ? 'Procesando...' : 'Procesar facturacion'}
+            <button type="submit" className="bitacora-btn bitacora-btn--filter" disabled={cargando} style={{ marginTop: '16px' }}>
+              {cargando ? 'Procesando...' : 'Procesar facturación'}
             </button>
           </form>
         </div>
 
-        <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
-          <h3>Detalle de la orden</h3>
+        <div className="bitacora-panel facturacion-detail-panel">
+          <h3 className="usuarios-panel-title">Detalle de la orden</h3>
           {ordenSeleccionada ? (
-            <div>
+            <div className="facturacion-detail-info">
               <p><strong>Orden:</strong> #{ordenSeleccionada.codigo}</p>
               <p><strong>Cliente:</strong> {ordenSeleccionada.cliente_nombre || '-'}</p>
               <p><strong>Motocicleta:</strong> {ordenSeleccionada.motocicleta_placa || '-'}</p>
@@ -695,8 +705,8 @@ const FormFacturacion = () => {
           )}
 
           {resultado && (
-            <div style={{ marginTop: '20px', backgroundColor: '#2a2a2a', padding: '12px', borderRadius: '8px' }}>
-              <h4 style={{ marginTop: 0, color: '#ff6600' }}>Facturacion generada</h4>
+            <div className="facturacion-result-box">
+              <h4>Facturación generada</h4>
               <p><strong>Nota servicio:</strong> #{resultado?.nota_servicio?.codigo || '-'}</p>
               <p><strong>Factura:</strong> #{resultado?.factura?.codigo || '-'}</p>
               <p><strong>Estado orden:</strong> {resultado?.orden?.estado || '-'}</p>
@@ -705,47 +715,49 @@ const FormFacturacion = () => {
         </div>
       </div>
 
-      <div style={{ marginTop: '24px', backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
-        <h3>Historial de facturas</h3>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid #444' }}>
-              <th style={{ textAlign: 'left', padding: '8px' }}>Orden</th>
-              <th style={{ textAlign: 'left', padding: '8px' }}>Cliente</th>
-              <th style={{ textAlign: 'left', padding: '8px' }}>Motocicleta</th>
-              <th style={{ textAlign: 'left', padding: '8px' }}>Estado</th>
-              <th style={{ textAlign: 'left', padding: '8px' }}>Nota</th>
-              <th style={{ textAlign: 'left', padding: '8px' }}>Factura</th>
-              <th style={{ textAlign: 'left', padding: '8px' }}>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {historial.length === 0 ? (
+      <div className="bitacora-panel facturacion-history-panel">
+        <h3 className="usuarios-panel-title">Historial de facturas</h3>
+        <div className="bitacora-table-wrap">
+          <table className="bitacora-table">
+            <thead>
               <tr>
-                <td colSpan="7" style={{ padding: '12px', textAlign: 'center' }}>No hay facturas registradas.</td>
+                <th>Orden</th>
+                <th>Cliente</th>
+                <th>Motocicleta</th>
+                <th>Estado</th>
+                <th>Nota</th>
+                <th>Factura</th>
+                <th>Acciones</th>
               </tr>
-            ) : (
-              historial.map((item) => (
-                <tr key={`${item?.orden?.codigo || 'orden'}-${item?.factura?.codigo || 'factura'}`} style={{ borderBottom: '1px solid #2c2c2c' }}>
-                  <td style={{ padding: '8px' }}>#{item?.orden?.codigo || '-'}</td>
-                  <td style={{ padding: '8px' }}>{item?.orden?.cliente_nombre || '-'}</td>
-                  <td style={{ padding: '8px' }}>{item?.orden?.motocicleta_placa || '-'}</td>
-                  <td style={{ padding: '8px' }}>{item?.orden?.estado || '-'}</td>
-                  <td style={{ padding: '8px' }}>#{item?.nota_servicio?.codigo || '-'}</td>
-                  <td style={{ padding: '8px' }}>#{item?.factura?.codigo || '-'}</td>
-                  <td style={{ padding: '8px' }}>
-                    <button
-                      onClick={() => descargarHistorial(item)}
-                      style={{ backgroundColor: '#2c5f8f', border: 'none', color: 'white', borderRadius: '4px', padding: '6px 10px', cursor: 'pointer' }}
-                    >
-                      Descargar PDFs
-                    </button>
-                  </td>
+            </thead>
+            <tbody>
+              {historial.length === 0 ? (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center' }}>No hay facturas registradas.</td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                historial.map((item) => (
+                  <tr key={`${item?.orden?.codigo || 'orden'}-${item?.factura?.codigo || 'factura'}`}>
+                    <td>#{item?.orden?.codigo || '-'}</td>
+                    <td>{item?.orden?.cliente_nombre || '-'}</td>
+                    <td>{item?.orden?.motocicleta_placa || '-'}</td>
+                    <td>{item?.orden?.estado || '-'}</td>
+                    <td>#{item?.nota_servicio?.codigo || '-'}</td>
+                    <td>#{item?.factura?.codigo || '-'}</td>
+                    <td>
+                      <button
+                        onClick={() => descargarHistorial(item)}
+                        className="table-action-btn table-action-btn--success"
+                      >
+                        Descargar PDFs
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

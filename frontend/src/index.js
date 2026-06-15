@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import LandingPage from './LandingPage';
+import RegistroPage from './RegistroPage';
 import Login from './Login';
 import Bitacora from './Bitacora';
 import Usuarios from './Usuarios';
@@ -38,6 +39,7 @@ root.render(
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/registro" element={<RegistroPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordRequest />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/cambiar-password-obligatorio" element={<ForceChangePassword />} />
@@ -59,6 +61,7 @@ root.render(
         <Route path="/seguimiento-clientes" element={<SeguimientoClientes />} />
         <Route path="/reportes" element={<Reportes />} />
         <Route path="/dashboard-analitico" element={<DashboardAnalitico />} />
+        <Route path="/dashboard" element={<InicioOperativo />} />
         <Route path="/mis-motocicletas" element={<MisMotocicletas />} />
         <Route path="/inicio" element={<InicioOperativo />} />
         <Route path="/perfil" element={<Perfil />} />

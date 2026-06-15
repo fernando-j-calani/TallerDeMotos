@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Login.css';
 import { getHomeRouteByRole } from './navigation';
+import { repairText } from './textNormalization';
 import { API_BASE_URL } from './config';
 
 const API = `${API_BASE_URL}/api`;
@@ -125,21 +126,30 @@ const Clientes = () => {
   };
 
   return (
-    <div style={{ padding: '30px', backgroundColor: '#121212', minHeight: '100vh', color: 'white' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <h2 style={{ color: '#ff6600', margin: 0 }}>Gestión de Clientes (CU05)</h2>
-        <div>
-          <button onClick={() => navigate('/motocicletas')} style={{ marginRight: '10px', padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Motocicletas</button>
-          <button onClick={() => navigate('/perfil')} style={{ marginRight: '10px', padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Mi Perfil</button>
-          <button onClick={() => navigate(getHomeRouteByRole(usuarioLocal?.rol))} style={{ padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Inicio</button>
+    <div className="app-container clientes-page">
+      <div className="page-bg-layer page-bg-layer--a" style={{ backgroundImage: 'url(/static/img/clientes/fondo-clientes-1.png)' }}></div>
+      <div className="page-bg-layer page-bg-layer--b" style={{ backgroundImage: 'url(/static/img/clientes/fondo-clientes-2.png)' }}></div>
+      <div className="page-bg-overlay"></div>
+
+      <div className="top-panel">
+        <div className="page-title">
+          <h2>Gestión de Clientes (CU05)</h2>
+          <div className="page-subtitle">Administración de clientes del taller</div>
+        </div>
+        <div className="user-actions">
+          <span>👤 {repairText(usuarioLocal?.nombre)} ({repairText(usuarioLocal?.rol)})</span>
+          <button onClick={() => navigate('/motocicletas')} className="btn-secondary">Motocicletas</button>
+          <button onClick={() => navigate('/perfil')} className="btn-secondary">Mi Perfil</button>
+          <button onClick={() => navigate(getHomeRouteByRole(usuarioLocal?.rol))} className="btn-secondary">Inicio</button>
+          <button onClick={() => navigate(-1)} className="btn-secondary">Atrás</button>
         </div>
       </div>
 
-      {error && <div className="error-box" style={{ marginBottom: '15px' }}>{error}</div>}
+      {error && <div className="error-box" style={{ marginTop: '20px' }}>{error}</div>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px' }}>
-        <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
-          <h3>Registrar Cliente</h3>
+      <div className="clientes-content">
+        <div className="bitacora-panel clientes-form-panel">
+          <h3 className="usuarios-panel-title">Registrar Cliente</h3>
           <form onSubmit={crearCliente}>
             <div className="input-group"><label>Cédula/NIT</label><input value={nuevo.cedula} onChange={(e) => setNuevo({ ...nuevo, cedula: e.target.value })} required /></div>
             <div className="input-group"><label>Nombre</label><input value={nuevo.nombre} onChange={(e) => setNuevo({ ...nuevo, nombre: e.target.value })} required /></div>
@@ -147,21 +157,21 @@ const Clientes = () => {
             <div className="input-group"><label>Teléfono alternativo</label><input value={nuevo.telefono_alternativo} onChange={(e) => setNuevo({ ...nuevo, telefono_alternativo: e.target.value })} /></div>
             <div className="input-group"><label>Dirección</label><input value={nuevo.direccion} onChange={(e) => setNuevo({ ...nuevo, direccion: e.target.value })} /></div>
             <div className="input-group"><label>Email</label><input type="email" value={nuevo.email} onChange={(e) => setNuevo({ ...nuevo, email: e.target.value })} /></div>
-            <button type="submit" className="btn-login">Crear cliente</button>
+            <button type="submit" className="bitacora-btn bitacora-btn--filter">Crear cliente</button>
           </form>
         </div>
 
-        <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
-            <h3 style={{ margin: 0 }}>Listado</h3>
-            <div>
+        <div className="bitacora-panel clientes-list-panel">
+          <div className="clientes-list-header">
+            <h3 className="usuarios-panel-title">Listado</h3>
+            <div className="clientes-search">
               <input
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
                 placeholder="Buscar por nombre o cédula"
-                style={{ padding: '8px', width: '260px', marginRight: '10px', borderRadius: '5px', border: '1px solid #444', backgroundColor: '#2a2a2a', color: 'white' }}
+                className="bitacora-input"
               />
-              <label style={{ marginRight: '10px', fontSize: '13px' }}>
+              <label className="clientes-search-checkbox">
                 <input
                   type="checkbox"
                   checked={mostrarInactivos}
@@ -170,83 +180,62 @@ const Clientes = () => {
                     setMostrarInactivos(checked);
                     cargarClientes(busqueda, checked);
                   }}
-                  style={{ marginRight: '6px' }}
                 />
                 Mostrar inactivos
               </label>
-              <button onClick={() => cargarClientes(busqueda, mostrarInactivos)} style={{ padding: '8px 12px', backgroundColor: '#ff6600', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Buscar</button>
+              <button onClick={() => cargarClientes(busqueda, mostrarInactivos)} className="bitacora-btn bitacora-btn--filter">Buscar</button>
             </div>
           </div>
 
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #444' }}>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Cédula</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Nombre</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Teléfono</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Estado</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {clientes.map((c) => (
-                <tr
-                  key={c.codigo}
-                  style={{
-                    borderBottom: '1px solid #2c2c2c',
-                    opacity: (c.estado || 'Activo') === 'Inactivo' ? 0.55 : 1,
-                    color: (c.estado || 'Activo') === 'Inactivo' ? '#ff8f8f' : 'white',
-                  }}
-                >
-                  <td style={{ padding: '8px' }}>{c.cedula}</td>
-                  <td style={{ padding: '8px' }}>{c.nombre}</td>
-                  <td style={{ padding: '8px' }}>{c.telefono || '-'}</td>
-                  <td style={{ padding: '8px' }}>
-                    <span
-                      style={{
-                        backgroundColor: (c.estado || 'Activo') === 'Activo' ? 'rgba(0,255,0,0.15)' : 'rgba(255,0,0,0.15)',
-                        color: (c.estado || 'Activo') === 'Activo' ? '#7dff7d' : '#ff8f8f',
-                        borderRadius: '4px',
-                        padding: '4px 8px',
-                        fontSize: '12px',
-                      }}
-                    >
-                      {c.estado || 'Activo'}
-                    </span>
-                  </td>
-                  <td style={{ padding: '8px' }}>
-                    <button onClick={() => abrirEdicion(c)} style={{ marginRight: '6px', backgroundColor: '#2c5f8f', border: 'none', color: 'white', borderRadius: '4px', padding: '6px 10px', cursor: 'pointer' }}>Editar</button>
-                    <button
-                      onClick={() => cambiarEstadoCliente(c)}
-                      style={{
-                        backgroundColor: (c.estado || 'Activo') === 'Inactivo' ? '#2d8f5a' : '#8f2d2d',
-                        border: 'none',
-                        color: 'white',
-                        borderRadius: '4px',
-                        padding: '6px 10px',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {(c.estado || 'Activo') === 'Inactivo' ? 'Activar' : 'Desactivar'}
-                    </button>
-                  </td>
+          <div className="bitacora-table-wrap">
+            <table className="bitacora-table">
+              <thead>
+                <tr>
+                  <th>Cédula</th>
+                  <th>Nombre</th>
+                  <th>Teléfono</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {clientes.map((c) => (
+                  <tr key={c.codigo} className={(c.estado || 'Activo') === 'Inactivo' ? 'clientes-row--inactiva' : ''}>
+                    <td>{c.cedula}</td>
+                    <td>{c.nombre}</td>
+                    <td>{c.telefono || '-'}</td>
+                    <td>
+                      <span className={`usuario-status-badge ${(c.estado || 'Activo') === 'Activo' ? 'usuario-status-badge--activo' : 'usuario-status-badge--inactivo'}`}>
+                        {c.estado || 'Activo'}
+                      </span>
+                    </td>
+                    <td>
+                      <button onClick={() => abrirEdicion(c)} className="table-action-btn table-action-btn--edit">Editar</button>
+                      <button
+                        onClick={() => cambiarEstadoCliente(c)}
+                        className={`table-action-btn ${(c.estado || 'Activo') === 'Inactivo' ? 'table-action-btn--success' : 'table-action-btn--danger'}`}
+                      >
+                        {(c.estado || 'Activo') === 'Inactivo' ? 'Activar' : 'Desactivar'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
       {clienteEdicion && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-          <div style={{ width: '100%', maxWidth: '460px', backgroundColor: '#1e1e1e', border: '1px solid #333', borderRadius: '10px', padding: '20px' }}>
-            <h3 style={{ marginTop: 0, color: '#ff6600' }}>Editar cliente</h3>
+        <div className="usuarios-modal-overlay">
+          <div className="usuarios-modal usuarios-modal--sm">
+            <h3 style={{ marginTop: 0, color: 'var(--color-accent)' }}>Editar cliente</h3>
             <form onSubmit={guardarEdicion}>
               <div className="input-group"><label>Nombre</label><input value={editForm.nombre} onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value })} required /></div>
               <div className="input-group"><label>Teléfono</label><input value={editForm.telefono} onChange={(e) => setEditForm({ ...editForm, telefono: e.target.value })} /></div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" onClick={() => setClienteEdicion(null)} style={{ padding: '8px 12px', backgroundColor: '#444', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Cancelar</button>
-                <button type="submit" style={{ padding: '8px 12px', backgroundColor: '#ff6600', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Guardar</button>
+                <button type="button" onClick={() => setClienteEdicion(null)} className="btn-secondary">Cancelar</button>
+                <button type="submit" className="bitacora-btn bitacora-btn--filter">Guardar</button>
               </div>
             </form>
           </div>

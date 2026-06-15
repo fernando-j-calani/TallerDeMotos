@@ -4,6 +4,7 @@ import './Login.css';
 import { getHomeRouteByRole } from './navigation';
 import { API_BASE_URL } from './config';
 import { validarPermisoModulo } from './permissions';
+import { repairText } from './textNormalization';
 
 const API = `${API_BASE_URL}/api`;
 
@@ -297,20 +298,29 @@ const OrdenesTrabajo = () => {
   };
 
   return (
-    <div style={{ padding: '30px', backgroundColor: '#121212', minHeight: '100vh', color: 'white' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <h2 style={{ color: '#ff6600', margin: 0 }}>Gestionar Órdenes de Trabajo (CU08)</h2>
-        <div>
-          <button onClick={() => navigate('/inicio')} style={{ marginRight: '10px', padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Inicio</button>
-          <button onClick={() => navigate('/perfil')} style={{ padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Mi Perfil</button>
+    <div className="app-container ordenes-page">
+      <div className="page-bg-layer page-bg-layer--a" style={{ backgroundImage: 'url(/static/img/ordenes-trabajo/fondo-ordenes-trabajo-1.png)' }}></div>
+      <div className="page-bg-layer page-bg-layer--b" style={{ backgroundImage: 'url(/static/img/ordenes-trabajo/fondo-ordenes-trabajo-2.png)' }}></div>
+      <div className="page-bg-overlay"></div>
+
+      <div className="top-panel">
+        <div className="page-title">
+          <h2>Gestionar Órdenes de Trabajo (CU08)</h2>
+          <div className="page-subtitle">Registro y seguimiento de órdenes de trabajo del taller</div>
+        </div>
+        <div className="user-actions">
+          <span>👤 {repairText(usuarioLocal?.nombre)} ({repairText(usuarioLocal?.rol)})</span>
+          <button onClick={() => navigate('/inicio')} className="btn-secondary">Inicio</button>
+          <button onClick={() => navigate('/perfil')} className="btn-secondary">Mi Perfil</button>
+          <button onClick={() => navigate(-1)} className="btn-secondary">Atrás</button>
         </div>
       </div>
 
-      {error && <div className="error-box" style={{ marginBottom: '15px' }}>{error}</div>}
+      {error && <div className="error-box" style={{ marginTop: '20px' }}>{error}</div>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px' }}>
-        <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
-          <h3>Registrar orden de trabajo</h3>
+      <div className="ordenes-content">
+        <div className="bitacora-panel ordenes-form-panel">
+          <h3 className="usuarios-panel-title">Registrar orden de trabajo</h3>
           <form onSubmit={crearOrden}>
             <div className="input-group"><label>Cotización</label><select value={nuevo.id_cotizacion} onChange={(e) => {
               const value = e.target.value;
@@ -342,84 +352,83 @@ const OrdenesTrabajo = () => {
             <div className="input-group"><label>Costo repuestos</label><input type="number" step="0.01" value={nuevo.costo_repuestos} onChange={(e) => setNuevo({ ...nuevo, costo_repuestos: Number(e.target.value) })} /></div>
             <div className="input-group"><label>Total</label><input type="number" step="0.01" value={nuevo.total} readOnly /></div>
             <div className="input-group"><label>Estado</label><select value={nuevo.estado} onChange={(e) => setNuevo({ ...nuevo, estado: e.target.value })}><option value="Pendiente">Pendiente</option><option value="Aprobado">Aprobado</option><option value="Rechazado">Rechazado</option></select></div>
-            <button type="submit" className="btn-login">Crear orden</button>
+            <button type="submit" className="bitacora-btn bitacora-btn--filter" style={{ marginTop: '16px' }}>Crear orden</button>
           </form>
         </div>
 
-        <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
-          <h3>Listado de órdenes</h3>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center', marginBottom: '16px' }}>
+        <div className="bitacora-panel ordenes-list-panel">
+          <div className="ordenes-list-header">
+            <h3 className="usuarios-panel-title">Listado de órdenes</h3>
+          </div>
+          <div className="ordenes-search">
             <input
               type="text"
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               placeholder="Buscar orden por cliente, moto o estado"
-              style={{ flex: '1', minWidth: '220px', padding: '10px', borderRadius: '6px', border: '1px solid #444', backgroundColor: '#111', color: 'white' }}
+              className="bitacora-input"
             />
-            <button
-              type="button"
-              onClick={BuscarOrdenes}
-              style={{ padding: '10px 16px', backgroundColor: '#2c5f8f', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-            >
-              Buscar
-            </button>
-            <button
-              type="button"
-              onClick={() => cargarOrdenes('')}
-              style={{ padding: '10px 16px', backgroundColor: '#444', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-            >
-              Mostrar todo
-            </button>
+            <button type="button" onClick={BuscarOrdenes} className="bitacora-btn bitacora-btn--filter">Buscar</button>
+            <button type="button" onClick={() => cargarOrdenes('')} className="bitacora-btn bitacora-btn--clear">Mostrar todo</button>
           </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #444' }}>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Orden</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Cliente</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Motocicleta</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Mecánico</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Fecha creación</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Fecha inicio</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Fecha fin</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Kilometraje</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Prioridad</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Costo mano de obra</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Costo repuestos</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Estado</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Total</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ordenesOrdenadas.map((o) => (
-                <tr key={o.codigo} style={{ borderBottom: '1px solid #2c2c2c' }}>
-                  <td style={{ padding: '8px' }}>#{o.codigo}</td>
-                  <td style={{ padding: '8px' }}>{o.cliente_nombre || '-'}</td>
-                  <td style={{ padding: '8px' }}>{o.motocicleta_placa || '-'}</td>
-                  <td style={{ padding: '8px' }}>{o.mecanico_nombre || '-'}</td>
-                  <td style={{ padding: '8px' }}>{o.fecha_creacion || '-'}</td>
-                  <td style={{ padding: '8px' }}>{o.fecha_inicio || '-'}</td>
-                  <td style={{ padding: '8px' }}>{o.fecha_fin || '-'}</td>
-                  <td style={{ padding: '8px' }}>{o.kilometraje_ingreso || 0}</td>
-                  <td style={{ padding: '8px' }}>{o.prioridad || '-'}</td>
-                  <td style={{ padding: '8px' }}>${o.costo_mano_obra || 0}</td>
-                  <td style={{ padding: '8px' }}>${o.costo_repuestos || 0}</td>
-                  <td style={{ padding: '8px' }}>{o.estado || '-'}</td>
-                  <td style={{ padding: '8px' }}>${o.total || 0}</td>
-                  <td style={{ padding: '8px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                    <button onClick={() => abrirEdicionOrden(o)} style={{ backgroundColor: '#2c5f8f', border: 'none', color: 'white', borderRadius: '4px', padding: '6px 10px', cursor: 'pointer' }}>Editar</button>
-                    <button onClick={() => eliminarOrden(o)} style={{ backgroundColor: '#8f2d2d', border: 'none', color: 'white', borderRadius: '4px', padding: '6px 10px', cursor: 'pointer' }}>Eliminar</button>
-                  </td>
+          <div className="bitacora-table-wrap">
+            <table className="bitacora-table">
+              <thead>
+                <tr>
+                  <th>Orden</th>
+                  <th>Cliente</th>
+                  <th>Motocicleta</th>
+                  <th>Mecánico</th>
+                  <th>Fecha creación</th>
+                  <th>Fecha inicio</th>
+                  <th>Fecha fin</th>
+                  <th>Kilometraje</th>
+                  <th>Prioridad</th>
+                  <th>Costo mano de obra</th>
+                  <th>Costo repuestos</th>
+                  <th>Estado</th>
+                  <th>Total</th>
+                  <th>Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {ordenesOrdenadas.length === 0 ? (
+                  <tr>
+                    <td colSpan="14" style={{ textAlign: 'center' }}>No hay órdenes registradas.</td>
+                  </tr>
+                ) : (
+                  ordenesOrdenadas.map((o) => (
+                    <tr key={o.codigo}>
+                      <td>#{o.codigo}</td>
+                      <td>{o.cliente_nombre || '-'}</td>
+                      <td>{o.motocicleta_placa || '-'}</td>
+                      <td>{o.mecanico_nombre || '-'}</td>
+                      <td>{o.fecha_creacion || '-'}</td>
+                      <td>{o.fecha_inicio || '-'}</td>
+                      <td>{o.fecha_fin || '-'}</td>
+                      <td>{o.kilometraje_ingreso || 0}</td>
+                      <td>{o.prioridad || '-'}</td>
+                      <td>${o.costo_mano_obra || 0}</td>
+                      <td>${o.costo_repuestos || 0}</td>
+                      <td>{o.estado || '-'}</td>
+                      <td>${o.total || 0}</td>
+                      <td>
+                        <button onClick={() => abrirEdicionOrden(o)} className="table-action-btn table-action-btn--edit">Editar</button>
+                        <button onClick={() => eliminarOrden(o)} className="table-action-btn table-action-btn--danger">Eliminar</button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
+
       {ordenEdicion && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-          <div style={{ width: '100%', maxWidth: '560px', maxHeight: '80vh', overflowY: 'auto', backgroundColor: '#1e1e1e', border: '1px solid #333', borderRadius: '10px', padding: '20px' }}>
-            <h3 style={{ marginTop: 0, color: '#ff6600' }}>Editar orden #{ordenEdicion.codigo}</h3>
+        <div className="usuarios-modal-overlay">
+          <div className="usuarios-modal usuarios-modal--sm">
+            <h3 className="usuarios-panel-title">Editar orden #{ordenEdicion.codigo}</h3>
             <form onSubmit={guardarEdicionOrden}>
               <div className="input-group"><label>Mecánico</label><select value={editOrden.id_mecanico} onChange={(e) => {
                 const value = e.target.value;
@@ -433,8 +442,8 @@ const OrdenesTrabajo = () => {
               <div className="input-group"><label>Costo repuestos</label><input type="number" step="0.01" value={editOrden.costo_repuestos} onChange={(e) => setEditOrden({ ...editOrden, costo_repuestos: Number(e.target.value) })} /></div>
               <div className="input-group"><label>Total</label><input type="number" step="0.01" value={editOrden.total} readOnly /></div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" onClick={() => setOrdenEdicion(null)} style={{ padding: '8px 12px', backgroundColor: '#444', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Cancelar</button>
-                <button type="submit" style={{ padding: '8px 12px', backgroundColor: '#ff6600', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Guardar cambios</button>
+                <button type="button" onClick={() => setOrdenEdicion(null)} className="bitacora-btn bitacora-btn--clear">Cancelar</button>
+                <button type="submit" className="bitacora-btn bitacora-btn--filter">Guardar cambios</button>
               </div>
             </form>
           </div>

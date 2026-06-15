@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Login.css';
-import { logoutUniversal } from './auth';
 import { normalizeRoleText, repairText } from './textNormalization';
-import AdminMenu from './AdminMenu';
 import { API_BASE_URL } from './config';
 
 const ROLES = ['Cliente', 'Mecanico', 'Recepcionista', 'Administrador'];
@@ -18,7 +16,7 @@ const ROLE_MAP = {
 const PERMISOS_DATA = [
   {
     seccion: 'P1',
-    nombre: 'Gestión de Usuarios y Accesos',
+    nombre: 'Gestión de Accesos y Seguridad',
     modulos: [
       {
         cu: 'CU01',
@@ -27,54 +25,54 @@ const PERMISOS_DATA = [
       },
       {
         cu: 'CU02',
-        nombre: 'Gestion de Usuarios',
+        nombre: 'Gestionar Usuarios y Asignar Roles',
         acciones: ['Mostrar', 'Buscar', 'Adicionar', 'Eliminar', 'Editar'],
       },
       {
-        cu: 'CU03|CU04',
+        cu: 'CU03',
         nombre: 'Gestionar Roles y Asignar Permisos',
         acciones: ['Mostrar', 'Buscar', 'Adicionar', 'Eliminar', 'Editar'],
       },
       {
-        cu: 'CU17',
-        nombre: 'Configuración de Perfil Personal',
+        cu: 'CU04',
+        nombre: 'Gestionar Permisos',
         acciones: ['Mostrar', 'Editar'],
-      },
-      {
-        cu: 'CU20',
-        nombre: 'Bitácora de Auditoría',
-        acciones: ['Mostrar', 'Buscar', 'Exportar'],
       },
     ],
   },
   {
     seccion: 'P2',
-    nombre: 'Gestión de Clientes y Motocicletas',
+    nombre: 'Gestión de Clientes y Vehículos',
     modulos: [
       {
         cu: 'CU05',
-        nombre: 'Gestion de Clientes',
+        nombre: 'Gestionar Clientes',
         acciones: ['Mostrar', 'Buscar', 'Adicionar', 'Eliminar', 'Editar'],
       },
       {
         cu: 'CU06',
-        nombre: 'Gestion de Motocicletas',
+        nombre: 'Gestionar Motocicletas',
         acciones: ['Mostrar', 'Buscar', 'Adicionar', 'Eliminar', 'Editar'],
       },
       {
         cu: 'CU15',
-        nombre: 'Gestionar Historial de Mantenimiento',
+        nombre: 'Consultar Historial de Mantenimiento',
         acciones: ['Mostrar', 'Buscar', 'Adicionar', 'Eliminar'],
+      },
+      {
+        cu: 'CU16',
+        nombre: 'Dar Seguimiento para Clientes',
+        acciones: ['Mostrar', 'Buscar', 'Exportar'],
       },
     ],
   },
   {
     seccion: 'P3',
-    nombre: 'Gestión de Cotizaciones y Órdenes de Trabajo',
+    nombre: 'Gestión de Servicio Técnico',
     modulos: [
       {
         cu: 'CU07',
-        nombre: 'Gestionar Cotizaciones',
+        nombre: 'Elaborar Cotizaciones',
         acciones: ['Mostrar', 'Buscar', 'Adicionar', 'Eliminar', 'Editar'],
       },
       {
@@ -84,25 +82,20 @@ const PERMISOS_DATA = [
       },
       {
         cu: 'CU09',
-        nombre: 'Gestionar Notas de Trabajo',
+        nombre: 'Redactar Notas de Trabajo',
         acciones: ['Mostrar', 'Buscar', 'Adicionar', 'Eliminar', 'Editar'],
       },
       {
-        cu: 'CU16',
-        nombre: 'Gestionar Seguimiento para Clientes',
-        acciones: ['Mostrar', 'Buscar', 'Exportar'],
+        cu: 'CU14',
+        nombre: 'Emitir Facturación',
+        acciones: ['Mostrar', 'Buscar', 'Adicionar', 'Eliminar', 'Editar', 'Imprimir'],
       },
     ],
   },
   {
     seccion: 'P4',
-    nombre: 'Gestión de Inventario y Repuestos',
+    nombre: 'Gestión de Inventario y Suministros',
     modulos: [
-      {
-        cu: 'CU12',
-        nombre: 'Gestionar Compras a Proveedores',
-        acciones: ['Mostrar', 'Buscar', 'Adicionar', 'Eliminar', 'Editar'],
-      },
       {
         cu: 'CU10',
         nombre: 'Gestionar Productos (Repuestos)',
@@ -110,40 +103,44 @@ const PERMISOS_DATA = [
       },
       {
         cu: 'CU11',
-        nombre: 'Gestionar Inventario',
+        nombre: 'Monitorear Inventario',
         acciones: ['Mostrar', 'Buscar', 'Reportes'],
       },
       {
+        cu: 'CU12',
+        nombre: 'Procesar Compras a Proveedores',
+        acciones: ['Mostrar', 'Buscar', 'Adicionar', 'Eliminar', 'Editar'],
+      },
+      {
         cu: 'CU13',
-        nombre: 'Gestionar Proveedores',
+        nombre: 'Administrar Proveedores',
         acciones: ['Mostrar', 'Buscar', 'Adicionar', 'Eliminar', 'Editar'],
       },
     ],
   },
   {
     seccion: 'P5',
-    nombre: 'Gestión de Facturación y Pagos',
+    nombre: 'Configuración y Analítica',
     modulos: [
       {
-        cu: 'CU14',
-        nombre: 'Gestionar Facturación',
-        acciones: ['Mostrar', 'Buscar', 'Adicionar', 'Eliminar', 'Editar', 'Imprimir'],
+        cu: 'CU17',
+        nombre: 'Configuración de Perfil Personal',
+        acciones: ['Mostrar', 'Editar'],
       },
-    ],
-  },
-  {
-    seccion: 'P6',
-    nombre: 'Gestión de Reportes y Análisis',
-    modulos: [
       {
         cu: 'CU18',
-        nombre: 'Gestionar Reportes',
+        nombre: 'Generar Reportes',
         acciones: ['Mostrar', 'Buscar', 'Exportar', 'Descargar'],
       },
       {
         cu: 'CU19',
-        nombre: 'Gestionar Dashboard Analítico',
+        nombre: 'Visualizar Dashboard Analítico',
         acciones: ['Mostrar', 'Exportar'],
+      },
+      {
+        cu: 'CU20',
+        nombre: 'Auditoría de Operaciones – Bitácora',
+        acciones: ['Mostrar', 'Buscar', 'Exportar'],
       },
     ],
   },
@@ -361,17 +358,12 @@ const AsignarPrivilegios = () => {
     }
   };
 
-  const cerrarSesion = async () => {
-    await logoutUniversal();
-    navigate('/login');
-  };
-
-  if (cargando) {
-    return <div className="app-container"><p>Cargando...</p></div>;
-  }
-
   return (
-    <div className="app-container">
+    <div className="app-container privilegios-page">
+      <div className="page-bg-layer page-bg-layer--a" style={{ backgroundImage: 'url(/static/img/asignar-privilegios/fondo-privilegios-1.png)' }}></div>
+      <div className="page-bg-layer page-bg-layer--b" style={{ backgroundImage: 'url(/static/img/asignar-privilegios/fondo-privilegios-2.png)' }}></div>
+      <div className="page-bg-overlay"></div>
+
       <div className="top-panel">
         <div className="page-title">
           <h2>Asignar Privilegios</h2>
@@ -379,142 +371,98 @@ const AsignarPrivilegios = () => {
         </div>
         <div className="user-actions">
           <span>👤 {repairText(usuarioLocal?.nombre)} ({repairText(usuarioLocal?.rol)})</span>
-          <button onClick={() => navigate('/perfil')} className="btn-primary">Mi Perfil</button>
-          <button onClick={cerrarSesion} className="btn-secondary">Cerrar Sesión</button>
+          <button onClick={() => navigate('/perfil')} className="btn-secondary">Mi Perfil</button>
+          <button onClick={goBack} className="btn-secondary">Atrás</button>
         </div>
       </div>
 
-      <AdminMenu />
+      {error && <div className="error-box" style={{ marginTop: '20px' }}>{error}</div>}
 
-      <div className="section-card" style={{ padding: '24px', marginTop: '20px' }}>
-        {error && <div className="error-box" style={{ marginBottom: '12px' }}>{error}</div>}
+      {cargando ? (
+        <div className="bitacora-panel" style={{ marginTop: '20px' }}>Cargando...</div>
+      ) : (
+        <>
+          {PERMISOS_DATA.map((seccion) => (
+            <div key={seccion.seccion} className="bitacora-panel" style={{ marginTop: '20px' }}>
+              <h3 className="usuarios-panel-title">{seccion.seccion}. {seccion.nombre}</h3>
 
-        {PERMISOS_DATA.map((seccion) => (
-          <div key={seccion.seccion} style={{ marginBottom: '30px', paddingBottom: '20px', borderBottom: '2px solid #333' }}>
-            <h3 style={{ color: '#ff6600', marginBottom: '16px' }}>
-              {seccion.seccion}. {seccion.nombre}
-            </h3>
-
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '800px' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid #444' }}>
-                    <th style={{ padding: '12px', width: '40%', color: '#ff6600' }}>Módulo / Acción</th>
-                    {ROLES.map((rol) => (
-                      <th key={`select-${rol}`} style={{ padding: '8px', textAlign: 'center', color: '#ccc', minWidth: '120px' }}>
-                        <button
-                          type="button"
-                          onClick={() => toggleSelectAllRole(rol)}
-                          disabled={rol === ADMIN_ROLE}
-                          className="btn-primary"
-                          style={{ width: '100%', padding: '8px 6px', fontSize: '0.85rem', opacity: rol === ADMIN_ROLE ? 0.6 : 1, cursor: rol === ADMIN_ROLE ? 'not-allowed' : 'pointer' }}
-                        >
-                          Seleccionar Todo
-                        </button>
-                      </th>
-                    ))}
-                  </tr>
-                  <tr style={{ borderBottom: '2px solid #ff6600' }}>
-                    <th style={{ padding: '12px', width: '40%', color: '#ff6600' }}>Módulo / Acción</th>
-                    {ROLES.map((rol) => (
-                      <th key={rol} style={{ padding: '12px', textAlign: 'center', color: '#ccc', minWidth: '120px' }}>
-                        {rol}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {seccion.modulos.map((modulo) => {
-                    const cuNombreKey = `${modulo.cu}_${modulo.nombre}`;
-                    return (
-                      <React.Fragment key={cuNombreKey}>
-                        <tr style={{ borderBottom: '1px solid #444', backgroundColor: '#252525' }}>
-                          <td style={{ padding: '12px', color: '#ff6600', fontWeight: 'bold' }}>
-                            {modulo.cu} – {modulo.nombre}
-                          </td>
-                          {ROLES.map((rol) => (
-                            <td key={rol} style={{ padding: '12px', textAlign: 'center', backgroundColor: '#1e1e1e' }}>
-                              <input
-                                type="checkbox"
-                                checked={permisos[rol]?.[cuNombreKey]?.acciones?.['Mostrar'] || false}
-                                onChange={() => togglePermiso(rol, cuNombreKey, 'Mostrar')}
-                                disabled={rol === ADMIN_ROLE}
-                                style={{ cursor: rol === ADMIN_ROLE ? 'not-allowed' : 'pointer', width: '18px', height: '18px' }}
-                              />
-                            </td>
-                          ))}
-                        </tr>
-                        {modulo.acciones.map((accion) => (
-                          <tr key={accion} style={{ borderBottom: '1px solid #333', backgroundColor: '#1a1a1a' }}>
-                            <td style={{ padding: '12px', paddingLeft: '32px', color: '#aaa', fontSize: '0.95rem' }}>
-                              – {accion}
-                            </td>
+              <div className="bitacora-table-wrap">
+                <table className="bitacora-table privilegios-table">
+                  <thead>
+                    <tr className="privilegios-select-row">
+                      <th></th>
+                      {ROLES.map((rol) => (
+                        <th key={`select-${rol}`}>
+                          <button
+                            type="button"
+                            onClick={() => toggleSelectAllRole(rol)}
+                            disabled={rol === ADMIN_ROLE}
+                            className="bitacora-btn bitacora-btn--filter privilegios-select-all"
+                          >
+                            Seleccionar Todo
+                          </button>
+                        </th>
+                      ))}
+                    </tr>
+                    <tr>
+                      <th>Módulo / Acción</th>
+                      {ROLES.map((rol) => (
+                        <th key={rol}>{rol}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {seccion.modulos.map((modulo) => {
+                      const cuNombreKey = `${modulo.cu}_${modulo.nombre}`;
+                      return (
+                        <React.Fragment key={cuNombreKey}>
+                          <tr className="privilegios-row--modulo">
+                            <td>{modulo.cu} – {modulo.nombre}</td>
                             {ROLES.map((rol) => (
-                              <td key={rol} style={{ padding: '12px', textAlign: 'center' }}>
+                              <td key={rol} className="privilegios-cell">
                                 <input
                                   type="checkbox"
-                                  checked={permisos[rol]?.[cuNombreKey]?.acciones?.[accion] || false}
-                                  onChange={() => togglePermiso(rol, cuNombreKey, accion)}
+                                  checked={permisos[rol]?.[cuNombreKey]?.acciones?.['Mostrar'] || false}
+                                  onChange={() => togglePermiso(rol, cuNombreKey, 'Mostrar')}
                                   disabled={rol === ADMIN_ROLE}
-                                  style={{ cursor: rol === ADMIN_ROLE ? 'not-allowed' : 'pointer', width: '18px', height: '18px' }}
                                 />
                               </td>
                             ))}
                           </tr>
-                        ))}
-                      </React.Fragment>
-                    );
-                  })}
-                </tbody>
-              </table>
+                          {modulo.acciones.map((accion) => (
+                            <tr key={accion} className="privilegios-row--accion">
+                              <td className="privilegios-accion-label">– {accion}</td>
+                              {ROLES.map((rol) => (
+                                <td key={rol} className="privilegios-cell">
+                                  <input
+                                    type="checkbox"
+                                    checked={permisos[rol]?.[cuNombreKey]?.acciones?.[accion] || false}
+                                    onChange={() => togglePermiso(rol, cuNombreKey, accion)}
+                                    disabled={rol === ADMIN_ROLE}
+                                  />
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+
+          <div className="bitacora-panel" style={{ marginTop: '20px' }}>
+            <div className="reportes-export-actions">
+              <button onClick={guardarPermisos} disabled={guardando} className="bitacora-btn bitacora-btn--export">
+                {guardando ? 'Guardando...' : 'Guardar Permisos'}
+              </button>
+              <button onClick={() => navigate('/inicio')} className="bitacora-btn bitacora-btn--clear">Cancelar</button>
             </div>
           </div>
-        ))}
-
-        <div style={{ display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'flex-end' }}>
-          <button
-            onClick={guardarPermisos}
-            disabled={guardando}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#ff6600',
-              color: 'white',
-              border: 'none',
-              borderRadius: '5px',
-              cursor: guardando ? 'not-allowed' : 'pointer',
-              opacity: guardando ? 0.6 : 1,
-            }}
-          >
-            {guardando ? 'Guardando...' : 'Guardar Permisos'}
-          </button>
-          <button
-            onClick={goBack}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#555',
-              color: 'white',
-              border: 'none',
-              borderRadius: '5px',
-              cursor: 'pointer',
-            }}
-          >
-            Volver
-          </button>
-          <button
-            onClick={() => navigate('/inicio')}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#333',
-              color: 'white',
-              border: 'none',
-              borderRadius: '5px',
-              cursor: 'pointer',
-            }}
-          >
-            Cancelar
-          </button>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 };

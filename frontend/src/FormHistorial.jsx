@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
 import './Login.css';
 import { getHomeRouteByRole } from './navigation';
+import { repairText } from './textNormalization';
 import { API_BASE_URL } from './config';
 import { validarPermisoModulo } from './permissions';
 
@@ -172,34 +173,38 @@ const FormHistorial = () => {
   };
 
   return (
-    <div style={{ padding: '30px', backgroundColor: '#121212', minHeight: '100vh', color: 'white' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <h2 style={{ color: '#ff6600', margin: 0 }}>Historial de Mantenimiento (CU15)</h2>
-        <div>
-          <button onClick={() => navigate('/inicio')} style={{ marginRight: '10px', padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Inicio</button>
-          <button onClick={() => navigate('/perfil')} style={{ padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Mi Perfil</button>
+    <div className="app-container historial-page">
+      <div className="page-bg-layer page-bg-layer--a" style={{ backgroundImage: 'url(/static/img/historial-mantenimiento/fondo-historial-mantenimiento-1.png)' }}></div>
+      <div className="page-bg-layer page-bg-layer--b" style={{ backgroundImage: 'url(/static/img/historial-mantenimiento/fondo-historial-mantenimiento-2.png)' }}></div>
+      <div className="page-bg-overlay"></div>
+
+      <div className="top-panel">
+        <div className="page-title">
+          <h2>Historial de Mantenimiento (CU15)</h2>
+          <div className="page-subtitle">Consulta del historial de mantenimiento de vehículos</div>
+        </div>
+        <div className="user-actions">
+          <span>👤 {repairText(usuarioLocal?.nombre)} ({repairText(usuarioLocal?.rol)})</span>
+          <button onClick={() => navigate('/inicio')} className="btn-secondary">Inicio</button>
+          <button onClick={() => navigate('/perfil')} className="btn-secondary">Mi Perfil</button>
+          <button onClick={() => navigate(-1)} className="btn-secondary">Atrás</button>
         </div>
       </div>
 
-      {error && <div className="error-box" style={{ marginBottom: '15px' }}>{error}</div>}
-      {mensajeError && (
-        <div className="alert alert-warning" style={{ marginBottom: '15px', backgroundColor: '#2a2a2a', padding: '10px', borderRadius: '6px' }}>
-          {mensajeError}
-        </div>
-      )}
+      {error && <div className="error-box" style={{ marginTop: '20px' }}>{error}</div>}
 
-      <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px', marginBottom: '20px' }}>
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+      <div className="bitacora-panel historial-search-panel">
+        <div className="historial-search-bar">
           <input
             value={criterio}
             onChange={(e) => setCriterio(e.target.value)}
-            placeholder="Placa o numero de chasis"
-            style={{ flex: 1, minWidth: '220px', padding: '10px', borderRadius: '6px', border: '1px solid #444', backgroundColor: '#111', color: 'white' }}
+            placeholder="Placa o número de chasis"
+            className="bitacora-input"
           />
           <button
             type="button"
             onClick={() => iniciaBusquedaPorPlacaOChasis(criterio)}
-            style={{ padding: '10px 16px', backgroundColor: '#2c5f8f', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+            className="bitacora-btn bitacora-btn--filter"
             disabled={cargando}
           >
             {cargando ? 'Buscando...' : 'Buscar'}
@@ -207,71 +212,93 @@ const FormHistorial = () => {
           <button
             type="button"
             onClick={solicitaReportePDF}
-            style={{ padding: '10px 16px', backgroundColor: '#ff6600', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+            className="bitacora-btn bitacora-btn--export"
             disabled={cargando}
           >
             Descargar reporte PDF
           </button>
         </div>
+
+        {mensajeError && (
+          <div className="historial-warning-box">
+            {mensajeError}
+          </div>
+        )}
       </div>
 
       {motocicleta && (
-        <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px', marginBottom: '20px' }}>
-          <h3>Datos del vehiculo</h3>
-          <p><strong>Placa:</strong> {motocicleta.placa || '-'}</p>
-          <p><strong>Chasis:</strong> {motocicleta.numero_chasis || '-'}</p>
-          <p><strong>Cliente:</strong> {motocicleta.cliente_nombre || '-'}</p>
-          <p><strong>Marca/Modelo:</strong> {(motocicleta.marca || '-') + ' ' + (motocicleta.modelo || '')}</p>
+        <div className="bitacora-panel historial-vehiculo-panel">
+          <h3 className="usuarios-panel-title">Datos del vehículo</h3>
+          <div className="historial-info-grid">
+            <div className="historial-info-item">
+              <span className="historial-info-label">Placa</span>
+              <span>{motocicleta.placa || '-'}</span>
+            </div>
+            <div className="historial-info-item">
+              <span className="historial-info-label">Chasis</span>
+              <span>{motocicleta.numero_chasis || '-'}</span>
+            </div>
+            <div className="historial-info-item">
+              <span className="historial-info-label">Cliente</span>
+              <span>{motocicleta.cliente_nombre || '-'}</span>
+            </div>
+            <div className="historial-info-item">
+              <span className="historial-info-label">Marca/Modelo</span>
+              <span>{(motocicleta.marca || '-') + ' ' + (motocicleta.modelo || '')}</span>
+            </div>
+          </div>
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
-        <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
-          <h3>Ordenes de trabajo</h3>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #444' }}>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Orden</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Estado</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Fecha inicio</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Fecha fin</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ordenes.length === 0 ? (
+      <div className="historial-content">
+        <div className="bitacora-panel historial-ordenes-panel">
+          <h3 className="usuarios-panel-title">Órdenes de trabajo</h3>
+          <div className="bitacora-table-wrap">
+            <table className="bitacora-table">
+              <thead>
                 <tr>
-                  <td colSpan="5" style={{ padding: '12px', textAlign: 'center' }}>No hay historial disponible.</td>
+                  <th>Orden</th>
+                  <th>Estado</th>
+                  <th>Fecha inicio</th>
+                  <th>Fecha fin</th>
+                  <th>Acciones</th>
                 </tr>
-              ) : (
-                ordenes.map((orden) => (
-                  <tr key={orden.codigo} style={{ borderBottom: '1px solid #2c2c2c' }}>
-                    <td style={{ padding: '8px' }}>#{orden.codigo}</td>
-                    <td style={{ padding: '8px' }}>{orden.estado || '-'}</td>
-                    <td style={{ padding: '8px' }}>{orden.fecha_inicio || '-'}</td>
-                    <td style={{ padding: '8px' }}>{orden.fecha_fin || '-'}</td>
-                    <td style={{ padding: '8px' }}>
-                      <button
-                        type="button"
-                        onClick={() => seleccionaOrdenParaVerDesglose(orden.codigo)}
-                        style={{ backgroundColor: '#2c5f8f', border: 'none', color: 'white', borderRadius: '4px', padding: '6px 10px', cursor: 'pointer' }}
-                      >
-                        Ver desglose
-                      </button>
-                    </td>
+              </thead>
+              <tbody>
+                {ordenes.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" style={{ textAlign: 'center' }}>No hay historial disponible.</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  ordenes.map((orden) => (
+                    <tr key={orden.codigo}>
+                      <td>#{orden.codigo}</td>
+                      <td>{orden.estado || '-'}</td>
+                      <td>{orden.fecha_inicio || '-'}</td>
+                      <td>{orden.fecha_fin || '-'}</td>
+                      <td>
+                        <button
+                          type="button"
+                          onClick={() => seleccionaOrdenParaVerDesglose(orden.codigo)}
+                          className="table-action-btn table-action-btn--edit"
+                        >
+                          Ver desglose
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
-          <h3>Desglose de la orden</h3>
+        <div className="bitacora-panel historial-desglose-panel">
+          <h3 className="usuarios-panel-title">Desglose de la orden</h3>
           {ordenSeleccionada ? (
             <div>
               <p><strong>Orden:</strong> #{ordenSeleccionada.codigo}</p>
-              <p><strong>Mecanico:</strong> {ordenSeleccionada.mecanico_nombre || '-'}</p>
+              <p><strong>Mecánico:</strong> {ordenSeleccionada.mecanico_nombre || '-'}</p>
               <p><strong>Prioridad:</strong> {ordenSeleccionada.prioridad || '-'}</p>
               <p><strong>Total:</strong> {ordenSeleccionada.total || 0}</p>
               <div style={{ marginTop: '10px' }}>
@@ -279,7 +306,7 @@ const FormHistorial = () => {
                   <p>No hay detalles registrados.</p>
                 ) : (
                   detalles.map((detalle) => (
-                    <div key={detalle.codigo} style={{ borderBottom: '1px solid #333', padding: '6px 0' }}>
+                    <div key={detalle.codigo} className="historial-detalle-item">
                       <div><strong>{detalle.tipo}</strong> - {detalle.descripcion}</div>
                       <div>Cantidad: {detalle.cantidad} | Precio: {detalle.precio_unitario} | Subtotal: {detalle.subtotal}</div>
                     </div>

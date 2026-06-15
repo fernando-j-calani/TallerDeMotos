@@ -14,8 +14,28 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+def load_dotenv_file(path):
+    try:
+        with open(path, encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                if '=' not in line:
+                    continue
+                key, value = line.split('=', 1)
+                key = key.strip()
+                value = value.strip()
+                if len(value) >= 2 and ((value[0] == value[-1] == '"') or (value[0] == value[-1] == "'")):
+                    value = value[1:-1]
+                if key and key not in os.environ:
+                    os.environ[key] = value
+    except FileNotFoundError:
+        pass
+
+# Load .env from the repository root when running locally.
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv_file(BASE_DIR.parent / '.env')
 
 
 # Quick-start development settings - unsuitable for production
@@ -46,7 +66,7 @@ def build_origin(url):
 ALLOWED_HOSTS = [host.strip() for host in os.environ.get('ALLOWED_HOSTS', '').split(',') if host.strip()]
 if not ALLOWED_HOSTS:
     if WEBSITE_HOSTNAME == 'localhost':
-        ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]']
+        ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]', 'testserver']
     else:
         ALLOWED_HOSTS = [WEBSITE_HOSTNAME]
 
@@ -66,6 +86,8 @@ PASSWORD_RESET_TOKEN_MAX_AGE_SECONDS = int(os.environ.get('PASSWORD_RESET_TOKEN_
 PASSWORD_RESET_LIMIT_PER_IP = int(os.environ.get('PASSWORD_RESET_LIMIT_PER_IP', '20'))
 PASSWORD_RESET_LIMIT_PER_EMAIL = int(os.environ.get('PASSWORD_RESET_LIMIT_PER_EMAIL', '5'))
 PASSWORD_RESET_WINDOW_SECONDS = int(os.environ.get('PASSWORD_RESET_WINDOW_SECONDS', '3600'))
+PASSWORD_RESET_CODE_MAX_AGE_SECONDS = int(os.environ.get('PASSWORD_RESET_CODE_MAX_AGE_SECONDS', '600'))
+PASSWORD_RESET_CODE_MAX_ATTEMPTS = int(os.environ.get('PASSWORD_RESET_CODE_MAX_ATTEMPTS', '5'))
 FRONTEND_URL = FRONTEND_URL
 MAIL_MODE = os.environ.get('MAIL_MODE', 'offline').strip().lower()
 PASSWORD_RESET_LOG_TO_CONSOLE = get_bool_env('PASSWORD_RESET_LOG_TO_CONSOLE', True)

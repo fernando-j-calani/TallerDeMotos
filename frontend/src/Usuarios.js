@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Login.css'; // Reutilizamos los colores y estilos base
-import { logoutUniversal } from './auth';
 import { getHomeRouteByRole } from './navigation';
 import { repairText } from './textNormalization';
 import { API_BASE_URL } from './config';
@@ -48,7 +47,7 @@ const Usuarios = () => {
     nombre: '', email: '', password: '', telefono: '', id_rol: ''
   });
   const [usuarioEdicion, setUsuarioEdicion] = useState(null);
-  const [editUsuario, setEditUsuario] = useState({ nombre: '', telefono: '', id_rol: '' });
+  const [editUsuario, setEditUsuario] = useState({ nombre: '', email: '', telefono: '', id_rol: '' });
 
     useEffect(() => {
         // 1. Verificamos la seguridad
@@ -216,6 +215,7 @@ const Usuarios = () => {
     setUsuarioEdicion(usuario);
     setEditUsuario({
       nombre: usuario.nombre || '',
+      email: usuario.email || '',
       telefono: usuario.telefono || '',
       id_rol: String(usuario.id_rol || ''),
     });
@@ -236,7 +236,7 @@ const Usuarios = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ nombre: editUsuario.nombre, telefono: editUsuario.telefono, id_rol: idRol }),
+        body: JSON.stringify({ nombre: editUsuario.nombre, email: editUsuario.email, telefono: editUsuario.telefono, id_rol: idRol }),
       });
 
       const datos = await respuesta.json();
@@ -282,39 +282,33 @@ const Usuarios = () => {
     }
   };
 
-  const cerrarSesion = async () => {
-    await logoutUniversal();
-    navigate('/login');
-  };
-
   return (
-    <div style={{ padding: '40px', backgroundColor: '#121212', minHeight: '100vh', color: 'white' }}>
-      {/* Barra de Navegación Simple */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #333', paddingBottom: '20px' }}>
-        <h2 style={{ color: '#ff6600', margin: 0 }}>Gestión de Usuarios (CU02)</h2>
-        <div>
-          <button onClick={() => navigate('/roles-permisos')} style={{ marginRight: '10px', padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
-            Roles y Permisos
-          </button>
-          <button onClick={cargarClientesElegibles} style={{ marginRight: '10px', padding: '8px 16px', backgroundColor: '#2c5f8f', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
-            Generar usuario cliente
-          </button>
-          <button onClick={() => navigate('/bitacora')} style={{ marginRight: '10px', padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
-            Ir a Bitácora
-          </button>
-          <button onClick={cerrarSesion} style={{ padding: '8px 16px', backgroundColor: '#ff4d4d', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
-            Cerrar Sesión
-          </button>
+    <div className="app-container usuarios-page">
+      <div className="page-bg-layer page-bg-layer--a" style={{ backgroundImage: 'url(/static/img/usuarios/fondo-usuarios-1.png)' }}></div>
+      <div className="page-bg-layer page-bg-layer--b" style={{ backgroundImage: 'url(/static/img/usuarios/fondo-usuarios-2.png)' }}></div>
+      <div className="page-bg-overlay"></div>
+
+      <div className="top-panel">
+        <div className="page-title">
+          <h2>Gestión de Usuarios (CU02)</h2>
+          <div className="page-subtitle">Administración de cuentas, roles y accesos del sistema</div>
+        </div>
+        <div className="user-actions">
+          <span>👤 {repairText(usuarioLocal?.nombre)} ({repairText(usuarioLocal?.rol)})</span>
+          <button onClick={() => navigate('/roles-permisos')} className="btn-secondary">Roles y Permisos</button>
+          <button onClick={cargarClientesElegibles} className="btn-primary">Generar usuario cliente</button>
+          <button onClick={() => navigate('/bitacora')} className="btn-secondary">Ir a Bitácora</button>
+          <button onClick={() => navigate(-1)} className="btn-secondary">Atrás</button>
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-        {error && <div className="error-box" style={{ width: '100%', marginBottom: '10px' }}>{error}</div>}
-        {ok && <div style={{ width: '100%', marginBottom: '10px', backgroundColor: 'rgba(0,255,0,0.12)', color: '#7dff7d', padding: '10px 12px', borderRadius: '6px' }}>{ok}</div>}
-        
+      {error && <div className="error-box" style={{ marginTop: '20px' }}>{error}</div>}
+      {ok && <div className="success-box" style={{ marginTop: '20px' }}>{ok}</div>}
+
+      <div className="usuarios-content">
         {/* PANEL IZQUIERDO: Formulario para Crear Usuario */}
-        <div style={{ flex: '1', backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px', minWidth: '300px' }}>
-          <h3 style={{ color: '#ccc', marginBottom: '20px' }}>Crear Nuevo Usuario</h3>
+        <div className="bitacora-panel usuarios-form-panel">
+          <h3 className="usuarios-panel-title">Crear Nuevo Usuario</h3>
           <form onSubmit={crearUsuario}>
             <div className="input-group">
               <label>Nombre Completo</label>
@@ -334,65 +328,70 @@ const Usuarios = () => {
             </div>
             <div className="input-group">
               <label>Rol del Sistema</label>
-              <select name="id_rol" value={nuevoUsuario.id_rol} onChange={manejarCambio} required style={{ width: '100%', padding: '12px', borderRadius: '5px', backgroundColor: '#2a2a2a', color: 'white', border: '1px solid #333' }}>
+              <select name="id_rol" value={nuevoUsuario.id_rol} onChange={manejarCambio} required>
                 <option value="">-- Seleccione un Rol --</option>
                 {roles.map(rol => (
                   <option key={rol.codigo} value={rol.codigo}>{repairText(rol.nombre)}</option>
                 ))}
               </select>
             </div>
-            <button type="submit" className="btn-login">Registrar Usuario</button>
+            <button type="submit" className="bitacora-btn bitacora-btn--filter">Registrar Usuario</button>
           </form>
         </div>
 
         {/* PANEL DERECHO: Tabla de Usuarios Existentes */}
-        <div style={{ flex: '2', backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px', minWidth: '400px' }}>
-          <h3 style={{ color: '#ccc', marginBottom: '20px' }}>Usuarios del Sistema</h3>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <thead>
-              <tr style={{ borderBottom: '2px solid #ff6600', color: '#ccc' }}>
-                <th style={{ padding: '12px' }}>Nombre</th>
-                <th style={{ padding: '12px' }}>Email</th>
-                <th style={{ padding: '12px' }}>Rol</th>
-                <th style={{ padding: '12px' }}>Estado</th>
-                <th style={{ padding: '12px' }}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {usuarios.map((u) => (
-                <tr key={u.codigo} style={{ borderBottom: '1px solid #333' }}>
-                  <td style={{ padding: '12px' }}>{repairText(u.nombre)}</td>
-                  <td style={{ padding: '12px' }}>{u.email}</td>
-                  <td style={{ padding: '12px', color: '#ff6600' }}>{repairText(u.rol_nombre)}</td>
-                  <td style={{ padding: '12px' }}>
-                    <span style={{ backgroundColor: u.estado === 'Activo' ? 'rgba(0, 255, 0, 0.1)' : 'rgba(255, 0, 0, 0.1)', color: u.estado === 'Activo' ? '#00ff00' : '#ff4d4d', padding: '4px 8px', borderRadius: '4px', fontSize: '12px' }}>
-                      {u.estado}
-                    </span>
-                  </td>
-                  <td style={{ padding: '12px' }}>
-                    <button onClick={() => abrirEdicionUsuario(u)} style={{ marginRight: '6px', backgroundColor: '#2c5f8f', border: 'none', color: 'white', borderRadius: '4px', padding: '6px 10px', cursor: 'pointer' }}>
-                      Editar
-                    </button>
-                    <button onClick={() => cambiarEstadoUsuario(u)} style={{ backgroundColor: u.estado === 'Activo' ? '#8f2d2d' : '#2d8f5a', border: 'none', color: 'white', borderRadius: '4px', padding: '6px 10px', cursor: 'pointer' }}>
-                      {u.estado === 'Activo' ? 'Desactivar' : 'Activar'}
-                    </button>
-                  </td>
+        <div className="bitacora-panel usuarios-table-panel">
+          <h3 className="usuarios-panel-title">Usuarios del Sistema</h3>
+          <div className="bitacora-table-wrap">
+            <table className="bitacora-table">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Email</th>
+                  <th>Rol</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {usuarios.map((u) => (
+                  <tr key={u.codigo}>
+                    <td>{repairText(u.nombre)}</td>
+                    <td>{u.email}</td>
+                    <td className="bitacora-user">{repairText(u.rol_nombre)}</td>
+                    <td>
+                      <span className={`usuario-status-badge ${u.estado === 'Activo' ? 'usuario-status-badge--activo' : 'usuario-status-badge--inactivo'}`}>
+                        {u.estado}
+                      </span>
+                    </td>
+                    <td>
+                      <button onClick={() => abrirEdicionUsuario(u)} className="table-action-btn table-action-btn--edit">
+                        Editar
+                      </button>
+                      <button onClick={() => cambiarEstadoUsuario(u)} className={`table-action-btn ${u.estado === 'Activo' ? 'table-action-btn--danger' : 'table-action-btn--success'}`}>
+                        {u.estado === 'Activo' ? 'Desactivar' : 'Activar'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-
       </div>
 
       {usuarioEdicion && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-          <div style={{ width: '100%', maxWidth: '460px', backgroundColor: '#1e1e1e', border: '1px solid #333', borderRadius: '10px', padding: '20px' }}>
-            <h3 style={{ marginTop: 0, color: '#ff6600' }}>Editar usuario</h3>
+        <div className="usuarios-modal-overlay">
+          <div className="usuarios-modal usuarios-modal--sm">
+            <h3 style={{ marginTop: 0, color: 'var(--color-accent)' }}>Editar usuario</h3>
             <form onSubmit={guardarEdicionUsuario}>
               <div className="input-group">
                 <label>Nombre</label>
                 <input value={editUsuario.nombre} onChange={(e) => setEditUsuario({ ...editUsuario, nombre: e.target.value })} required />
+              </div>
+              <div className="input-group">
+                <label>Correo Electrónico</label>
+                <input type="email" value={editUsuario.email} onChange={(e) => setEditUsuario({ ...editUsuario, email: e.target.value })} required />
               </div>
               <div className="input-group">
                 <label>Teléfono</label>
@@ -404,7 +403,6 @@ const Usuarios = () => {
                   value={editUsuario.id_rol}
                   onChange={(e) => setEditUsuario({ ...editUsuario, id_rol: e.target.value })}
                   required
-                  style={{ width: '100%', padding: '12px', borderRadius: '5px', backgroundColor: '#2a2a2a', color: 'white', border: '1px solid #333' }}
                 >
                   <option value="">-- Seleccione un Rol --</option>
                   {roles.map((rol) => (
@@ -413,8 +411,8 @@ const Usuarios = () => {
                 </select>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" onClick={() => setUsuarioEdicion(null)} style={{ padding: '8px 12px', backgroundColor: '#444', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Cancelar</button>
-                <button type="submit" style={{ padding: '8px 12px', backgroundColor: '#ff6600', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Guardar</button>
+                <button type="button" onClick={() => setUsuarioEdicion(null)} className="btn-secondary">Cancelar</button>
+                <button type="submit" className="bitacora-btn bitacora-btn--filter">Guardar</button>
               </div>
             </form>
           </div>
@@ -422,14 +420,14 @@ const Usuarios = () => {
       )}
 
       {mostrarGeneradorCliente && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 60, padding: '20px' }}>
-          <div style={{ width: '100%', maxWidth: '860px', maxHeight: '85vh', overflow: 'auto', backgroundColor: '#1e1e1e', border: '1px solid #333', borderRadius: '10px', padding: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <div className="usuarios-modal-overlay">
+          <div className="usuarios-modal usuarios-modal--lg">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', gap: '12px', flexWrap: 'wrap' }}>
               <div>
-                <h3 style={{ margin: 0, color: '#ff6600' }}>Generar usuario cliente</h3>
-                <p style={{ margin: '6px 0 0', color: '#bbb' }}>Se muestran solo clientes activos que aún no tienen una cuenta Cliente activa.</p>
+                <h3 style={{ margin: 0, color: 'var(--color-accent)' }}>Generar usuario cliente</h3>
+                <p style={{ margin: '6px 0 0', color: 'var(--color-text-muted)' }}>Se muestran solo clientes activos que aún no tienen una cuenta Cliente activa.</p>
               </div>
-              <button type="button" onClick={() => setMostrarGeneradorCliente(false)} style={{ padding: '8px 12px', backgroundColor: '#444', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Cerrar</button>
+              <button type="button" onClick={() => setMostrarGeneradorCliente(false)} className="btn-secondary">Cerrar</button>
             </div>
 
             <div className="input-group" style={{ marginBottom: '16px' }}>
@@ -437,60 +435,62 @@ const Usuarios = () => {
               <input value={busquedaCliente} onChange={(e) => setBusquedaCliente(e.target.value)} placeholder="Nombre o cédula" />
             </div>
 
-            <div style={{ marginBottom: '16px', color: '#bbb' }}>
-              Contraseña temporal: <strong style={{ color: '#ff6600' }}>{CLIENT_TEMP_PASSWORD}</strong>
+            <div style={{ marginBottom: '16px', color: 'var(--color-text-muted)' }}>
+              Contraseña temporal: <strong style={{ color: 'var(--color-accent)' }}>{CLIENT_TEMP_PASSWORD}</strong>
             </div>
 
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-              <thead>
-                <tr style={{ borderBottom: '2px solid #ff6600', color: '#ccc' }}>
-                  <th style={{ padding: '12px' }}>Cliente</th>
-                  <th style={{ padding: '12px' }}>Cédula</th>
-                  <th style={{ padding: '12px' }}>Teléfono</th>
-                  <th style={{ padding: '12px' }}>Email sugerido</th>
-                  <th style={{ padding: '12px' }}>Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                {clientesElegibles
-                  .filter((cliente) => {
+            <div className="bitacora-table-wrap">
+              <table className="bitacora-table">
+                <thead>
+                  <tr>
+                    <th>Cliente</th>
+                    <th>Cédula</th>
+                    <th>Teléfono</th>
+                    <th>Email sugerido</th>
+                    <th>Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {clientesElegibles
+                    .filter((cliente) => {
+                      const filtro = busquedaCliente.trim().toLowerCase();
+                      if (!filtro) return true;
+                      return (cliente.nombre || '').toLowerCase().includes(filtro) || (cliente.cedula || '').toLowerCase().includes(filtro);
+                    })
+                    .map((cliente) => {
+                      const emailSugerido = generarCorreoCliente(cliente.nombre, usuarios);
+                      return (
+                        <tr key={cliente.codigo}>
+                          <td>{cliente.nombre}</td>
+                          <td>{cliente.cedula}</td>
+                          <td>{cliente.telefono || '-'}</td>
+                          <td className="bitacora-user">{emailSugerido}</td>
+                          <td>
+                            <button
+                              type="button"
+                              onClick={() => crearUsuarioCliente(cliente)}
+                              className="table-action-btn table-action-btn--success"
+                            >
+                              Crear cuenta
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  {clientesElegibles.filter((cliente) => {
                     const filtro = busquedaCliente.trim().toLowerCase();
                     if (!filtro) return true;
                     return (cliente.nombre || '').toLowerCase().includes(filtro) || (cliente.cedula || '').toLowerCase().includes(filtro);
-                  })
-                  .map((cliente) => {
-                    const emailSugerido = generarCorreoCliente(cliente.nombre, usuarios);
-                    return (
-                      <tr key={cliente.codigo} style={{ borderBottom: '1px solid #2c2c2c' }}>
-                        <td style={{ padding: '12px' }}>{cliente.nombre}</td>
-                        <td style={{ padding: '12px' }}>{cliente.cedula}</td>
-                        <td style={{ padding: '12px' }}>{cliente.telefono || '-'}</td>
-                        <td style={{ padding: '12px', color: '#ff6600' }}>{emailSugerido}</td>
-                        <td style={{ padding: '12px' }}>
-                          <button
-                            type="button"
-                            onClick={() => crearUsuarioCliente(cliente)}
-                            style={{ backgroundColor: '#2d8f5a', border: 'none', color: 'white', borderRadius: '4px', padding: '6px 10px', cursor: 'pointer' }}
-                          >
-                            Crear cuenta
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                {clientesElegibles.filter((cliente) => {
-                  const filtro = busquedaCliente.trim().toLowerCase();
-                  if (!filtro) return true;
-                  return (cliente.nombre || '').toLowerCase().includes(filtro) || (cliente.cedula || '').toLowerCase().includes(filtro);
-                }).length === 0 && (
-                  <tr>
-                    <td colSpan="5" style={{ padding: '20px', textAlign: 'center', color: '#bbb' }}>
-                      No hay clientes elegibles para generar usuario.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  }).length === 0 && (
+                    <tr>
+                      <td colSpan="5" style={{ padding: '20px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                        No hay clientes elegibles para generar usuario.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

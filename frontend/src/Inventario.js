@@ -4,6 +4,7 @@ import './Login.css';
 import { getHomeRouteByRole } from './navigation';
 import { API_BASE_URL } from './config';
 import { validarPermisoModulo } from './permissions';
+import { repairText } from './textNormalization';
 
 const API = `${API_BASE_URL}/api`;
 
@@ -109,86 +110,103 @@ const Inventario = () => {
   };
 
   return (
-    <div style={{ padding: '30px', backgroundColor: '#121212', minHeight: '100vh', color: 'white' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <h2 style={{ color: '#ff6600', margin: 0 }}>Monitoreo de Inventario (CU11)</h2>
-        <div>
-          <button onClick={() => navigate('/inicio')} style={{ marginRight: '10px', padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Inicio</button>
-          <button onClick={() => navigate('/perfil')} style={{ padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Mi Perfil</button>
+    <div className="app-container inventario-page">
+      <div className="page-bg-layer page-bg-layer--a" style={{ backgroundImage: 'url(/static/img/inventario/fondo-inventario-1.png)' }}></div>
+      <div className="page-bg-layer page-bg-layer--b" style={{ backgroundImage: 'url(/static/img/inventario/fondo-inventario-2.png)' }}></div>
+      <div className="page-bg-overlay"></div>
+
+      <div className="top-panel">
+        <div className="page-title">
+          <h2>Monitoreo de Inventario (CU11)</h2>
+          <div className="page-subtitle">Seguimiento de niveles de stock, alertas y ajustes de productos</div>
+        </div>
+        <div className="user-actions">
+          <span>👤 {repairText(usuarioLocal?.nombre)} ({repairText(usuarioLocal?.rol)})</span>
+          <button onClick={() => navigate('/inicio')} className="btn-secondary">Inicio</button>
+          <button onClick={() => navigate('/perfil')} className="btn-secondary">Mi Perfil</button>
+          <button onClick={() => navigate(-1)} className="btn-secondary">Atrás</button>
         </div>
       </div>
 
-      {error && <div className="error-box" style={{ marginBottom: '15px' }}>{error}</div>}
+      {error && <div className="error-box" style={{ marginTop: '20px' }}>{error}</div>}
 
-      <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <input
-            type="checkbox"
-            checked={mostrarBajoStock}
-            onChange={(e) => setMostrarBajoStock(e.target.checked)}
-          />
-          Mostrar solo stock bajo
-        </label>
-        <span style={{ color: '#ccc' }}>
-          Stock mínimo se muestra como mínimo 1 y todas las ubicaciones se completan en la tabla.
-        </span>
+      <div className="bitacora-panel inventario-table-panel">
+        <div className="inventario-toolbar">
+          <label className="inventario-filter-checkbox">
+            <input
+              type="checkbox"
+              checked={mostrarBajoStock}
+              onChange={(e) => setMostrarBajoStock(e.target.checked)}
+            />
+            Mostrar solo stock bajo
+          </label>
+          <span className="inventario-toolbar-note">
+            Stock mínimo se muestra como mínimo 1 y todas las ubicaciones se completan en la tabla.
+          </span>
+          <span className="inventario-total">Total de productos: <strong>{productos.length}</strong></span>
+        </div>
+
+        <div className="bitacora-table-wrap">
+          <table className="bitacora-table">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Nombre</th>
+                <th>Marca</th>
+                <th>Categoría</th>
+                <th>Modelo compatible</th>
+                <th>Stock actual</th>
+                <th>Stock mínimo</th>
+                <th>Precio compra</th>
+                <th>Precio venta</th>
+                <th>Ubicación</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {productosOrdenados.length === 0 ? (
+                <tr><td colSpan="11" style={{ textAlign: 'center' }}>No hay productos en inventario.</td></tr>
+              ) : (
+                productosOrdenados.map((p) => {
+                  const stockMinimo = Math.max(1, Number(p.stock_minimo) || 1);
+                  const ubicacion = p.ubicacion_almacen?.trim() || 'Sin ubicación asignada';
+                  const estaBajo = Number(p.stock_actual) <= stockMinimo;
+                  return (
+                    <tr key={p.codigo} className={estaBajo ? 'inventario-row--bajo' : ''}>
+                      <td>#{p.codigo}</td>
+                      <td>{p.nombre || '-'}</td>
+                      <td>{p.marca || '-'}</td>
+                      <td>{p.categoria || '-'}</td>
+                      <td>{p.modelo_compatible || '-'}</td>
+                      <td><strong>{p.stock_actual || 0}</strong></td>
+                      <td>{stockMinimo}</td>
+                      <td>$ {p.precio_compra || 0}</td>
+                      <td>$ {p.precio_venta || 0}</td>
+                      <td>{ubicacion}</td>
+                      <td>
+                        <span className={`usuario-status-badge ${(p.estado || 'Activo') === 'Activo' ? 'usuario-status-badge--activo' : 'usuario-status-badge--inactivo'}`}>
+                          {p.estado || 'Activo'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <div style={{ marginBottom: '16px', color: '#ddd' }}>
-        Total de productos: <strong>{productos.length}</strong>
-      </div>
-
-      <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid #444' }}>
-              <th style={{ textAlign: 'left', padding: '8px' }}>Código</th>
-              <th style={{ textAlign: 'left', padding: '8px' }}>Nombre</th>
-              <th style={{ textAlign: 'left', padding: '8px' }}>Marca</th>
-              <th style={{ textAlign: 'left', padding: '8px' }}>Categoría</th>
-              <th style={{ textAlign: 'left', padding: '8px' }}>Modelo compatible</th>
-              <th style={{ textAlign: 'left', padding: '8px' }}>Stock actual</th>
-              <th style={{ textAlign: 'left', padding: '8px' }}>Stock mínimo</th>
-              <th style={{ textAlign: 'left', padding: '8px' }}>Precio compra</th>
-              <th style={{ textAlign: 'left', padding: '8px' }}>Precio venta</th>
-              <th style={{ textAlign: 'left', padding: '8px' }}>Ubicación</th>
-              <th style={{ textAlign: 'left', padding: '8px' }}>Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {productosOrdenados.map((p) => {
-              const stockMinimo = Math.max(1, Number(p.stock_minimo) || 1);
-              const ubicacion = p.ubicacion_almacen?.trim() || 'Sin ubicación asignada';
-              const estaBajo = Number(p.stock_actual) <= stockMinimo;
-              return (
-                <tr key={p.codigo} style={{ borderBottom: '1px solid #2c2c2c', backgroundColor: estaBajo ? 'rgba(255, 100, 100, 0.08)' : 'transparent' }}>
-                  <td style={{ padding: '8px' }}>#{p.codigo}</td>
-                  <td style={{ padding: '8px' }}>{p.nombre || '-'}</td>
-                  <td style={{ padding: '8px' }}>{p.marca || '-'}</td>
-                  <td style={{ padding: '8px' }}>{p.categoria || '-'}</td>
-                  <td style={{ padding: '8px' }}>{p.modelo_compatible || '-'}</td>
-                  <td style={{ padding: '8px' }}><strong>{p.stock_actual || 0}</strong></td>
-                  <td style={{ padding: '8px' }}>{stockMinimo}</td>
-                  <td style={{ padding: '8px' }}>$ {p.precio_compra || 0}</td>
-                  <td style={{ padding: '8px' }}>$ {p.precio_venta || 0}</td>
-                  <td style={{ padding: '8px' }}>{ubicacion}</td>
-                  <td style={{ padding: '8px' }}>{p.estado || 'Activo'}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      <div style={{ marginTop: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-        <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
-          <h3>Consultar historial de producto</h3>
+      <div className="inventario-content">
+        <div className="bitacora-panel inventario-form-panel">
+          <h3 className="usuarios-panel-title">Consultar historial de producto</h3>
           <div className="input-group"><label>Código del producto</label><input value={historialCodigo} onChange={(e) => setHistorialCodigo(e.target.value)} /></div>
-          <button type="button" onClick={ConsultaHistorialProductos} style={{ padding: '10px 16px', backgroundColor: '#2c5f8f', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Consultar historial</button>
-          {ajusteMensaje && <div style={{ marginTop: '12px', color: '#d1d1d1' }}>{ajusteMensaje}</div>}
+          <button type="button" onClick={ConsultaHistorialProductos} className="bitacora-btn bitacora-btn--filter">Consultar historial</button>
+          {ajusteMensaje && <div className="inventario-mensaje">{ajusteMensaje}</div>}
           {historial.length > 0 && (
-            <div style={{ marginTop: '12px' }}>
+            <div className="inventario-historial-list">
               <h4>Historial simulado</h4>
-              <ul style={{ paddingLeft: '18px' }}>
+              <ul>
                 {historial.map((item, index) => (
                   <li key={index}>{`${item.fecha}: ${item.descripcion} (${item.cantidad})`}</li>
                 ))}
@@ -196,12 +214,12 @@ const Inventario = () => {
             </div>
           )}
         </div>
-        <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
-          <h3>Registrar ajuste manual</h3>
+        <div className="bitacora-panel inventario-form-panel">
+          <h3 className="usuarios-panel-title">Registrar ajuste manual</h3>
           <div className="input-group"><label>Código del producto</label><input value={ajusteCodigo} onChange={(e) => setAjusteCodigo(e.target.value)} /></div>
           <div className="input-group"><label>Cantidad a ajustar</label><input type="number" value={ajusteCantidad} onChange={(e) => setAjusteCantidad(Number(e.target.value))} /></div>
-          <button type="button" onClick={RegistraAjusteManual} style={{ padding: '10px 16px', backgroundColor: '#2c5f8f', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Aplicar ajuste</button>
-          {ajusteMensaje && <div style={{ marginTop: '12px', color: '#d1d1d1' }}>{ajusteMensaje}</div>}
+          <button type="button" onClick={RegistraAjusteManual} className="bitacora-btn bitacora-btn--filter">Aplicar ajuste</button>
+          {ajusteMensaje && <div className="inventario-mensaje">{ajusteMensaje}</div>}
         </div>
       </div>
     </div>

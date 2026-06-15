@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Login.css';
 import { getHomeRouteByRole } from './navigation';
+import { repairText } from './textNormalization';
 import { API_BASE_URL } from './config';
 
 const API = `${API_BASE_URL}/api`;
@@ -190,30 +191,29 @@ const RolesPermisos = () => {
   };
 
   return (
-    <div style={{ padding: '30px', backgroundColor: '#121212', minHeight: '100vh', color: 'white' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <h2 style={{ color: '#ff6600', margin: 0 }}>Gestión de Roles y Permisos (CU03/CU04)</h2>
-        <div>
-          <button
-            onClick={() => navigate('/usuarios')}
-            style={{ marginRight: '10px', padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
-          >
-            Ir a Usuarios
-          </button>
-          <button
-            onClick={() => navigate('/bitacora')}
-            style={{ padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
-          >
-            Ir a Bitácora
-          </button>
+    <div className="app-container roles-page">
+      <div className="page-bg-layer page-bg-layer--a" style={{ backgroundImage: 'url(/static/img/roles-permisos/fondo-roles-1.png)' }}></div>
+      <div className="page-bg-layer page-bg-layer--b" style={{ backgroundImage: 'url(/static/img/roles-permisos/fondo-roles-2.png)' }}></div>
+      <div className="page-bg-overlay"></div>
+
+      <div className="top-panel">
+        <div className="page-title">
+          <h2>Gestión de Roles y Permisos (CU03/CU04)</h2>
+          <div className="page-subtitle">Administración de roles, privilegios y asignaciones del sistema</div>
+        </div>
+        <div className="user-actions">
+          <span>👤 {repairText(usuarioLocal?.nombre)} ({repairText(usuarioLocal?.rol)})</span>
+          <button onClick={() => navigate('/usuarios')} className="btn-secondary">Ir a Usuarios</button>
+          <button onClick={() => navigate('/bitacora')} className="btn-secondary">Ir a Bitácora</button>
+          <button onClick={() => navigate(-1)} className="btn-secondary">Atrás</button>
         </div>
       </div>
 
-      {error && <div className="error-box" style={{ marginBottom: '15px' }}>{error}</div>}
+      {error && <div className="error-box" style={{ marginTop: '20px' }}>{error}</div>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-        <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
-          <h3>Roles</h3>
+      <div className="roles-content">
+        <div className="bitacora-panel roles-panel">
+          <h3 className="usuarios-panel-title">Roles</h3>
           <form onSubmit={crearRol}>
             <div className="input-group">
               <label>Nombre del rol</label>
@@ -230,42 +230,34 @@ const RolesPermisos = () => {
                 onChange={(e) => setNuevoRol({ ...nuevoRol, descripcion: e.target.value })}
               />
             </div>
-            <button type="submit" className="btn-login">Crear rol</button>
+            <button type="submit" className="bitacora-btn bitacora-btn--filter">Crear rol</button>
           </form>
 
-          <table style={{ width: '100%', marginTop: '15px', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #444' }}>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Rol</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {roles.map((rol) => (
-                <tr key={rol.codigo} style={{ borderBottom: '1px solid #2c2c2c' }}>
-                  <td style={{ padding: '8px' }}>{rol.nombre}</td>
-                  <td style={{ padding: '8px' }}>
-                    <button
-                      onClick={() => abrirEdicionRol(rol)}
-                      style={{ marginRight: '6px', backgroundColor: '#2c5f8f', border: 'none', color: 'white', borderRadius: '4px', padding: '6px 10px', cursor: 'pointer' }}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => eliminarRol(rol.codigo)}
-                      style={{ backgroundColor: '#8f2d2d', border: 'none', color: 'white', borderRadius: '4px', padding: '6px 10px', cursor: 'pointer' }}
-                    >
-                      Eliminar
-                    </button>
-                  </td>
+          <div className="bitacora-table-wrap">
+            <table className="bitacora-table">
+              <thead>
+                <tr>
+                  <th>Rol</th>
+                  <th>Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {roles.map((rol) => (
+                  <tr key={rol.codigo}>
+                    <td>{repairText(rol.nombre)}</td>
+                    <td>
+                      <button onClick={() => abrirEdicionRol(rol)} className="table-action-btn table-action-btn--edit">Editar</button>
+                      <button onClick={() => eliminarRol(rol.codigo)} className="table-action-btn table-action-btn--danger">Eliminar</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
-          <h3>Privilegios</h3>
+        <div className="bitacora-panel roles-panel">
+          <h3 className="usuarios-panel-title">Privilegios</h3>
           <form onSubmit={crearPrivilegio}>
             <div className="input-group">
               <label>Nombre del privilegio</label>
@@ -282,33 +274,77 @@ const RolesPermisos = () => {
                 onChange={(e) => setNuevoPrivilegio({ ...nuevoPrivilegio, descripcion: e.target.value })}
               />
             </div>
-            <button type="submit" className="btn-login">Crear privilegio</button>
+            <button type="submit" className="bitacora-btn bitacora-btn--filter">Crear privilegio</button>
           </form>
 
-          <table style={{ width: '100%', marginTop: '15px', borderCollapse: 'collapse' }}>
+          <div className="bitacora-table-wrap">
+            <table className="bitacora-table">
+              <thead>
+                <tr>
+                  <th>Privilegio</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {privilegios.map((privilegio) => (
+                  <tr key={privilegio.codigo}>
+                    <td>{repairText(privilegio.nombre)}</td>
+                    <td>
+                      <button onClick={() => abrirEdicionPrivilegio(privilegio)} className="table-action-btn table-action-btn--edit">Editar</button>
+                      <button onClick={() => eliminarPrivilegio(privilegio.codigo)} className="table-action-btn table-action-btn--danger">Eliminar</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div className="bitacora-panel roles-assign-panel">
+        <h3 className="usuarios-panel-title">Asignar / Revocar Permisos por Rol</h3>
+        <form onSubmit={asignarPrivilegio} className="roles-assign-form">
+          <div className="input-group">
+            <label>Rol</label>
+            <select
+              required
+              value={asignacion.id_rol}
+              onChange={(e) => setAsignacion({ ...asignacion, id_rol: e.target.value })}
+            >
+              <option value="">Selecciona rol</option>
+              {roles.map((rol) => <option key={rol.codigo} value={rol.codigo}>{repairText(rol.nombre)}</option>)}
+            </select>
+          </div>
+          <div className="input-group">
+            <label>Privilegio</label>
+            <select
+              required
+              value={asignacion.id_privilegio}
+              onChange={(e) => setAsignacion({ ...asignacion, id_privilegio: e.target.value })}
+            >
+              <option value="">Selecciona privilegio</option>
+              {privilegios.map((privilegio) => <option key={privilegio.codigo} value={privilegio.codigo}>{repairText(privilegio.nombre)}</option>)}
+            </select>
+          </div>
+          <button type="submit" className="bitacora-btn bitacora-btn--filter">Asignar</button>
+        </form>
+
+        <div className="bitacora-table-wrap">
+          <table className="bitacora-table">
             <thead>
-              <tr style={{ borderBottom: '1px solid #444' }}>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Privilegio</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Acciones</th>
+              <tr>
+                <th>Rol</th>
+                <th>Privilegio</th>
+                <th>Acción</th>
               </tr>
             </thead>
             <tbody>
-              {privilegios.map((privilegio) => (
-                <tr key={privilegio.codigo} style={{ borderBottom: '1px solid #2c2c2c' }}>
-                  <td style={{ padding: '8px' }}>{privilegio.nombre}</td>
-                  <td style={{ padding: '8px' }}>
-                    <button
-                      onClick={() => abrirEdicionPrivilegio(privilegio)}
-                      style={{ marginRight: '6px', backgroundColor: '#2c5f8f', border: 'none', color: 'white', borderRadius: '4px', padding: '6px 10px', cursor: 'pointer' }}
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => eliminarPrivilegio(privilegio.codigo)}
-                      style={{ backgroundColor: '#8f2d2d', border: 'none', color: 'white', borderRadius: '4px', padding: '6px 10px', cursor: 'pointer' }}
-                    >
-                      Eliminar
-                    </button>
+              {asignaciones.map((item, idx) => (
+                <tr key={`${item.id_rol}-${item.id_privilegio}-${idx}`}>
+                  <td>{repairText(item.rol_nombre)}</td>
+                  <td>{repairText(item.privilegio_nombre)}</td>
+                  <td>
+                    <button onClick={() => revocarPrivilegio(item.id_rol, item.id_privilegio)} className="table-action-btn table-action-btn--danger">Revocar</button>
                   </td>
                 </tr>
               ))}
@@ -317,67 +353,16 @@ const RolesPermisos = () => {
         </div>
       </div>
 
-      <div style={{ marginTop: '20px', backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
-        <h3>Asignar/Revoke permisos por rol</h3>
-        <form onSubmit={asignarPrivilegio} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <select
-            required
-            value={asignacion.id_rol}
-            onChange={(e) => setAsignacion({ ...asignacion, id_rol: e.target.value })}
-            style={{ padding: '10px', backgroundColor: '#2a2a2a', color: 'white', border: '1px solid #444', borderRadius: '5px' }}
-          >
-            <option value="">Selecciona rol</option>
-            {roles.map((rol) => <option key={rol.codigo} value={rol.codigo}>{rol.nombre}</option>)}
-          </select>
-          <select
-            required
-            value={asignacion.id_privilegio}
-            onChange={(e) => setAsignacion({ ...asignacion, id_privilegio: e.target.value })}
-            style={{ padding: '10px', backgroundColor: '#2a2a2a', color: 'white', border: '1px solid #444', borderRadius: '5px' }}
-          >
-            <option value="">Selecciona privilegio</option>
-            {privilegios.map((privilegio) => <option key={privilegio.codigo} value={privilegio.codigo}>{privilegio.nombre}</option>)}
-          </select>
-          <button type="submit" className="btn-login" style={{ marginTop: 0 }}>Asignar</button>
-        </form>
-
-        <table style={{ width: '100%', marginTop: '15px', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid #444' }}>
-              <th style={{ textAlign: 'left', padding: '8px' }}>Rol</th>
-              <th style={{ textAlign: 'left', padding: '8px' }}>Privilegio</th>
-              <th style={{ textAlign: 'left', padding: '8px' }}>Acción</th>
-            </tr>
-          </thead>
-          <tbody>
-            {asignaciones.map((item, idx) => (
-              <tr key={`${item.id_rol}-${item.id_privilegio}-${idx}`} style={{ borderBottom: '1px solid #2c2c2c' }}>
-                <td style={{ padding: '8px' }}>{item.rol_nombre}</td>
-                <td style={{ padding: '8px' }}>{item.privilegio_nombre}</td>
-                <td style={{ padding: '8px' }}>
-                  <button
-                    onClick={() => revocarPrivilegio(item.id_rol, item.id_privilegio)}
-                    style={{ backgroundColor: '#8f2d2d', border: 'none', color: 'white', borderRadius: '4px', padding: '6px 10px', cursor: 'pointer' }}
-                  >
-                    Revocar
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
       {rolEdicion && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-          <div style={{ width: '100%', maxWidth: '460px', backgroundColor: '#1e1e1e', border: '1px solid #333', borderRadius: '10px', padding: '20px' }}>
-            <h3 style={{ marginTop: 0, color: '#ff6600' }}>Editar rol</h3>
+        <div className="usuarios-modal-overlay">
+          <div className="usuarios-modal usuarios-modal--sm">
+            <h3 style={{ marginTop: 0, color: 'var(--color-accent)' }}>Editar rol</h3>
             <form onSubmit={guardarEdicionRol}>
               <div className="input-group"><label>Nombre</label><input value={editRol.nombre} onChange={(e) => setEditRol({ ...editRol, nombre: e.target.value })} required /></div>
               <div className="input-group"><label>Descripción</label><input value={editRol.descripcion} onChange={(e) => setEditRol({ ...editRol, descripcion: e.target.value })} /></div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" onClick={() => setRolEdicion(null)} style={{ padding: '8px 12px', backgroundColor: '#444', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Cancelar</button>
-                <button type="submit" style={{ padding: '8px 12px', backgroundColor: '#ff6600', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Guardar</button>
+                <button type="button" onClick={() => setRolEdicion(null)} className="btn-secondary">Cancelar</button>
+                <button type="submit" className="bitacora-btn bitacora-btn--filter">Guardar</button>
               </div>
             </form>
           </div>
@@ -385,15 +370,15 @@ const RolesPermisos = () => {
       )}
 
       {privilegioEdicion && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-          <div style={{ width: '100%', maxWidth: '460px', backgroundColor: '#1e1e1e', border: '1px solid #333', borderRadius: '10px', padding: '20px' }}>
-            <h3 style={{ marginTop: 0, color: '#ff6600' }}>Editar privilegio</h3>
+        <div className="usuarios-modal-overlay">
+          <div className="usuarios-modal usuarios-modal--sm">
+            <h3 style={{ marginTop: 0, color: 'var(--color-accent)' }}>Editar privilegio</h3>
             <form onSubmit={guardarEdicionPrivilegio}>
               <div className="input-group"><label>Nombre</label><input value={editPrivilegio.nombre} onChange={(e) => setEditPrivilegio({ ...editPrivilegio, nombre: e.target.value })} required /></div>
               <div className="input-group"><label>Descripción</label><input value={editPrivilegio.descripcion} onChange={(e) => setEditPrivilegio({ ...editPrivilegio, descripcion: e.target.value })} /></div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" onClick={() => setPrivilegioEdicion(null)} style={{ padding: '8px 12px', backgroundColor: '#444', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Cancelar</button>
-                <button type="submit" style={{ padding: '8px 12px', backgroundColor: '#ff6600', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Guardar</button>
+                <button type="button" onClick={() => setPrivilegioEdicion(null)} className="btn-secondary">Cancelar</button>
+                <button type="submit" className="bitacora-btn bitacora-btn--filter">Guardar</button>
               </div>
             </form>
           </div>

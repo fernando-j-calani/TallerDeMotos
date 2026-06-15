@@ -1,0 +1,110 @@
+/* Hero styles for Taller La Roca */
+:root{
+  --accent: #00a8cc;
+  --muted: #c7c7c7;
+}
+.hero-slider{
+  position:relative;
+  height:100vh; /* fill viewport height */
+  min-height:560px;
+  color:#fff;
+  overflow:hidden;
+  display:block;
+}
+.hero-slider .slide{
+  position:absolute;
+  inset:0;
+  height:100%;
+  background-size:cover;
+  background-position:center center;
+  transition:opacity .6s ease, transform .6s ease;
+  opacity:0;
+  transform:scale(1.02);
+}
+.hero-slider .slide.active{opacity:1;transform:scale(1);z-index:1}
+.hero-slider .overlay{position:absolute;inset:0;z-index:0;
+  /* make top area transparent so header shows image behind */
+  background: linear-gradient(180deg,
+    rgba(0,0,0,0.00) 0%,
+    rgba(0,0,0,0.10) 20%,
+    rgba(0,0,0,0.35) 50%,
+    rgba(0,0,0,0.65) 100%
+  );
+}
+.hero-slider .container{position:relative;z-index:2;height:100vh;display:flex;align-items:center}
+.hero-slider .subtitle{font-family:Inter, sans-serif;letter-spacing:4px;text-transform:uppercase;color:var(--muted);margin-bottom:0.75rem;font-size:0.95rem}
+.hero-slider .hero-title{font-family:Montserrat, sans-serif;font-weight:800;font-size:4.8rem;line-height:0.95;text-transform:uppercase;margin:0;color:#fff}
+.hero-slider .hero-title small{display:block;font-size:1.2rem;font-weight:600}
+.hero-slider .btn{border-width:2px}
+
+/* Left vertical indicators */
+.slider-controls{position:absolute;left:86%;transform:translateX(-50%);bottom:2.5rem;z-index:3}
+.slider-indicators{display:flex;flex-direction:row;gap:18px;align-items:center;justify-content:center;padding:0;margin:0;list-style:none}
+.slider-indicators .indicator{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;color:var(--muted);font-family:Montserrat, sans-serif}
+.slider-indicators .num{font-weight:700;font-size:0.95rem;color:var(--muted);display:block}
+.slider-indicators .indicator::after{content:"";display:block;height:2px;width:0;background:transparent;transition:all .25s}
+.slider-indicators .indicator.active{color:#fff}
+.slider-indicators .indicator.active .num{color:#fff}
+.slider-indicators .indicator.active::after{background:var(--accent);width:34px}
+
+/* Decorative corner lines near subtitle */
+.hero-deco{position:relative;padding-left:0.6rem}
+.hero-deco::before{content:"";position:absolute;left:-28px;top:18px;width:22px;height:2px;background:var(--accent)}
+.hero-deco::after{content:"";position:absolute;left:-28px;top:18px;width:2px;height:22px;background:var(--accent)}
+
+@media (max-width:1200px){
+  .hero-slider{height:100vh}
+}
+
+@media (max-width:992px){
+  .hero-slider{height:80vh}
+  .hero-slider .hero-title{font-size:2.6rem}
+  .slider-controls{left:82%;transform:translateX(-50%);bottom:1.5rem}
+}
+
+@media (max-width:576px){
+  .hero-slider{height:60vh}
+  .hero-slider .hero-title{font-size:1.8rem}
+  .slider-controls{display:none}
+}
+
+/* Make navbar transparent and sit above the hero background */
+.navbar{
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  z-index: 9999; /* ensure above hero content */
+}
+.navbar, .navbar .container{background:transparent !important}
+.navbar .nav-link, .navbar .navbar-brand span{color:#fff !important}
+.navbar .nav-link:hover{color:var(--accent) !important}
+.navbar .navbar-toggler{border-color:rgba(255,255,255,0.15)}
+.navbar .navbar-toggler-icon{filter:invert(1) brightness(2)}
+
+/* When hero is present, ensure following sections don't get hidden behind the fixed navbar */
+main.site-main{padding-top:1rem}
+
+/* Ensure logo background or small containers don't add a solid bar */
+.navbar-brand img{background:transparent !important}
+.navbar .container{padding-left:0.6rem;padding-right:0.6rem}
+
+/* Make fixed-top act visually as overlay so hero shows behind header */
+
+/* Force transparent background for common navbar variants (override custom.css) */
+.navbar.fixed-top,
+.navbar.bg-dark,
+.navbar{
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Remove any default body offset that pushes content down when using fixed-top */
+body{padding-top:0 !important}
+
+/* Remove possible thin separators or shadows */
+.navbar, .navbar::after, .navbar .container{border-bottom:0 !important;box-shadow:none !important}
+
+/* Ensure hero starts at very top so background is visible under header */
+.hero-slider{margin-top:0;padding-top:0}
+
+

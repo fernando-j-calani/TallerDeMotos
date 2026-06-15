@@ -7,15 +7,18 @@ from django.core.signing import BadSignature, SignatureExpired
 from django.conf import settings
 from django.utils import timezone
 from django.http import HttpResponse
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMessage
 from django.core.cache import cache
-from django.db import connection, OperationalError, transaction
-from django.db.models import Q, F
+from django.db import connection, IntegrityError, OperationalError, transaction
+from django.db.models import Q, F, Sum
 from django.utils.dateparse import parse_date
+from datetime import datetime, timedelta
+import calendar
 import math
 import logging
 import traceback
 import uuid
+import secrets
 import csv
 import re
 import unicodedata
@@ -63,6 +66,7 @@ from .serializers import (
     SeguimientoSerializer,
 )
 from django.contrib.auth.hashers import make_password
+from .reportes_export import columnas_para, generar_csv_reporte, generar_excel_reporte, generar_pdf_reporte
 
 
 MAX_LOGIN_INTENTOS = 3
@@ -134,18 +138,25 @@ def exigir_roles(usuario, roles_permitidos):
 def tiene_permiso_modulo(usuario, codigo_cu, accion):
     try:
         ensure_permiso_modulo_table()
-    except OperationalError:
+    except Exception as e:
+        print(f"[DEBUG] Error en ensure_permiso_modulo_table: {e}")
         return False
-    return PermisoModulo.objects.filter(
-        id_rol=usuario.id_rol,
-        codigo_cu=codigo_cu,
-        accion__iexact=accion,
-        permitido=True,
-    ).exists()
+    
+    try:
+        return PermisoModulo.objects.filter(
+            id_rol=usuario.id_rol,
+            codigo_cu=codigo_cu,
+            accion__iexact=accion,
+            permitido=True,
+        ).exists()
+    except Exception as e:
+        print(f"[DEBUG] Error verificando permiso {codigo_cu}-{accion}: {e}")
+        return False
 
 
 def exigir_permiso_modulo(usuario, codigo_cu, acciones):
-    if usuario.id_rol.nombre == 'Administrador':
+    # Administrador siempre tiene acceso a todo
+    if usuario.id_rol.nombre and usuario.id_rol.nombre.strip().lower() == 'administrador':
         return None
 
     if isinstance(acciones, (list, tuple, set)):
@@ -160,36 +171,166 @@ def exigir_permiso_modulo(usuario, codigo_cu, acciones):
 
 
 def ensure_permiso_modulo_table():
-    with connection.cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT EXISTS (
-                SELECT 1
-                FROM information_schema.tables
-                WHERE table_schema = 'public'
-                  AND table_name = 'permiso_modulo'
-            )
-            """
-        )
-        if not cursor.fetchone()[0]:
-            cursor.execute(
-                """
-                CREATE TABLE IF NOT EXISTS public.permiso_modulo (
-                    id serial PRIMARY KEY,
-                    id_rol integer NOT NULL REFERENCES rol(codigo),
-                    codigo_cu varchar(20) NOT NULL,
-                    nombre_modulo varchar(255) NOT NULL,
-                    accion varchar(50) NOT NULL,
-                    permitido boolean NOT NULL DEFAULT false
+    """Asegura que la tabla permiso_modulo existe y está inicializada con los permisos"""
+    try:
+        # Verificar si la tabla existe
+        table_exists = False
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT EXISTS (
+                        SELECT 1
+                        FROM information_schema.tables
+                        WHERE table_schema = 'public'
+                          AND table_name = 'permiso_modulo'
+                    )
+                    """
                 )
-                """
-            )
-            cursor.execute(
-                """
-                CREATE UNIQUE INDEX IF NOT EXISTS permiso_modulo_unique_idx
-                ON public.permiso_modulo (id_rol, codigo_cu, nombre_modulo, accion)
-                """
-            )
+                table_exists = cursor.fetchone()[0]
+        except Exception as e:
+            print(f"[DEBUG] Error verificando tabla permiso_modulo: {e}")
+            return
+        
+        if not table_exists:
+            try:
+                with connection.cursor() as cursor:
+                    # Crear tabla
+                    cursor.execute(
+                        """
+                        CREATE TABLE IF NOT EXISTS public.permiso_modulo (
+                            id serial PRIMARY KEY,
+                            id_rol integer NOT NULL REFERENCES rol(codigo),
+                            codigo_cu varchar(20) NOT NULL,
+                            nombre_modulo varchar(255) NOT NULL,
+                            accion varchar(50) NOT NULL,
+                            permitido boolean NOT NULL DEFAULT true
+                        )
+                        """
+                    )
+                    # Crear índice único
+                    cursor.execute(
+                        """
+                        CREATE UNIQUE INDEX IF NOT EXISTS permiso_modulo_unique_idx
+                        ON public.permiso_modulo (id_rol, codigo_cu, nombre_modulo, accion)
+                        """
+                    )
+                print("[DEBUG] Tabla permiso_modulo creada exitosamente")
+            except Exception as e:
+                print(f"[DEBUG] Error creando tabla permiso_modulo: {e}")
+                return
+        
+        # Inicializar permisos si faltan
+        try:
+            print("[DEBUG] Inicializando permisos de módulo si faltan...")
+            _inicializar_permisos()
+            print("[DEBUG] Permisos inicializados exitosamente")
+        except Exception as e:
+            print(f"[DEBUG] Error inicializando permisos: {e}")
+    except Exception as e:
+        print(f"[DEBUG] Error en ensure_permiso_modulo_table: {e}")
+
+
+def _normalizar_clave_rol(texto):
+    """Colapsa cualquier secuencia de caracteres no alfanuméricos a un único
+    separador, para poder emparejar nombres de rol aunque tengan tildes
+    corrompidas (p. ej. 'Mec??nico' en la BD vs 'Mecánico' en el código)."""
+    return re.sub(r'[^a-z0-9]+', '#', (texto or '').lower().strip())
+
+
+def _buscar_rol_por_nombre(nombre_rol):
+    rol = Rol.objects.filter(nombre=nombre_rol).first()
+    if rol:
+        return rol
+
+    objetivo = _normalizar_clave_rol(nombre_rol)
+    for candidato in Rol.objects.all():
+        if _normalizar_clave_rol(candidato.nombre) == objetivo:
+            return candidato
+    return None
+
+
+def _inicializar_permisos():
+    """Crea los permisos iniciales para todos los roles no-administrador"""
+    
+    permisos_por_rol = {
+        'Recepcionista': {
+            'CU05': ['Mostrar', 'Buscar', 'Adicionar', 'Editar', 'Eliminar'],
+            'CU06': ['Mostrar', 'Buscar', 'Adicionar', 'Editar', 'Eliminar'],
+            'CU07': ['Mostrar', 'Buscar', 'Adicionar', 'Editar'],
+            'CU08': ['Mostrar', 'Buscar', 'Adicionar', 'Editar'],
+            'CU09': ['Mostrar', 'Buscar', 'Adicionar'],
+            'CU10': ['Mostrar', 'Buscar', 'Adicionar', 'Editar', 'Eliminar'],
+            'CU11': ['Mostrar', 'Buscar', 'Adicionar', 'Editar', 'Eliminar'],
+            'CU12': ['Mostrar', 'Buscar', 'Adicionar'],
+            'CU13': ['Mostrar', 'Buscar', 'Adicionar', 'Editar', 'Eliminar'],
+            'CU14': ['Mostrar', 'Buscar', 'Adicionar'],
+            'CU15': ['Mostrar', 'Buscar', 'Exportar'],
+            'CU16': ['Mostrar', 'Buscar', 'Adicionar'],
+            'CU18': ['Mostrar', 'Buscar', 'Exportar'],
+        },
+        'Mecánico': {
+            'CU08': ['Mostrar', 'Buscar'],
+            'CU09': ['Mostrar', 'Buscar', 'Adicionar'],
+            'CU10': ['Mostrar', 'Buscar'],
+            'CU11': ['Mostrar', 'Buscar'],
+            'CU13': ['Mostrar', 'Buscar'],
+        },
+        'Cliente': {
+            'CU05': ['Mostrar'],
+            'CU06': ['Mostrar'],
+            'CU08': ['Mostrar', 'Buscar'],
+            'CU09': ['Mostrar', 'Buscar'],
+            'CU14': ['Mostrar', 'Buscar'],
+            'CU16': ['Mostrar', 'Buscar', 'Adicionar'],
+        },
+    }
+    
+    nombres_modulos = {
+        'CU05': 'Clientes',
+        'CU06': 'Motocicletas',
+        'CU07': 'Cotizaciones',
+        'CU08': 'Órdenes de Trabajo',
+        'CU09': 'Notas de Trabajo',
+        'CU10': 'Productos',
+        'CU11': 'Proveedores',
+        'CU12': 'Compras',
+        'CU13': 'Inventario',
+        'CU14': 'Facturación',
+        'CU15': 'Reportes',
+        'CU16': 'Seguimiento de Clientes',
+        'CU18': 'Gestión de Roles y Permisos',
+    }
+    
+    try:
+        with transaction.atomic():
+            contador = 0
+            for nombre_rol, permisos_cu in permisos_por_rol.items():
+                rol = _buscar_rol_por_nombre(nombre_rol)
+                if not rol:
+                    print(f"[DEBUG] Rol '{nombre_rol}' no encontrado")
+                    continue
+                
+                for codigo_cu, acciones in permisos_cu.items():
+                    nombre_modulo = nombres_modulos.get(codigo_cu, codigo_cu)
+                    
+                    for accion in acciones:
+                        try:
+                            perm, creado = PermisoModulo.objects.get_or_create(
+                                id_rol=rol,
+                                codigo_cu=codigo_cu,
+                                nombre_modulo=nombre_modulo,
+                                accion=accion,
+                                defaults={'permitido': True}
+                            )
+                            if creado:
+                                contador += 1
+                        except Exception as e:
+                            print(f"[DEBUG] Error creando permiso {nombre_rol}-{codigo_cu}-{accion}: {e}")
+            
+            print(f"[DEBUG] Total permisos creados: {contador}")
+    except Exception as e:
+        print(f"[DEBUG] Error en _inicializar_permisos: {e}")
 
 
 def normalizar_usuario_desde_nombre(nombre_completo):
@@ -225,6 +366,37 @@ def generar_usuario_unico_para_cliente(nombre_completo):
         candidato = f"{base}{i}"
         i += 1
     return candidato
+
+
+def obtener_o_crear_usuario_cliente(cliente):
+    """Garantiza que exista un Usuario con rol 'Cliente' vinculado al cliente dado.
+
+    Devuelve una tupla (usuario, creado).
+    """
+    try:
+        rol_cliente = Rol.objects.get(nombre='Cliente')
+    except Rol.DoesNotExist:
+        rol_cliente = Rol.objects.create(nombre='Cliente', descripcion='Rol de cliente final')
+
+    usuario_cliente = Usuario.objects.filter(nombre=cliente.nombre, id_rol=rol_cliente).first()
+    if usuario_cliente:
+        return usuario_cliente, False
+
+    email_cliente = (cliente.email or '').strip()
+    if email_cliente and not Usuario.objects.filter(email__iexact=email_cliente).exists():
+        email_usuario = email_cliente
+    else:
+        email_usuario = generar_usuario_unico_para_cliente(cliente.nombre)
+
+    usuario_cliente = Usuario.objects.create(
+        id_rol=rol_cliente,
+        nombre=cliente.nombre,
+        email=email_usuario,
+        contrasena=make_password(settings.CLIENT_TEMP_PASSWORD),
+        telefono=cliente.telefono,
+        estado='Activo',
+    )
+    return usuario_cliente, True
 
 
 def obtener_cliente_vinculado(usuario_sesion):
@@ -344,6 +516,46 @@ def _resolver_destinatario_reset_online(usuario):
     local_inbox, dominio_inbox = inbox.split('@', 1)
     alias = _normalizar_alias_destinatario(destinatario_original.split('@', 1)[0])
     return f"{local_inbox}+{alias}@{dominio_inbox}"
+
+
+def _enviar_codigo_verificacion(usuario, cache_prefix, asunto, intro_mensaje):
+    """Genera un código de 6 dígitos, lo cachea y lo envía por correo al usuario."""
+    codigo = f"{secrets.randbelow(1000000):06d}"
+    cache.set(f"{cache_prefix}:code:{usuario.codigo}", codigo, timeout=settings.PASSWORD_RESET_CODE_MAX_AGE_SECONDS)
+    cache.delete(f"{cache_prefix}:code_attempts:{usuario.codigo}")
+
+    destinatario_envio = _resolver_destinatario_reset_online(usuario)
+
+    if settings.PASSWORD_RESET_LOG_TO_CONSOLE:
+        print(
+            f"[{cache_prefix.upper()}] mode={settings.MAIL_MODE} from={settings.DEFAULT_FROM_EMAIL} "
+            f"to={destinatario_envio} original={usuario.email} codigo={codigo}"
+        )
+
+    for intento in range(1, settings.EMAIL_SEND_RETRIES + 1):
+        try:
+            send_mail(
+                subject=asunto,
+                message=(
+                    f'{intro_mensaje}\n\n'
+                    f'Tu código de confirmación es: {codigo}\n'
+                    f'Este código es válido por {settings.PASSWORD_RESET_CODE_MAX_AGE_SECONDS // 60} minutos.\n\n'
+                    'Si no solicitaste esto, ignora este mensaje.'
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[destinatario_envio],
+                fail_silently=False,
+            )
+            if settings.PASSWORD_RESET_LOG_TO_CONSOLE:
+                print(f"[{cache_prefix.upper()}] intento={intento} resultado_envio=ok")
+            return
+        except Exception as exc:
+            if settings.PASSWORD_RESET_LOG_TO_CONSOLE:
+                print(f"[{cache_prefix.upper()}] intento={intento} error_envio={exc}")
+
+            es_dns_temporal = isinstance(exc, OSError) and getattr(exc, 'errno', None) == -3
+            if not es_dns_temporal:
+                return
 
 
 def _normalizar_decimal(valor):
@@ -504,6 +716,20 @@ def _validar_orden_para_nota(orden):
 
 
 # ==========================================
+# DEBUG ENDPOINT
+# ==========================================
+@api_view(['POST'])
+def debug_login(request):
+    email = request.data.get('email') if hasattr(request, 'data') else request.POST.get('email')
+    password = request.data.get('password') if hasattr(request, 'data') else request.POST.get('password')
+    
+    logger.warning(f"DEBUG: email={email}, password={password}")
+    logger.warning(f"DEBUG: request.data={getattr(request, 'data', None)}")
+    logger.warning(f"DEBUG: request.POST={dict(request.POST)}")
+    
+    return Response({"debug": f"email={email}, password={password}"}, status=200)
+
+# ==========================================
 # CU01: GESTIONAR INICIO DE SESIÓN
 # ==========================================
 @api_view(['POST'])
@@ -639,7 +865,7 @@ def bitacora_api(request):
         if not any(tiene_permiso_modulo(usuario_sesion, 'CU20', acc) for acc in acciones_requeridas):
             return Response({"exito": False, "error": "No autorizado para ver la bitacora."}, status=403)
 
-    registros = Bitacora.objects.select_related('id_usuario').all()
+    registros = Bitacora.objects.select_related('id_usuario', 'id_usuario__id_rol').all()
 
     if usuario_id:
         registros = registros.filter(id_usuario_id=usuario_id)
@@ -666,20 +892,81 @@ def bitacora_api(request):
         response['Content-Disposition'] = 'attachment; filename="bitacora.csv"'
 
         writer = csv.writer(response)
-        writer.writerow(['codigo', 'fecha_hora', 'usuario', 'accion', 'descripcion'])
+        writer.writerow(['codigo', 'fecha_hora', 'usuario', 'rol', 'accion', 'descripcion'])
 
         for reg in registros:
             writer.writerow([
                 reg.codigo,
                 reg.fecha_hora.isoformat() if reg.fecha_hora else '',
                 reg.id_usuario.nombre if reg.id_usuario else '',
+                reg.id_usuario.id_rol.nombre if reg.id_usuario and reg.id_usuario.id_rol else '',
                 reg.accion,
                 reg.descripcion,
             ])
         return response
 
-    serializer = BitacoraSerializer(registros, many=True)
-    return Response(serializer.data, status=200)
+    # --- Estadísticas sobre el conjunto filtrado (antes de paginar) ---
+    valores = list(registros.values('fecha_hora', 'accion', 'id_usuario__nombre'))
+    total_registros = len(valores)
+    hoy_la_paz = BitacoraSerializer._to_la_paz(timezone.now()).date()
+
+    eventos_hoy = 0
+    contador_acciones = {}
+    contador_usuarios = {}
+    for valor in valores:
+        fecha_local = BitacoraSerializer._to_la_paz(valor['fecha_hora'])
+        if fecha_local and fecha_local.date() == hoy_la_paz:
+            eventos_hoy += 1
+
+        accion_valor = valor['accion']
+        if accion_valor:
+            contador_acciones[accion_valor] = contador_acciones.get(accion_valor, 0) + 1
+
+        usuario_nombre = valor['id_usuario__nombre']
+        if usuario_nombre:
+            contador_usuarios[usuario_nombre] = contador_usuarios.get(usuario_nombre, 0) + 1
+
+    accion_top, accion_top_total = max(contador_acciones.items(), key=lambda x: x[1], default=(None, 0))
+    usuario_top, usuario_top_total = max(contador_usuarios.items(), key=lambda x: x[1], default=(None, 0))
+
+    estadisticas = {
+        'total_eventos': total_registros,
+        'eventos_hoy': eventos_hoy,
+        'accion_mas_frecuente': accion_top,
+        'accion_mas_frecuente_total': accion_top_total,
+        'usuario_mas_activo': usuario_top,
+        'usuario_mas_activo_total': usuario_top_total,
+    }
+
+    # --- Paginación ---
+    try:
+        pagina = int(request.GET.get('page', '1'))
+    except ValueError:
+        pagina = 1
+    try:
+        por_pagina = int(request.GET.get('page_size', '25'))
+    except ValueError:
+        por_pagina = 25
+
+    pagina = max(pagina, 1)
+    por_pagina = min(max(por_pagina, 1), 100)
+    total_paginas = max(math.ceil(total_registros / por_pagina), 1) if total_registros else 1
+    pagina = min(pagina, total_paginas)
+
+    inicio = (pagina - 1) * por_pagina
+    registros_pagina = registros[inicio:inicio + por_pagina]
+
+    serializer = BitacoraSerializer(registros_pagina, many=True)
+    return Response({
+        'resultados': serializer.data,
+        'paginacion': {
+            'pagina': pagina,
+            'por_pagina': por_pagina,
+            'total_registros': total_registros,
+            'total_paginas': total_paginas,
+        },
+        'estadisticas': estadisticas,
+    }, status=200)
 
 # ==========================================
 # CU02: GESTIONAR USUARIOS
@@ -703,14 +990,22 @@ def usuarios_api(request):
     elif request.method == 'POST':
         # Lógica para CREAR un nuevo usuario
         datos = request.data
+        email = (datos.get('email') or '').strip().lower()
+
+        if not email:
+            return Response({"exito": False, "error": "El email es obligatorio."}, status=400)
+
+        if Usuario.objects.filter(email__iexact=email).exists():
+            return Response({"exito": False, "error": "Ya existe un usuario registrado con ese email."}, status=400)
+
         try:
             rol_asignado = Rol.objects.get(codigo=datos['id_rol'])
-            
+
             nuevo_usuario = Usuario.objects.create(
                 nombre=datos['nombre'],
-                email=datos['email'],
+                email=email,
                 # ¡Encriptamos la contraseña antes de guardarla!
-                contrasena=make_password(datos['password']), 
+                contrasena=make_password(datos['password']),
                 telefono=datos.get('telefono', ''),
                 estado='Activo',
                 id_rol=rol_asignado
@@ -728,6 +1023,8 @@ def usuarios_api(request):
             return Response({"exito": True, "mensaje": "Usuario creado exitosamente"}, status=201)
         except Rol.DoesNotExist:
             return Response({"exito": False, "error": "El rol seleccionado no existe."}, status=400)
+        except IntegrityError:
+            return Response({"exito": False, "error": "Ya existe un usuario registrado con ese email."}, status=400)
         except Exception as e:
             return Response({"exito": False, "error": str(e)}, status=400)
 
@@ -748,7 +1045,7 @@ def usuario_detalle_api(request, usuario_id):
         return Response({"exito": False, "error": "Usuario no encontrado."}, status=404)
 
     nombre = request.data.get('nombre', usuario_obj.nombre)
-    email = request.data.get('email', usuario_obj.email)
+    email = (request.data.get('email', usuario_obj.email) or '').strip().lower()
     telefono = request.data.get('telefono', usuario_obj.telefono)
     estado = request.data.get('estado', usuario_obj.estado)
     id_rol = request.data.get('id_rol', usuario_obj.id_rol_id)
@@ -770,7 +1067,10 @@ def usuario_detalle_api(request, usuario_id):
     usuario_obj.telefono = telefono
     usuario_obj.estado = estado
     usuario_obj.id_rol = rol
-    usuario_obj.save(update_fields=['nombre', 'email', 'telefono', 'estado', 'id_rol'])
+    try:
+        usuario_obj.save(update_fields=['nombre', 'email', 'telefono', 'estado', 'id_rol'])
+    except IntegrityError:
+        return Response({"exito": False, "error": "Ya existe otro usuario con ese email."}, status=400)
 
     registrar_bitacora(
         usuario_sesion,
@@ -1018,14 +1318,29 @@ def clientes_api(request):
     if error_auth:
         return error_auth
 
-    error_rol = exigir_roles(usuario_sesion, ['Administrador', 'Recepcionista'])
-    if error_rol:
-        return error_rol
+    if request.method == 'GET':
+        accion = 'Buscar' if request.GET.get('q') else 'Mostrar'
+        error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU05', accion)
+        if error_permiso:
+            return error_permiso
+    else:
+        error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU05', 'Adicionar')
+        if error_permiso:
+            return error_permiso
 
     if request.method == 'GET':
         busqueda = request.GET.get('q', '').strip()
         incluir_inactivos = request.GET.get('incluir_inactivos', '').strip().lower() == 'true'
-        clientes = Cliente.objects.all().order_by('codigo')
+        
+        # SEGURIDAD: Los Clientes solo ven su propio perfil
+        if usuario_sesion.id_rol.nombre and usuario_sesion.id_rol.nombre.strip().lower() == 'cliente':
+            cliente_vinculado = obtener_cliente_vinculado(usuario_sesion)
+            if not cliente_vinculado:
+                return Response({"exito": True, "data": [], "mensaje": "No se encontró un cliente vinculado a tu usuario."}, status=200)
+            clientes = Cliente.objects.filter(codigo=cliente_vinculado.codigo)
+        else:
+            # Administrador y Recepcionista ven todos
+            clientes = Cliente.objects.all().order_by('codigo')
 
         if not incluir_inactivos:
             clientes = clientes.filter(estado='Activo')
@@ -1048,6 +1363,15 @@ def clientes_api(request):
     payload['estado'] = 'Activo'
     cliente = Cliente.objects.create(**payload)
     registrar_bitacora(usuario_sesion, 'CREACIÓN', f"Registró cliente: {cliente.nombre} ({cliente.cedula}).")
+
+    usuario_cliente, creado = obtener_o_crear_usuario_cliente(cliente)
+    if creado:
+        registrar_bitacora(
+            usuario_sesion,
+            'CREACIÓN',
+            f"Generó usuario cliente '{usuario_cliente.email}' al registrar cliente {cliente.nombre}."
+        )
+
     return Response({"exito": True, "mensaje": "Cliente creado."}, status=201)
 
 
@@ -1083,9 +1407,14 @@ def cliente_detalle_api(request, cliente_id):
     if error_auth:
         return error_auth
 
-    error_rol = exigir_roles(usuario_sesion, ['Administrador', 'Recepcionista'])
-    if error_rol:
-        return error_rol
+    if request.method == 'PUT':
+        error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU05', 'Editar')
+        if error_permiso:
+            return error_permiso
+    elif request.method == 'DELETE':
+        error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU05', 'Eliminar')
+        if error_permiso:
+            return error_permiso
 
     try:
         cliente = Cliente.objects.get(codigo=cliente_id)
@@ -1121,14 +1450,29 @@ def motocicletas_api(request):
     if error_auth:
         return error_auth
 
-    error_rol = exigir_roles(usuario_sesion, ['Administrador', 'Recepcionista'])
-    if error_rol:
-        return error_rol
+    if request.method == 'GET':
+        accion = 'Buscar' if request.GET.get('q') else 'Mostrar'
+        error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU06', accion)
+        if error_permiso:
+            return error_permiso
+    else:
+        error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU06', 'Adicionar')
+        if error_permiso:
+            return error_permiso
 
     if request.method == 'GET':
         busqueda = request.GET.get('q', '').strip()
         incluir_inactivos = request.GET.get('incluir_inactivos', '').strip().lower() == 'true'
-        motos = Motocicleta.objects.select_related('id_cliente').all().order_by('codigo')
+        
+        # SEGURIDAD: Los Clientes solo ven sus propias motocicletas
+        if usuario_sesion.id_rol.nombre and usuario_sesion.id_rol.nombre.strip().lower() == 'cliente':
+            cliente_vinculado = obtener_cliente_vinculado(usuario_sesion)
+            if not cliente_vinculado:
+                return Response({"exito": True, "data": [], "mensaje": "No se encontró un cliente vinculado a tu usuario."}, status=200)
+            motos = Motocicleta.objects.select_related('id_cliente').filter(id_cliente=cliente_vinculado)
+        else:
+            # Administrador y Recepcionista ven todos
+            motos = Motocicleta.objects.select_related('id_cliente').all().order_by('codigo')
 
         if not incluir_inactivos:
             motos = motos.filter(estado='Activo')
@@ -1161,9 +1505,14 @@ def motocicleta_detalle_api(request, motocicleta_id):
     if error_auth:
         return error_auth
 
-    error_rol = exigir_roles(usuario_sesion, ['Administrador', 'Recepcionista'])
-    if error_rol:
-        return error_rol
+    if request.method == 'PUT':
+        error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU06', 'Editar')
+        if error_permiso:
+            return error_permiso
+    elif request.method == 'DELETE':
+        error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU06', 'Eliminar')
+        if error_permiso:
+            return error_permiso
 
     try:
         moto = Motocicleta.objects.get(codigo=motocicleta_id)
@@ -2094,6 +2443,47 @@ def notas_trabajo_api(request):
     )
 
 
+@api_view(['PUT', 'DELETE'])
+def nota_trabajo_detalle_api(request, nota_id):
+    usuario_sesion, error_auth = obtener_usuario_autenticado(request)
+    if error_auth:
+        return error_auth
+
+    if request.method == 'PUT':
+        error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU09', 'Editar')
+        if error_permiso:
+            return error_permiso
+    else:
+        error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU09', 'Eliminar')
+        if error_permiso:
+            return error_permiso
+
+    try:
+        nota = Notatrabajo.objects.get(codigo=nota_id)
+    except Notatrabajo.DoesNotExist:
+        return Response({"exito": False, "error": "Nota de trabajo no encontrada."}, status=404)
+
+    if request.method == 'PUT':
+        serializer = NotaTrabajoSerializer(nota, data=request.data, partial=True)
+        if not serializer.is_valid():
+            return Response({"exito": False, "errores": serializer.errors}, status=400)
+
+        nota_actualizada = serializer.save()
+        registrar_bitacora(usuario_sesion, 'MODIFICACIÓN', f"Actualizó nota de trabajo #{nota.codigo}.")
+        return Response(
+            {
+                "exito": True,
+                "mensaje": "Nota de trabajo actualizada.",
+                "nota": NotaTrabajoSerializer(nota_actualizada).data,
+            },
+            status=200,
+        )
+
+    registrar_bitacora(usuario_sesion, 'ELIMINACIÓN', f"Eliminó nota de trabajo #{nota.codigo}.")
+    nota.delete()
+    return Response({"exito": True, "mensaje": "Nota de trabajo eliminada."}, status=200)
+
+
 # ==========================================
 # CU14: GESTIONAR FACTURACION
 # ==========================================
@@ -2273,7 +2663,7 @@ def facturacion_historial_api(request):
         .order_by('-fecha_fin', '-codigo')
     )
 
-    notas = Notaservicio.objects.select_related('id_orden_trabajo').filter(id_orden_trabajo__in=ordenes)
+    notas = Notaservicio.objects.filter(id_orden_trabajo__in=ordenes)
     notas_por_orden = {nota.id_orden_trabajo_id: nota for nota in notas}
 
     facturas = Factura.objects.select_related('id_nota_servicio').filter(id_nota_servicio__in=notas)
@@ -2307,99 +2697,280 @@ def reportes_api(request):
 
     export = (request.GET.get('export') or '').strip().lower()
     accion = 'Exportar' if export else 'Buscar'
-    error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU15', accion)
+    error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU18', accion)
     if error_permiso:
         return error_permiso
 
     tipo = (request.GET.get('tipo') or '').strip().lower()
     fecha_inicio = parse_date((request.GET.get('fecha_inicio') or '').strip())
     fecha_fin = parse_date((request.GET.get('fecha_fin') or '').strip())
+    top = request.GET.get('top')
+    try:
+        top = int(top) if top else 10
+    except ValueError:
+        top = 10
+    if top < 1:
+        top = 10
+
+    email_destino = (request.GET.get('email_destino') or '').strip()
 
     if fecha_inicio and fecha_fin and fecha_inicio > fecha_fin:
         return Response({"exito": False, "error": "La fecha inicio no puede ser mayor que fecha fin."}, status=400)
 
     resultados = []
 
-    if tipo == 'financiero':
-        facturas = Factura.objects.all()
-        compras = Compra.objects.all()
+    if tipo == 'ingresos_por_periodo':
+        agrupacion = (request.GET.get('agrupacion') or 'dia').strip().lower()
+        facturas = Factura.objects.select_related('id_nota_servicio').all()
         if fecha_inicio:
             facturas = facturas.filter(fecha_emision__gte=fecha_inicio)
-            compras = compras.filter(fecha__gte=fecha_inicio)
         if fecha_fin:
             facturas = facturas.filter(fecha_emision__lte=fecha_fin)
-            compras = compras.filter(fecha__lte=fecha_fin)
 
-        for factura in facturas:
-            resultados.append(
-                {
-                    "fecha": factura.fecha_emision,
-                    "categoria": "Ingreso",
-                    "descripcion": f"Factura #{factura.codigo}",
-                    "monto": float(factura.total_facturado or 0),
-                    "estado": "Emitida",
-                }
-            )
-        for compra in compras:
-            resultados.append(
-                {
-                    "fecha": compra.fecha,
-                    "categoria": "Egreso",
-                    "descripcion": f"Compra #{compra.codigo}",
-                    "monto": float(compra.total or 0),
-                    "estado": compra.estado or '-',
-                }
-            )
+        grupos = {}
+        total_bruto = Decimal('0.00')
+        total_impuesto = Decimal('0.00')
+        total_ordenes = 0
 
-    elif tipo == 'operativo':
-        ordenes = Ordentrabajo.objects.select_related('id_mecanico').all()
+        for f in facturas:
+            fecha = f.fecha_emision or None
+            if not fecha:
+                continue
+
+            if agrupacion == 'semana':
+                year, week, _ = fecha.isocalendar()
+                week_start = fecha - timedelta(days=fecha.weekday())
+                week_end = week_start + timedelta(days=6)
+                label = f"Semana {week} ({week_start.isoformat()}-{week_end.isoformat()})"
+                key = f"{year}-W{week}"
+            elif agrupacion == 'mes':
+                label = f"{calendar.month_name[fecha.month]} {fecha.year}"
+                key = f"{fecha.year}-{fecha.month:02d}"
+            else:
+                label = fecha.isoformat()
+                key = fecha.isoformat()
+
+            bruto = f.total_facturado or Decimal('0.00')
+            impuesto = f.impuesto or Decimal('0.00')
+            neto = bruto - impuesto
+
+            if key not in grupos:
+                grupos[key] = {
+                    'label': label,
+                    'ordenes': 0,
+                    'bruto': Decimal('0.00'),
+                    'impuesto': Decimal('0.00'),
+                    'neto': Decimal('0.00'),
+                }
+
+            grupos[key]['ordenes'] += 1
+            grupos[key]['bruto'] += bruto
+            grupos[key]['impuesto'] += impuesto
+            grupos[key]['neto'] += neto
+
+            total_bruto += bruto
+            total_impuesto += impuesto
+            total_ordenes += 1
+
+        resultados = []
+        for k in sorted(grupos.keys()):
+            g = grupos[k]
+            resultados.append({
+                'periodo': g['label'],
+                'ordenes': g['ordenes'],
+                'ingreso_bruto': float(g['bruto']),
+                'impuesto': float(g['impuesto']),
+                'ingreso_neto': float(g['neto']),
+            })
+
+        resultados.append({
+            'periodo': 'TOTAL',
+            'ordenes': total_ordenes,
+            'ingreso_bruto': float(total_bruto),
+            'impuesto': float(total_impuesto),
+            'ingreso_neto': float(total_bruto - total_impuesto),
+        })
+
+    elif tipo == 'servicios_mas_realizados':
+        agrupacion = (request.GET.get('agrupacion') or '').strip().lower()
+        detalles = Detalleordentrabajo.objects.filter(id_producto__isnull=True)
+        if fecha_inicio:
+            detalles = detalles.filter(id_orden_trabajo__fecha_creacion__gte=fecha_inicio)
+        if fecha_fin:
+            detalles = detalles.filter(id_orden_trabajo__fecha_creacion__lte=fecha_fin)
+        detalles = detalles.values(
+            'tipo',
+            'descripcion',
+            'cantidad',
+            'subtotal',
+            'id_orden_trabajo__fecha_creacion'
+        )
+
+        servicios = {}
+        total_veces = 0
+        total_ingresos = Decimal('0.00')
+        for detalle in detalles:
+            nombre = (detalle.get('tipo') or detalle.get('descripcion') or 'Servicio').strip()
+            if nombre == '':
+                nombre = 'Servicio'
+            cantidad = detalle.get('cantidad') or 0
+            subtotal = detalle.get('subtotal') or Decimal('0.00')
+            fecha_creacion = detalle.get('id_orden_trabajo__fecha_creacion')
+
+            if agrupacion in ['semana', 'mes', 'dia']:
+                if not fecha_creacion:
+                    continue
+                if agrupacion == 'semana':
+                    year, week, _ = fecha_creacion.isocalendar()
+                    week_start = fecha_creacion - timedelta(days=fecha_creacion.weekday())
+                    week_end = week_start + timedelta(days=6)
+                    periodo_label = f"Semana {week} ({week_start.isoformat()}-{week_end.isoformat()})"
+                    periodo_key = f"{year}-W{week:02d}"
+                elif agrupacion == 'mes':
+                    periodo_label = f"{calendar.month_name[fecha_creacion.month]} {fecha_creacion.year}"
+                    periodo_key = f"{fecha_creacion.year}-{fecha_creacion.month:02d}"
+                else:
+                    periodo_label = fecha_creacion.isoformat()
+                    periodo_key = fecha_creacion.isoformat()
+
+                key = f"{periodo_key}|{nombre}"
+                if key not in servicios:
+                    servicios[key] = {
+                        'periodo': periodo_label,
+                        'servicio': nombre,
+                        'veces': 0,
+                        'monto': Decimal('0.00'),
+                    }
+                servicios[key]['veces'] += cantidad
+                servicios[key]['monto'] += subtotal
+            else:
+                if nombre not in servicios:
+                    servicios[nombre] = {'veces': 0, 'monto': Decimal('0.00')}
+                servicios[nombre]['veces'] += cantidad
+                servicios[nombre]['monto'] += subtotal
+
+            total_veces += cantidad
+            total_ingresos += subtotal
+
+        resultados = []
+        if agrupacion in ['semana', 'mes', 'dia']:
+            for v in servicios.values():
+                pct = (float(v['veces']) / total_veces * 100.0) if total_veces else 0.0
+                resultados.append({
+                    'periodo': v['periodo'],
+                    'servicio': v['servicio'],
+                    'veces_realizado': int(v['veces']),
+                    'ingreso_total': float(v['monto']),
+                    'porcentaje': round(pct, 2),
+                })
+            resultados.sort(key=lambda x: (x['periodo'], -x['veces_realizado'], -x['ingreso_total']))
+        else:
+            for nombre, v in servicios.items():
+                pct = (float(v['veces']) / total_veces * 100.0) if total_veces else 0.0
+                resultados.append({
+                    'servicio': nombre,
+                    'veces_realizado': int(v['veces']),
+                    'ingreso_total': float(v['monto']),
+                    'porcentaje': round(pct, 2),
+                })
+            resultados.sort(key=lambda x: (-x['veces_realizado'], -x['ingreso_total']))
+
+        resultados = resultados[:top]
+
+    elif tipo == 'repuestos_mas_vendidos':
+        detalles = Detalleordentrabajo.objects.select_related('id_producto').filter(id_producto__isnull=False)
+        if fecha_inicio:
+            detalles = detalles.filter(id_orden_trabajo__fecha_creacion__gte=fecha_inicio)
+        if fecha_fin:
+            detalles = detalles.filter(id_orden_trabajo__fecha_creacion__lte=fecha_fin)
+        repuestos = {}
+        for detalle in detalles:
+            producto = detalle.id_producto
+            if not producto:
+                continue
+            pid = producto.codigo
+            if pid not in repuestos:
+                repuestos[pid] = {'nombre': producto.nombre or 'Repuesto', 'cantidad': 0, 'monto': Decimal('0.00'), 'stock_actual': producto.stock_actual or 0}
+            repuestos[pid]['cantidad'] += detalle.cantidad or 0
+            repuestos[pid]['monto'] += detalle.subtotal or Decimal('0.00')
+
+        resultados = []
+        for pid, v in repuestos.items():
+            resultados.append({
+                'repuesto': v['nombre'],
+                'cantidad_vendida': int(v['cantidad']),
+                'ingreso_total': float(v['monto']),
+                'stock_actual': int(v['stock_actual']),
+            })
+
+        resultados.sort(key=lambda x: (-x['cantidad_vendida'], -x['ingreso_total']))
+        resultados = resultados[:top]
+
+    elif tipo == 'clientes_frecuentes':
+        ordenes = Ordentrabajo.objects.select_related('id_cliente').all()
+        if fecha_inicio:
+            ordenes = ordenes.filter(fecha_creacion__gte=fecha_inicio)
+        if fecha_fin:
+            ordenes = ordenes.filter(fecha_creacion__lte=fecha_fin)
+        clientes = {}
+        for orden in ordenes:
+            cliente = orden.id_cliente
+            if not cliente:
+                continue
+            cid = cliente.codigo
+            if cid not in clientes:
+                clientes[cid] = {'nombre': cliente.nombre or cliente.razon_social or 'Cliente', 'cedula': cliente.cedula, 'ordenes': 0, 'monto': Decimal('0.00')}
+            clientes[cid]['ordenes'] += 1
+            clientes[cid]['monto'] += orden.total or Decimal('0.00')
+
+        resultados = []
+        for cid, v in clientes.items():
+            resultados.append({
+                'cliente': v['nombre'],
+                'cedula': v.get('cedula') or '',
+                'cantidad_servicios': int(v['ordenes']),
+                'total_gastado': float(v['monto']),
+            })
+
+        resultados.sort(key=lambda x: (-x['cantidad_servicios'], -x['total_gastado']))
+        resultados = resultados[:top]
+
+    elif tipo == 'ordenes_por_estado':
+        ordenes = Ordentrabajo.objects.all()
         if fecha_inicio:
             ordenes = ordenes.filter(fecha_creacion__gte=fecha_inicio)
         if fecha_fin:
             ordenes = ordenes.filter(fecha_creacion__lte=fecha_fin)
 
-        estados = {}
-        tecnicos = {}
+        conteo = {}
+        total_estados = 0
         for orden in ordenes:
             estado = (orden.estado or 'Sin estado').strip()
-            estados[estado] = estados.get(estado, 0) + 1
-            if orden.id_mecanico:
-                nombre = orden.id_mecanico.nombre or 'Mecanico'
-                tecnicos[nombre] = tecnicos.get(nombre, 0) + 1
+            conteo[estado] = conteo.get(estado, 0) + 1
+            total_estados += 1
 
-        for estado, cantidad in estados.items():
-            resultados.append(
-                {
-                    "fecha": None,
-                    "categoria": "Ordenes por estado",
-                    "descripcion": estado,
-                    "monto": cantidad,
-                    "estado": "OK",
-                }
-            )
-        for mecanico, cantidad in tecnicos.items():
-            resultados.append(
-                {
-                    "fecha": None,
-                    "categoria": "Ordenes por tecnico",
-                    "descripcion": mecanico,
-                    "monto": cantidad,
-                    "estado": "OK",
-                }
-            )
+        resultados = []
+        for estado, cantidad in conteo.items():
+            pct = (float(cantidad) / total_estados * 100.0) if total_estados else 0.0
+            resultados.append({
+                'estado': estado,
+                'cantidad': int(cantidad),
+                'porcentaje': round(pct, 2),
+            })
+        resultados.sort(key=lambda x: (-x['cantidad'], x['estado']))
 
-    elif tipo == 'inventario':
-        productos = Producto.objects.all().order_by('nombre')
+    elif tipo == 'inventario_critico':
+        productos = Producto.objects.filter(stock_actual__lt=F('stock_minimo')).order_by('stock_actual')
         for producto in productos:
-            resultados.append(
-                {
-                    "fecha": None,
-                    "categoria": producto.categoria or 'Repuesto',
-                    "descripcion": producto.nombre,
-                    "monto": int(producto.stock_actual or 0),
-                    "estado": producto.estado or '-',
-                }
-            )
+            diferencia = (producto.stock_actual or 0) - (producto.stock_minimo or 0)
+            resultados.append({
+                'producto': producto.nombre,
+                'stock_actual': int(producto.stock_actual or 0),
+                'stock_minimo': int(producto.stock_minimo or 0),
+                'diferencia': int(diferencia),
+                'ubicacion': producto.ubicacion_almacen or '',
+            })
+
     else:
         return Response({"exito": False, "error": "Tipo de consulta inválido."}, status=400)
 
@@ -2410,66 +2981,118 @@ def reportes_api(request):
     )
 
     if export:
+        headers = columnas_para(tipo, resultados)
+        filtros = {
+            'tipo': tipo,
+            'fecha_inicio': fecha_inicio.isoformat() if fecha_inicio else '',
+            'fecha_fin': fecha_fin.isoformat() if fecha_fin else '',
+            'agrupacion': (request.GET.get('agrupacion') or '').strip().lower(),
+            'top': top,
+            'generado_en': timezone.localtime().strftime('%d/%m/%Y %H:%M'),
+        }
+
         if export == 'csv':
-            response = HttpResponse(content_type='text/csv; charset=utf-8')
-            response['Content-Disposition'] = 'attachment; filename="reporte.csv"'
-            writer = csv.writer(response)
-            writer.writerow(['fecha', 'categoria', 'descripcion', 'monto', 'estado'])
-            for row in resultados:
-                writer.writerow([
-                    row.get('fecha') or '',
-                    row.get('categoria') or '',
-                    row.get('descripcion') or '',
-                    row.get('monto') or 0,
-                    row.get('estado') or '',
-                ])
+            response = generar_csv_reporte(headers, resultados, filtros)
+            if email_destino:
+                enviar_archivo_por_correo(email_destino, 'reporte.csv', response.content, 'text/csv')
             return response
 
         if export == 'excel':
-            response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-            response['Content-Disposition'] = 'attachment; filename="reporte.xlsx"'
-            writer = csv.writer(response)
-            writer.writerow(['fecha', 'categoria', 'descripcion', 'monto', 'estado'])
-            for row in resultados:
-                writer.writerow([
-                    row.get('fecha') or '',
-                    row.get('categoria') or '',
-                    row.get('descripcion') or '',
-                    row.get('monto') or 0,
-                    row.get('estado') or '',
-                ])
+            try:
+                response, contenido = generar_excel_reporte(headers, resultados, filtros)
+            except ImportError:
+                return Response(
+                    {"exito": False, "error": "Excel no disponible. Instale openpyxl en el backend."},
+                    status=501,
+                )
+            if email_destino:
+                enviar_archivo_por_correo(email_destino, 'reporte.xlsx', contenido, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             return response
 
         if export == 'pdf':
             try:
-                from reportlab.pdfgen import canvas
-                from reportlab.lib.pagesizes import letter
-            except Exception:
+                response, contenido = generar_pdf_reporte(headers, resultados, filtros)
+            except ImportError:
                 return Response(
                     {"exito": False, "error": "PDF no disponible. Instale reportlab en el backend."},
                     status=501,
                 )
-
-            response = HttpResponse(content_type='application/pdf')
-            response['Content-Disposition'] = 'attachment; filename="reporte.pdf"'
-            pdf = canvas.Canvas(response, pagesize=letter)
-            pdf.setFont('Helvetica', 12)
-            pdf.drawString(50, 770, f"Reporte {tipo}")
-            y = 740
-            for row in resultados[:40]:
-                pdf.drawString(50, y, f"{row.get('categoria')}: {row.get('descripcion')} - {row.get('monto')}")
-                y -= 16
-                if y < 60:
-                    pdf.showPage()
-                    pdf.setFont('Helvetica', 12)
-                    y = 770
-            pdf.showPage()
-            pdf.save()
+            if email_destino:
+                enviar_archivo_por_correo(email_destino, 'reporte.pdf', contenido, 'application/pdf')
             return response
 
         return Response({"exito": False, "error": "Formato de exportación inválido."}, status=400)
 
     return Response({"exito": True, "resultados": resultados}, status=200)
+
+
+@api_view(['GET'])
+def dashboard_api(request):
+    """CU19: Dashboard Analítico - métricas en tiempo real (no persistente)"""
+    usuario_sesion, error_auth = obtener_usuario_autenticado(request)
+    if error_auth:
+        return error_auth
+
+    error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU19', 'Mostrar')
+    if error_permiso:
+        return error_permiso
+
+    hoy = timezone.now().date()
+
+    # Ingresos del día
+    ingresos_qs = Factura.objects.filter(fecha_emision=hoy)
+    ingresos_del_dia = sum((f.total_facturado or Decimal('0.00')) for f in ingresos_qs)
+
+    # Órdenes activas (no finalizadas/entregadas/canceladas)
+    estados_no_activas = ['Finalizado', 'Entregado', 'Cancelado']
+    ordenes_activas_count = Ordentrabajo.objects.exclude(estado__in=estados_no_activas).count()
+
+    # Alertas de stock
+    productos_bajos = Producto.objects.filter(stock_actual__lt=F('stock_minimo')).order_by('stock_actual')
+    alertas_stock = []
+    for p in productos_bajos[:20]:
+        alertas_stock.append({
+            'producto': p.nombre,
+            'stock_actual': int(p.stock_actual or 0),
+            'stock_minimo': int(p.stock_minimo or 0),
+            'diferencia': int((p.stock_actual or 0) - (p.stock_minimo or 0)),
+            'ubicacion': p.ubicacion_almacen or '',
+        })
+
+    # Servicios pendientes
+    servicios_pendientes_count = Ordentrabajo.objects.filter(estado__in=['Pendiente', 'En Diagnóstico']).count()
+
+    # Serie temporal: últimos 14 días de ingresos
+    series = []
+    for dias in range(13, -1, -1):
+        fecha = hoy - timedelta(days=dias)
+        total = Factura.objects.filter(fecha_emision=fecha).aggregate(total_sum=Sum('total_facturado'))['total_sum'] or Decimal('0.00')
+        series.append({'fecha': fecha.isoformat(), 'ingreso': float(total)})
+
+    response = {
+        'ingresos_del_dia': float(ingresos_del_dia),
+        'ordenes_activas': int(ordenes_activas_count),
+        'alertas_stock': alertas_stock,
+        'servicios_pendientes': int(servicios_pendientes_count),
+        'serie_ingresos_ultimos_14_dias': series,
+    }
+
+    registrar_bitacora(usuario_sesion, 'REPORTE', 'Accedió al Dashboard Analítico (CU19)')
+
+    return Response({'exito': True, 'dashboard': response}, status=200)
+
+def enviar_archivo_por_correo(email_destino, nombre_archivo, contenido, content_type):
+    try:
+        email = EmailMessage(
+            subject='Reporte del Taller',
+            body='Adjunto el reporte solicitado.',
+            to=[email_destino],
+        )
+        email.attach(nombre_archivo, contenido, content_type)
+        email.send(fail_silently=True)
+    except Exception:
+        logger.exception('Error enviando reporte por correo')
+    return None
 
 
 # ==========================================
@@ -2488,61 +3111,15 @@ class HistorialMantenimientoAPI(APIView):
             .first()
         )
         if motocicleta is None:
-            return Response({"exito": True, "motocicleta": None, "ordenes": []}, status=200)
-
-        ordenes = (
-            Ordentrabajo.objects.select_related('id_cliente', 'id_motocicleta', 'id_mecanico')
-            .filter(id_motocicleta=motocicleta)
-            .order_by('-fecha_creacion', '-codigo')
-        )
-
-        return Response(
-            {
-                "exito": True,
-                "motocicleta": MotocicletaSerializer(motocicleta).data,
-                "ordenes": HistorialOrdenSerializer(ordenes, many=True).data,
-            },
-            status=200,
-        )
-
-    def solicita_detalles_orden_especifica(self, request, orden_id):
-        try:
-            try:
-                orden = Ordentrabajo.objects.select_related('id_cliente', 'id_motocicleta', 'id_mecanico').get(codigo=orden_id)
-            except Ordentrabajo.DoesNotExist:
-                return Response({"exito": False, "error": "Orden de trabajo no encontrada."}, status=404)
-
-            detalles = Detalleordentrabajo.objects.select_related('id_producto').filter(id_orden_trabajo=orden)
             return Response(
                 {
                     "exito": True,
-                    "orden": HistorialOrdenSerializer(orden).data,
-                    "detalles": DetalleOrdenTrabajoSerializer(detalles, many=True).data,
+                    "motocicleta": None,
+                    "ordenes": [],
+                    "mensaje": "No se encontraron registros para el criterio.",
                 },
                 status=200,
             )
-        except Exception as e:
-            trace = traceback.format_exc()
-            return Response({"error_critico": str(e), "trace": trace}, status=500)
-
-    def solicita_generacion_pdf_y_registro(self, request):
-        criterio = (request.data.get('criterio') or '').strip()
-        if not criterio:
-            return None, Response({"exito": False, "error": "Debe ingresar placa o chasis."}, status=400)
-
-        motocicleta = (
-            Motocicleta.objects.select_related('id_cliente')
-            .filter(Q(placa__icontains=criterio) | Q(numero_chasis__icontains=criterio))
-            .order_by('codigo')
-            .first()
-        )
-        if motocicleta is None:
-            return {
-                "exito": True,
-                "motocicleta": None,
-                "ordenes": [],
-                "mensaje": "No se encontraron registros para el criterio.",
-            }, None
 
         ordenes = (
             Ordentrabajo.objects.select_related('id_cliente', 'id_motocicleta', 'id_mecanico')
@@ -2556,12 +3133,15 @@ class HistorialMantenimientoAPI(APIView):
             f"Exportó historial de mantenimiento de la motocicleta {motocicleta.placa}.",
         )
 
-        return {
-            "exito": True,
-            "motocicleta": MotocicletaSerializer(motocicleta).data,
-            "ordenes": HistorialOrdenSerializer(ordenes, many=True).data,
-            "mensaje": "Reporte generado.",
-        }, None
+        return Response(
+            {
+                "exito": True,
+                "motocicleta": MotocicletaSerializer(motocicleta).data,
+                "ordenes": HistorialOrdenSerializer(ordenes, many=True).data,
+                "mensaje": "Reporte generado.",
+            },
+            status=200,
+        )
 
     def retorna_datos_y_url_reporte(self, data):
         response_data = dict(data or {})
@@ -2807,67 +3387,69 @@ def forgot_password_request_api(request):
     email = (request.data.get('email') or '').strip().lower()
     ip = (request.META.get('HTTP_X_FORWARDED_FOR') or request.META.get('REMOTE_ADDR') or 'unknown').split(',')[0].strip()
 
-    if email:
-        key_email = f"pwdreset:email:{email}"
-        if excede_limite(key_email, settings.PASSWORD_RESET_LIMIT_PER_EMAIL, settings.PASSWORD_RESET_WINDOW_SECONDS):
-            return Response({"exito": True, "mensaje": "Si la cuenta existe, se enviará un enlace de recuperación."}, status=200)
+    if not email:
+        return Response({"exito": False, "error": "Debe ingresar un correo electrónico."}, status=400)
+
+    key_email = f"pwdreset:email:{email}"
+    if excede_limite(key_email, settings.PASSWORD_RESET_LIMIT_PER_EMAIL, settings.PASSWORD_RESET_WINDOW_SECONDS):
+        return Response({"exito": False, "error": "Demasiadas solicitudes. Intente nuevamente más tarde."}, status=429)
 
     key_ip = f"pwdreset:ip:{ip}"
     if excede_limite(key_ip, settings.PASSWORD_RESET_LIMIT_PER_IP, settings.PASSWORD_RESET_WINDOW_SECONDS):
-        return Response({"exito": True, "mensaje": "Si la cuenta existe, se enviará un enlace de recuperación."}, status=200)
+        return Response({"exito": False, "error": "Demasiadas solicitudes. Intente nuevamente más tarde."}, status=429)
 
     usuario = Usuario.objects.filter(email__iexact=email).first()
-    if usuario and (usuario.estado or 'Activo') == 'Activo':
-        destinatario_envio = _resolver_destinatario_reset_online(usuario)
-        payload = {
-            'purpose': 'password_reset',
-            'uid': usuario.codigo,
-            'jti': str(uuid.uuid4()),
-        }
-        token = signing.dumps(payload, salt='password-reset')
-        enlace = f"{settings.FRONTEND_URL.rstrip('/')}/reset-password?token={token}"
+    if not usuario or (usuario.estado or 'Activo') != 'Activo':
+        return Response({"exito": False, "error": "No existe una cuenta registrada con ese correo electrónico."}, status=404)
 
-        if settings.PASSWORD_RESET_LOG_TO_CONSOLE:
-            print(
-                f"[PASSWORD_RESET] mode={settings.MAIL_MODE} from={settings.DEFAULT_FROM_EMAIL} "
-                f"to={destinatario_envio} original={usuario.email} link={enlace}"
+    codigo = f"{secrets.randbelow(1000000):06d}"
+    cache.set(f"pwdreset:code:{usuario.codigo}", codigo, timeout=settings.PASSWORD_RESET_CODE_MAX_AGE_SECONDS)
+    cache.delete(f"pwdreset:code_attempts:{usuario.codigo}")
+
+    destinatario_envio = _resolver_destinatario_reset_online(usuario)
+
+    if settings.PASSWORD_RESET_LOG_TO_CONSOLE:
+        print(
+            f"[PASSWORD_RESET] mode={settings.MAIL_MODE} from={settings.DEFAULT_FROM_EMAIL} "
+            f"to={destinatario_envio} original={usuario.email} codigo={codigo}"
+        )
+
+    enviados = 0
+    ultimo_error = None
+
+    for intento in range(1, settings.EMAIL_SEND_RETRIES + 1):
+        try:
+            enviados = send_mail(
+                subject='Código de verificación - Taller La Roca',
+                message=(
+                    'Recibimos una solicitud para restablecer tu contraseña.\n\n'
+                    f'Tu código de confirmación es: {codigo}\n'
+                    f'Este código es válido por {settings.PASSWORD_RESET_CODE_MAX_AGE_SECONDS // 60} minutos.\n\n'
+                    'Si no solicitaste este cambio, ignora este mensaje.'
+                ),
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[destinatario_envio],
+                fail_silently=False,
             )
+            if settings.PASSWORD_RESET_LOG_TO_CONSOLE:
+                print(f"[PASSWORD_RESET] intento={intento} resultado_envio={enviados}")
+            ultimo_error = None
+            break
+        except Exception as exc:
+            ultimo_error = exc
+            if settings.PASSWORD_RESET_LOG_TO_CONSOLE:
+                print(f"[PASSWORD_RESET] intento={intento} error_envio={exc}")
 
-        enviados = 0
-        ultimo_error = None
-
-        for intento in range(1, settings.EMAIL_SEND_RETRIES + 1):
-            try:
-                enviados = send_mail(
-                    subject='Recuperación de contraseña - Taller La Roca',
-                    message=(
-                        'Solicitaste restablecer tu contraseña.\n\n'
-                        f'Usa este enlace (válido por {settings.PASSWORD_RESET_TOKEN_MAX_AGE_SECONDS // 60} minutos):\n{enlace}\n\n'
-                        'Si no solicitaste este cambio, ignora este mensaje.'
-                    ),
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[destinatario_envio],
-                    fail_silently=False,
-                )
-                if settings.PASSWORD_RESET_LOG_TO_CONSOLE:
-                    print(f"[PASSWORD_RESET] intento={intento} resultado_envio={enviados}")
-                ultimo_error = None
+            es_dns_temporal = isinstance(exc, OSError) and getattr(exc, 'errno', None) == -3
+            if not es_dns_temporal:
                 break
-            except Exception as exc:
-                ultimo_error = exc
-                if settings.PASSWORD_RESET_LOG_TO_CONSOLE:
-                    print(f"[PASSWORD_RESET] intento={intento} error_envio={exc}")
 
-                es_dns_temporal = isinstance(exc, OSError) and getattr(exc, 'errno', None) == -3
-                if not es_dns_temporal:
-                    break
+    if ultimo_error and settings.PASSWORD_RESET_LOG_TO_CONSOLE:
+        print(f"[PASSWORD_RESET] envio_no_confirmado tras {settings.EMAIL_SEND_RETRIES} intento(s)")
 
-        if ultimo_error and settings.PASSWORD_RESET_LOG_TO_CONSOLE:
-            print(f"[PASSWORD_RESET] envio_no_confirmado tras {settings.EMAIL_SEND_RETRIES} intento(s)")
+    registrar_bitacora(usuario, 'SOLICITUD_RESET', 'Solicitó un código de verificación para restablecer su contraseña.')
 
-        registrar_bitacora(usuario, 'SOLICITUD_RESET', 'Solicitó recuperación de contraseña por correo.')
-
-    return Response({"exito": True, "mensaje": "Si la cuenta existe, se enviará un enlace de recuperación."}, status=200)
+    return Response({"exito": True, "mensaje": "Te hemos enviado un código de verificación a tu correo electrónico."}, status=200)
 
 
 @api_view(['POST'])
@@ -2916,6 +3498,173 @@ def reset_password_confirm_api(request):
 
 
 @api_view(['POST'])
+def verify_reset_code_api(request):
+    email = (request.data.get('email') or '').strip().lower()
+    codigo = (request.data.get('codigo') or '').strip()
+
+    if not email or not codigo:
+        return Response({"exito": False, "error": "Debe ingresar el código de confirmación."}, status=400)
+
+    usuario = Usuario.objects.filter(email__iexact=email).first()
+    if not usuario:
+        return Response({"exito": False, "error": "Código incorrecto o expirado."}, status=400)
+
+    key_attempts = f"pwdreset:code_attempts:{usuario.codigo}"
+    if excede_limite(key_attempts, settings.PASSWORD_RESET_CODE_MAX_ATTEMPTS, settings.PASSWORD_RESET_CODE_MAX_AGE_SECONDS):
+        return Response({"exito": False, "error": "Demasiados intentos. Solicite un nuevo código."}, status=429)
+
+    codigo_guardado = cache.get(f"pwdreset:code:{usuario.codigo}")
+    if not codigo_guardado or codigo_guardado != codigo:
+        return Response({"exito": False, "error": "Código incorrecto o expirado."}, status=400)
+
+    cache.delete(f"pwdreset:code:{usuario.codigo}")
+    cache.delete(key_attempts)
+
+    payload = {
+        'purpose': 'password_reset',
+        'uid': usuario.codigo,
+        'jti': str(uuid.uuid4()),
+    }
+    token = signing.dumps(payload, salt='password-reset')
+
+    registrar_bitacora(usuario, 'VERIFICACION_CODIGO', 'Verificó el código de recuperación de contraseña.')
+
+    return Response({"exito": True, "token": token}, status=200)
+
+
+# ==========================================
+# CU: REGISTRO DE NUEVOS CLIENTES
+# ==========================================
+@api_view(['POST'])
+def registro_api(request):
+    nombre = (request.data.get('full_name') or '').strip()
+    email = (request.data.get('email') or '').strip().lower()
+    cedula = (request.data.get('cedula') or '').strip()
+    country_code = (request.data.get('country_code') or '').strip()
+    phone = (request.data.get('phone') or '').strip()
+    password = request.data.get('password', '')
+    password_confirmacion = request.data.get('confirm_password', '')
+
+    if not nombre or not email or not cedula or not phone or not password:
+        return Response({"exito": False, "error": "Todos los campos son obligatorios."}, status=400)
+
+    if password_confirmacion and password != password_confirmacion:
+        return Response({"exito": False, "error": "Las contraseñas no coinciden."}, status=400)
+
+    error_password = validar_password_segura(password)
+    if error_password:
+        return Response({"exito": False, "error": error_password}, status=400)
+
+    if Usuario.objects.filter(email__iexact=email).exists():
+        return Response({"exito": False, "error": "Ya existe una cuenta registrada con ese correo electrónico."}, status=400)
+
+    if Cliente.objects.filter(cedula=cedula).exists():
+        return Response({"exito": False, "error": "Ya existe un cliente registrado con esa cédula/NIT."}, status=400)
+
+    rol_cliente, _ = Rol.objects.get_or_create(nombre='Cliente', defaults={'descripcion': 'Rol de cliente final'})
+
+    telefono = f"{country_code} {phone}".strip()
+    hoy = timezone.now().date()
+
+    with transaction.atomic():
+        usuario = Usuario.objects.create(
+            id_rol=rol_cliente,
+            nombre=nombre,
+            email=email,
+            contrasena=make_password(password),
+            telefono=telefono,
+            estado='Pendiente',
+            fecha_registro=hoy,
+        )
+
+        Cliente.objects.create(
+            cedula=cedula,
+            nombre=nombre,
+            telefono=telefono,
+            email=email,
+            fecha_registro=hoy,
+            estado='Activo',
+        )
+
+    _enviar_codigo_verificacion(
+        usuario,
+        'register',
+        'Verifica tu cuenta - Taller La Roca',
+        'Gracias por registrarte en Taller La Roca. Para activar tu cuenta, ingresa el siguiente código:',
+    )
+
+    registrar_bitacora(usuario, 'REGISTRO', f"Se registró como nuevo cliente: {usuario.nombre} (cédula/NIT {cedula}).")
+
+    return Response(
+        {"exito": True, "mensaje": "Cuenta creada. Te hemos enviado un código de verificación a tu correo electrónico."},
+        status=201,
+    )
+
+
+@api_view(['POST'])
+def verify_register_code_api(request):
+    email = (request.data.get('email') or '').strip().lower()
+    codigo = (request.data.get('codigo') or '').strip()
+
+    if not email or not codigo:
+        return Response({"exito": False, "error": "Debe ingresar el código de confirmación."}, status=400)
+
+    usuario = Usuario.objects.filter(email__iexact=email, estado='Pendiente').first()
+    if not usuario:
+        return Response({"exito": False, "error": "Código incorrecto o expirado."}, status=400)
+
+    key_attempts = f"register:code_attempts:{usuario.codigo}"
+    if excede_limite(key_attempts, settings.PASSWORD_RESET_CODE_MAX_ATTEMPTS, settings.PASSWORD_RESET_CODE_MAX_AGE_SECONDS):
+        return Response({"exito": False, "error": "Demasiados intentos. Solicite un nuevo código."}, status=429)
+
+    codigo_guardado = cache.get(f"register:code:{usuario.codigo}")
+    if not codigo_guardado or codigo_guardado != codigo:
+        return Response({"exito": False, "error": "Código incorrecto o expirado."}, status=400)
+
+    cache.delete(f"register:code:{usuario.codigo}")
+    cache.delete(key_attempts)
+
+    usuario.estado = 'Activo'
+    usuario.save(update_fields=['estado'])
+
+    registrar_bitacora(usuario, 'VERIFICACION_CUENTA', 'Verificó su cuenta de cliente mediante el código enviado por correo.')
+
+    return Response({"exito": True, "mensaje": "Cuenta verificada exitosamente. Ahora puede iniciar sesión."}, status=200)
+
+
+@api_view(['POST'])
+def resend_register_code_api(request):
+    email = (request.data.get('email') or '').strip().lower()
+    ip = (request.META.get('HTTP_X_FORWARDED_FOR') or request.META.get('REMOTE_ADDR') or 'unknown').split(',')[0].strip()
+
+    if not email:
+        return Response({"exito": False, "error": "Debe ingresar un correo electrónico."}, status=400)
+
+    key_email = f"register:resend:email:{email}"
+    if excede_limite(key_email, settings.PASSWORD_RESET_LIMIT_PER_EMAIL, settings.PASSWORD_RESET_WINDOW_SECONDS):
+        return Response({"exito": False, "error": "Demasiadas solicitudes. Intente nuevamente más tarde."}, status=429)
+
+    key_ip = f"register:resend:ip:{ip}"
+    if excede_limite(key_ip, settings.PASSWORD_RESET_LIMIT_PER_IP, settings.PASSWORD_RESET_WINDOW_SECONDS):
+        return Response({"exito": False, "error": "Demasiadas solicitudes. Intente nuevamente más tarde."}, status=429)
+
+    usuario = Usuario.objects.filter(email__iexact=email, estado='Pendiente').first()
+    if not usuario:
+        return Response({"exito": False, "error": "No existe una solicitud de registro pendiente con ese correo."}, status=404)
+
+    _enviar_codigo_verificacion(
+        usuario,
+        'register',
+        'Verifica tu cuenta - Taller La Roca',
+        'Has solicitado un nuevo código de verificación para activar tu cuenta en Taller La Roca:',
+    )
+
+    registrar_bitacora(usuario, 'REENVIO_CODIGO', 'Solicitó un nuevo código de verificación de registro.')
+
+    return Response({"exito": True, "mensaje": "Te hemos reenviado el código de verificación a tu correo electrónico."}, status=200)
+
+
+@api_view(['POST'])
 def aceptar_cotizacion_api(request, cotizacion_id):
     usuario_sesion, error_auth = obtener_usuario_autenticado(request)
     if error_auth:
@@ -2935,29 +3684,13 @@ def aceptar_cotizacion_api(request, cotizacion_id):
 
     cliente = cotizacion.id_cliente
 
-    try:
-        rol_cliente = Rol.objects.get(nombre='Cliente')
-    except Rol.DoesNotExist:
-        rol_cliente = Rol.objects.create(nombre='Cliente', descripcion='Rol de cliente final')
+    usuario_cliente, creado = obtener_o_crear_usuario_cliente(cliente)
 
-    usuario_cliente = Usuario.objects.filter(nombre=cliente.nombre, id_rol=rol_cliente).first()
-    creado = False
-
-    if not usuario_cliente:
-        nombre_usuario = generar_usuario_unico_para_cliente(cliente.nombre)
-        usuario_cliente = Usuario.objects.create(
-            id_rol=rol_cliente,
-            nombre=cliente.nombre,
-            email=nombre_usuario,
-            contrasena=make_password(settings.CLIENT_TEMP_PASSWORD),
-            telefono=cliente.telefono,
-            estado='Activo',
-        )
-        creado = True
+    if creado:
         registrar_bitacora(
             usuario_sesion,
             'CREACIÓN',
-            f"Generó usuario cliente '{nombre_usuario}' al aceptar cotización {cotizacion.codigo}."
+            f"Generó usuario cliente '{usuario_cliente.email}' al aceptar cotización {cotizacion.codigo}."
         )
 
     registrar_bitacora(

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Login.css';
 import { getHomeRouteByRole } from './navigation';
+import { repairText } from './textNormalization';
 import { API_BASE_URL } from './config';
 import { validarPermisoModulo } from './permissions';
 
@@ -264,127 +265,192 @@ const Cotizaciones = () => {
   };
 
   return (
-    <div style={{ padding: '30px', backgroundColor: '#121212', minHeight: '100vh', color: 'white' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <h2 style={{ color: '#ff6600', margin: 0 }}>Elaborar Cotizaciones (CU07)</h2>
-        <div>
-          <button onClick={() => navigate('/inicio')} style={{ marginRight: '10px', padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Inicio</button>
-          <button onClick={() => navigate('/perfil')} style={{ padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Mi Perfil</button>
+    <div className="app-container cotizaciones-page">
+      <div className="page-bg-layer page-bg-layer--a" style={{ backgroundImage: 'url(/static/img/cotizaciones/fondo-cotizaciones-1.png)' }}></div>
+      <div className="page-bg-layer page-bg-layer--b" style={{ backgroundImage: 'url(/static/img/cotizaciones/fondo-cotizaciones-2.png)' }}></div>
+      <div className="page-bg-overlay"></div>
+
+      <div className="top-panel">
+        <div className="page-title">
+          <h2>Elaborar Cotizaciones (CU07)</h2>
+          <div className="page-subtitle">Registro y gestión de cotizaciones para clientes</div>
+        </div>
+        <div className="user-actions">
+          <span>👤 {repairText(usuarioLocal?.nombre)} ({repairText(usuarioLocal?.rol)})</span>
+          <button onClick={() => navigate('/inicio')} className="btn-secondary">Inicio</button>
+          <button onClick={() => navigate('/perfil')} className="btn-secondary">Mi Perfil</button>
+          <button onClick={() => navigate(-1)} className="btn-secondary">Atrás</button>
         </div>
       </div>
 
-      {error && <div className="error-box" style={{ marginBottom: '15px' }}>{error}</div>}
+      {error && <div className="error-box" style={{ marginTop: '20px' }}>{error}</div>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px' }}>
-        <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
-          <h3>Registrar cotización</h3>
+      <div className="cotizaciones-content">
+        <div className="bitacora-panel cotizaciones-form-panel">
+          <h3 className="usuarios-panel-title">Registrar cotización</h3>
           <form onSubmit={crearCotizacion}>
-            <div className="input-group"><label>Cliente</label><select value={nuevo.id_cliente} onChange={(e) => setNuevo({ ...nuevo, id_cliente: Number(e.target.value) })} required><option value="">Seleccione</option>{clientes.map((c) => (<option key={c.codigo} value={c.codigo}>{c.nombre}</option>))}</select></div>
-            <div className="input-group"><label>Motocicleta</label><select value={nuevo.id_motocicleta} onChange={(e) => setNuevo({ ...nuevo, id_motocicleta: Number(e.target.value) })} required><option value="">Seleccione</option>{motocicletas.map((m) => (<option key={m.codigo} value={m.codigo}>{`${m.placa} - ${m.marca || ''} ${m.modelo || ''}`}</option>))}</select></div>
-            <div className="input-group"><label>Fecha emisión</label><input type="date" value={nuevo.fecha_emision} onChange={(e) => setNuevo({ ...nuevo, fecha_emision: e.target.value })} required /></div>
-            <div className="input-group"><label>Fecha validez</label><input type="date" value={nuevo.fecha_validez} onChange={(e) => setNuevo({ ...nuevo, fecha_validez: e.target.value })} required /></div>
-            <div style={{ marginTop: '15px' }}>
+            <div className="input-group">
+              <label>Cliente</label>
+              <select value={nuevo.id_cliente} onChange={(e) => setNuevo({ ...nuevo, id_cliente: Number(e.target.value) })} required>
+                <option value="">Seleccione</option>
+                {clientes.map((c) => (<option key={c.codigo} value={c.codigo}>{c.nombre}</option>))}
+              </select>
+            </div>
+            <div className="input-group">
+              <label>Motocicleta</label>
+              <select value={nuevo.id_motocicleta} onChange={(e) => setNuevo({ ...nuevo, id_motocicleta: Number(e.target.value) })} required>
+                <option value="">Seleccione</option>
+                {motocicletas.map((m) => (<option key={m.codigo} value={m.codigo}>{`${m.placa} - ${m.marca || ''} ${m.modelo || ''}`}</option>))}
+              </select>
+            </div>
+            <div className="input-group">
+              <label>Fecha emisión</label>
+              <input type="date" value={nuevo.fecha_emision} onChange={(e) => setNuevo({ ...nuevo, fecha_emision: e.target.value })} required />
+            </div>
+            <div className="input-group">
+              <label>Fecha validez</label>
+              <input type="date" value={nuevo.fecha_validez} onChange={(e) => setNuevo({ ...nuevo, fecha_validez: e.target.value })} required />
+            </div>
+
+            <div className="cotizaciones-items-header">
               <h4>Items</h4>
-              {nuevo.detalles.map((detalle, index) => (
-                <div key={index} style={{ backgroundColor: '#121212', padding: '12px', borderRadius: '8px', marginBottom: '10px' }}>
+              <button type="button" onClick={agregarLinea} className="bitacora-btn bitacora-btn--export">Agregar item</button>
+            </div>
+            {nuevo.detalles.map((detalle, index) => (
+              <div key={index} className="cotizaciones-detalle-item">
+                <div className="cotizaciones-detalle-grid">
                   <div className="input-group"><label>Tipo</label><input value={detalle.tipo} onChange={(e) => actualizarDetalle(index, 'tipo', e.target.value)} /></div>
                   <div className="input-group"><label>Descripción</label><input value={detalle.descripcion} onChange={(e) => actualizarDetalle(index, 'descripcion', e.target.value)} /></div>
                   <div className="input-group"><label>Cantidad</label><input type="number" min="1" value={detalle.cantidad} onChange={(e) => actualizarDetalle(index, 'cantidad', Number(e.target.value))} /></div>
                   <div className="input-group"><label>Precio unitario</label><input type="number" step="0.01" value={detalle.precio_unitario} onChange={(e) => actualizarDetalle(index, 'precio_unitario', Number(e.target.value))} /></div>
                   <div className="input-group"><label>Subtotal</label><input type="number" step="0.01" value={detalle.subtotal} disabled /></div>
-                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}><button type="button" onClick={() => eliminarLinea(index)} style={{ backgroundColor: '#8f2d2d', border: 'none', color: 'white', borderRadius: '5px', padding: '6px 10px', cursor: 'pointer' }}>Eliminar</button></div>
                 </div>
-              ))}
-              <button type="button" onClick={agregarLinea} style={{ padding: '8px 12px', borderRadius: '5px', border: 'none', backgroundColor: '#2c5f8f', color: 'white', cursor: 'pointer' }}>Agregar item</button>
+                <div className="cotizaciones-detalle-actions">
+                  <button type="button" onClick={() => eliminarLinea(index)} className="table-action-btn table-action-btn--danger">Eliminar</button>
+                </div>
+              </div>
+            ))}
+
+            <div className="input-group">
+              <label>Impuesto</label>
+              <input type="number" step="0.01" value={nuevo.impuesto} onChange={(e) => setNuevo({ ...nuevo, impuesto: Number(e.target.value) })} />
             </div>
-            <div className="input-group"><label>Impuesto</label><input type="number" step="0.01" value={nuevo.impuesto} onChange={(e) => setNuevo({ ...nuevo, impuesto: Number(e.target.value) })} /></div>
-            <div style={{ marginTop: '12px' }}>
-              <strong>Subtotal:</strong> ${calcularTotales().subtotal} <br />
-              <strong>Impuesto:</strong> ${Number(nuevo.impuesto || 0).toFixed(2)} <br />
-              <strong>Total:</strong> ${calcularTotales().total} <br />
-              <strong>Estado inicial:</strong> {nuevo.estado}
+
+            <div className="cotizaciones-totales">
+              <div><strong>Subtotal:</strong> ${calcularTotales().subtotal}</div>
+              <div><strong>Impuesto:</strong> ${Number(nuevo.impuesto || 0).toFixed(2)}</div>
+              <div><strong>Total:</strong> ${calcularTotales().total}</div>
+              <div><strong>Estado inicial:</strong> {nuevo.estado}</div>
             </div>
-            <button type="submit" className="btn-login" style={{ marginTop: '16px' }}>Crear cotización</button>
+
+            <button type="submit" className="bitacora-btn bitacora-btn--filter" style={{ marginTop: '16px' }}>Crear cotización</button>
           </form>
         </div>
 
-        <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
-          <h3>Listado de cotizaciones</h3>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center', marginBottom: '16px' }}>
+        <div className="bitacora-panel cotizaciones-list-panel">
+          <div className="cotizaciones-list-header">
+            <h3 className="usuarios-panel-title">Listado de cotizaciones</h3>
+          </div>
+          <div className="cotizaciones-search">
             <input
               type="text"
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               placeholder="Buscar cotización por cliente o motocicleta"
-              style={{ flex: '1', minWidth: '220px', padding: '10px', borderRadius: '6px', border: '1px solid #444', backgroundColor: '#111', color: 'white' }}
+              className="bitacora-input"
             />
-            <button
-              type="button"
-              onClick={BuscarCotizaciones}
-              style={{ padding: '10px 16px', backgroundColor: '#2c5f8f', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-            >
-              Buscar
-            </button>
-            <button
-              type="button"
-              onClick={() => cargarCotizaciones('')}
-              style={{ padding: '10px 16px', backgroundColor: '#444', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
-            >
-              Mostrar todo
-            </button>
+            <button type="button" onClick={BuscarCotizaciones} className="bitacora-btn bitacora-btn--filter">Buscar</button>
+            <button type="button" onClick={() => cargarCotizaciones('')} className="bitacora-btn bitacora-btn--clear">Mostrar todo</button>
           </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #444' }}>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Código</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Cliente</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Motocicleta</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Fecha emisión</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Fecha validez</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Subtotal</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Impuesto</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Total</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Estado</th>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cotizacionesOrdenadas.map((c) => (
-                <tr key={c.codigo} style={{ borderBottom: '1px solid #2c2c2c' }}>
-                  <td style={{ padding: '8px' }}>#{c.codigo}</td>
-                  <td style={{ padding: '8px' }}>{c.id_cliente_nombre || '-'}</td>
-                  <td style={{ padding: '8px' }}>{c.id_motocicleta_placa || '-'}</td>
-                  <td style={{ padding: '8px' }}>{c.fecha_emision || '-'}</td>
-                  <td style={{ padding: '8px' }}>{c.fecha_validez || '-'}</td>
-                  <td style={{ padding: '8px' }}>${c.subtotal}</td>
-                  <td style={{ padding: '8px' }}>${c.impuesto}</td>
-                  <td style={{ padding: '8px' }}>${c.total}</td>
-                  <td style={{ padding: '8px' }}>{c.estado || '-'}</td>
-                  <td style={{ padding: '8px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                    <button onClick={() => aceptarCotizacion(c.codigo)} style={{ backgroundColor: '#2c5f8f', border: 'none', color: 'white', borderRadius: '4px', padding: '6px 10px', cursor: 'pointer' }}>Aceptar</button>
-                    <button onClick={() => abrirEdicionCotizacion(c)} style={{ backgroundColor: '#2c5f8f', border: 'none', color: 'white', borderRadius: '4px', padding: '6px 10px', cursor: 'pointer' }}>Editar</button>
-                    <button onClick={() => eliminarCotizacion(c)} style={{ backgroundColor: '#8f2d2d', border: 'none', color: 'white', borderRadius: '4px', padding: '6px 10px', cursor: 'pointer' }}>Eliminar</button>
-                  </td>
+          <div className="bitacora-table-wrap">
+            <table className="bitacora-table">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Cliente</th>
+                  <th>Motocicleta</th>
+                  <th>Fecha emisión</th>
+                  <th>Fecha validez</th>
+                  <th>Subtotal</th>
+                  <th>Impuesto</th>
+                  <th>Total</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {cotizacionesOrdenadas.length === 0 ? (
+                  <tr>
+                    <td colSpan="10" style={{ textAlign: 'center' }}>No hay cotizaciones registradas.</td>
+                  </tr>
+                ) : (
+                  cotizacionesOrdenadas.map((c) => (
+                    <tr key={c.codigo}>
+                      <td>#{c.codigo}</td>
+                      <td>{c.id_cliente_nombre || '-'}</td>
+                      <td>{c.id_motocicleta_placa || '-'}</td>
+                      <td>{c.fecha_emision || '-'}</td>
+                      <td>{c.fecha_validez || '-'}</td>
+                      <td>${c.subtotal}</td>
+                      <td>${c.impuesto}</td>
+                      <td>${c.total}</td>
+                      <td>{c.estado || '-'}</td>
+                      <td>
+                        <button onClick={() => aceptarCotizacion(c.codigo)} className="table-action-btn table-action-btn--success">Aceptar</button>
+                        <button onClick={() => abrirEdicionCotizacion(c)} className="table-action-btn table-action-btn--edit">Editar</button>
+                        <button onClick={() => eliminarCotizacion(c)} className="table-action-btn table-action-btn--danger">Eliminar</button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
+
       {cotizacionEdicion && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-          <div style={{ width: '100%', maxWidth: '560px', maxHeight: '80vh', overflowY: 'auto', backgroundColor: '#1e1e1e', border: '1px solid #333', borderRadius: '10px', padding: '20px' }}>
-            <h3 style={{ marginTop: 0, color: '#ff6600' }}>Editar cotización #{cotizacionEdicion.codigo}</h3>
+        <div className="usuarios-modal-overlay">
+          <div className="usuarios-modal usuarios-modal--sm">
+            <h3 className="usuarios-panel-title">Editar cotización #{cotizacionEdicion.codigo}</h3>
             <form onSubmit={guardarEdicionCotizacion}>
-              <div className="input-group"><label>Cliente</label><select value={editCotizacion.id_cliente} onChange={(e) => setEditCotizacion({ ...editCotizacion, id_cliente: Number(e.target.value) })} required><option value="">Seleccione</option>{clientes.map((c) => (<option key={c.codigo} value={c.codigo}>{c.nombre}</option>))}</select></div>
-              <div className="input-group"><label>Motocicleta</label><select value={editCotizacion.id_motocicleta} onChange={(e) => setEditCotizacion({ ...editCotizacion, id_motocicleta: Number(e.target.value) })} required><option value="">Seleccione</option>{motocicletas.map((m) => (<option key={m.codigo} value={m.codigo}>{`${m.placa} - ${m.marca || ''} ${m.modelo || ''}`}</option>))}</select></div>
-              <div className="input-group"><label>Fecha emisión</label><input type="date" value={editCotizacion.fecha_emision} onChange={(e) => setEditCotizacion({ ...editCotizacion, fecha_emision: e.target.value })} required /></div>
-              <div className="input-group"><label>Fecha validez</label><input type="date" value={editCotizacion.fecha_validez} onChange={(e) => setEditCotizacion({ ...editCotizacion, fecha_validez: e.target.value })} required /></div>
-              <div className="input-group"><label>Impuesto</label><input type="number" step="0.01" value={editCotizacion.impuesto} onChange={(e) => setEditCotizacion({ ...editCotizacion, impuesto: Number(e.target.value) })} /></div>
-              <div className="input-group"><label>Estado</label><select value={editCotizacion.estado} onChange={(e) => setEditCotizacion({ ...editCotizacion, estado: e.target.value })}><option value="Pendiente">Pendiente</option><option value="Aprobado">Aprobado</option><option value="Rechazado">Rechazado</option></select></div>
+              <div className="input-group">
+                <label>Cliente</label>
+                <select value={editCotizacion.id_cliente} onChange={(e) => setEditCotizacion({ ...editCotizacion, id_cliente: Number(e.target.value) })} required>
+                  <option value="">Seleccione</option>
+                  {clientes.map((c) => (<option key={c.codigo} value={c.codigo}>{c.nombre}</option>))}
+                </select>
+              </div>
+              <div className="input-group">
+                <label>Motocicleta</label>
+                <select value={editCotizacion.id_motocicleta} onChange={(e) => setEditCotizacion({ ...editCotizacion, id_motocicleta: Number(e.target.value) })} required>
+                  <option value="">Seleccione</option>
+                  {motocicletas.map((m) => (<option key={m.codigo} value={m.codigo}>{`${m.placa} - ${m.marca || ''} ${m.modelo || ''}`}</option>))}
+                </select>
+              </div>
+              <div className="input-group">
+                <label>Fecha emisión</label>
+                <input type="date" value={editCotizacion.fecha_emision} onChange={(e) => setEditCotizacion({ ...editCotizacion, fecha_emision: e.target.value })} required />
+              </div>
+              <div className="input-group">
+                <label>Fecha validez</label>
+                <input type="date" value={editCotizacion.fecha_validez} onChange={(e) => setEditCotizacion({ ...editCotizacion, fecha_validez: e.target.value })} required />
+              </div>
+              <div className="input-group">
+                <label>Impuesto</label>
+                <input type="number" step="0.01" value={editCotizacion.impuesto} onChange={(e) => setEditCotizacion({ ...editCotizacion, impuesto: Number(e.target.value) })} />
+              </div>
+              <div className="input-group">
+                <label>Estado</label>
+                <select value={editCotizacion.estado} onChange={(e) => setEditCotizacion({ ...editCotizacion, estado: e.target.value })}>
+                  <option value="Pendiente">Pendiente</option>
+                  <option value="Aprobado">Aprobado</option>
+                  <option value="Rechazado">Rechazado</option>
+                </select>
+              </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" onClick={() => setCotizacionEdicion(null)} style={{ padding: '8px 12px', backgroundColor: '#444', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Cancelar</button>
-                <button type="submit" style={{ padding: '8px 12px', backgroundColor: '#ff6600', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Guardar cambios</button>
+                <button type="button" onClick={() => setCotizacionEdicion(null)} className="bitacora-btn bitacora-btn--clear">Cancelar</button>
+                <button type="submit" className="bitacora-btn bitacora-btn--filter">Guardar cambios</button>
               </div>
             </form>
           </div>

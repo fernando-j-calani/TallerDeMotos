@@ -44,6 +44,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
 
 class BitacoraSerializer(serializers.ModelSerializer):
     usuario_nombre = serializers.ReadOnlyField(source='id_usuario.nombre')
+    usuario_rol = serializers.ReadOnlyField(source='id_usuario.id_rol.nombre')
     fecha_hora = serializers.SerializerMethodField()
 
     @staticmethod
@@ -79,11 +80,7 @@ class RolPrivilegioSerializer(serializers.ModelSerializer):
 class ClienteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cliente
-        fields = '__all__'
-        extra_kwargs = {
-            'nit': {'required': False, 'allow_null': True, 'allow_blank': True},
-            'razon_social': {'required': False, 'allow_null': True, 'allow_blank': True},
-        }
+        fields = ['codigo', 'cedula', 'nombre', 'telefono', 'telefono_alternativo', 'direccion', 'email', 'fecha_registro', 'estado']
 
 
 class MotocicletaSerializer(serializers.ModelSerializer):
@@ -124,8 +121,6 @@ class CotizacionSerializer(serializers.ModelSerializer):
 class OrdenTrabajoSerializer(serializers.ModelSerializer):
     cliente_nombre = serializers.ReadOnlyField(source='id_cliente.nombre')
     cliente_cedula = serializers.ReadOnlyField(source='id_cliente.cedula')
-    cliente_nit = serializers.ReadOnlyField(source='id_cliente.nit')
-    cliente_razon_social = serializers.ReadOnlyField(source='id_cliente.razon_social')
     cliente_email = serializers.ReadOnlyField(source='id_cliente.email')
     cliente_telefono = serializers.ReadOnlyField(source='id_cliente.telefono')
     motocicleta_placa = serializers.ReadOnlyField(source='id_motocicleta.placa')
@@ -156,8 +151,6 @@ class OrdenTrabajoSerializer(serializers.ModelSerializer):
 class HistorialOrdenSerializer(serializers.ModelSerializer):
     cliente_nombre = serializers.ReadOnlyField(source='id_cliente.nombre')
     cliente_cedula = serializers.ReadOnlyField(source='id_cliente.cedula')
-    cliente_nit = serializers.ReadOnlyField(source='id_cliente.nit')
-    cliente_razon_social = serializers.ReadOnlyField(source='id_cliente.razon_social')
     cliente_email = serializers.ReadOnlyField(source='id_cliente.email')
     cliente_telefono = serializers.ReadOnlyField(source='id_cliente.telefono')
     motocicleta_placa = serializers.ReadOnlyField(source='id_motocicleta.placa')

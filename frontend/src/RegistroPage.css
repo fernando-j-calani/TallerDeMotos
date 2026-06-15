@@ -1,0 +1,486 @@
+/* Registro Page Styles */
+.registro-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: linear-gradient(to bottom, #e9f1fa, #ffffff);
+  font-family: 'Roboto', sans-serif;
+}
+
+/* Navbar */
+.registro-page .navbar {
+  position: absolute;
+  top: 18px;
+  left: 0;
+  right: 0;
+  z-index: 16;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background: transparent;
+}
+
+.registro-page .brand-small {
+  text-decoration: none;
+}
+
+.registro-page .brand-small img {
+  height: 52px;
+  width: auto;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25));
+}
+
+.registro-page .btn-inicio {
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.18s ease;
+  cursor: pointer;
+  display: inline-block;
+}
+
+.registro-page .btn-inicio:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: #0088b4;
+  color: #0088b4;
+}
+
+/* Background holder */
+.registro-page .bg-holder {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1100px;
+  background-position: center top;
+  background-size: cover;
+  background-repeat: no-repeat;
+  padding-bottom: 40px;
+}
+
+.registro-page .bg-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.12));
+  z-index: 5;
+}
+
+/* Hero logo */
+.registro-page .hero-logo {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 14;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: top 0.22s ease;
+}
+
+.registro-page .hero-logo img {
+  width: 210px;
+  max-width: 34vw;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.25));
+}
+
+/* Form wrapper */
+.registro-page .form-wrapper {
+  position: relative;
+  z-index: 12;
+  background: #fff;
+  border-radius: 10px;
+  padding: 36px 38px;
+  max-width: 520px;
+  width: 100%;
+  box-shadow: 0 20px 50px rgba(31, 39, 57, 0.16);
+  margin-top: 420px;
+  transition: all 0.18s ease;
+}
+
+.registro-page .form-title {
+  text-align: center;
+  font-size: 26px;
+  margin-bottom: 20px;
+  color: #2f2e41;
+  font-weight: 800;
+}
+
+.registro-page .confirm-title {
+  text-align: left;
+  font-size: 26px;
+  margin-bottom: 16px;
+  color: #2f2e41;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.registro-page .confirm-text {
+  color: #44474e;
+  font-size: 14.5px;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+/* Tabs */
+.registro-page .tabs {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid #e6e6e6;
+  margin-bottom: 18px;
+  padding-bottom: 8px;
+  gap: 18px;
+}
+
+.registro-page .tab-half {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.registro-page .tab-btn {
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 16px;
+  color: #2f2e41;
+  transition: color 0.12s ease;
+  border-bottom: 3px solid transparent;
+  font-family: 'Roboto', sans-serif;
+}
+
+.registro-page .tab-btn:hover {
+  color: #008a9e;
+}
+
+.registro-page .tab-btn.active {
+  color: #008a9e;
+  border-bottom-color: #008a9e;
+}
+
+/* Form content */
+.registro-page .form-content {
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.registro-page .form-group {
+  margin-bottom: 16px;
+}
+
+.registro-page .form-label {
+  display: block;
+  margin-bottom: 8px;
+  color: #44474e;
+  font-weight: 600;
+}
+
+.registro-page .form-control {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
+  font-size: 15.5px;
+  transition: box-shadow 0.18s ease, border-color 0.18s ease;
+  font-family: 'Roboto', sans-serif;
+}
+
+.registro-page .form-control:focus {
+  outline: none;
+  border-color: #0088b4;
+  box-shadow: 0 6px 18px rgba(0, 136, 180, 0.12);
+}
+
+.registro-page .phone-input {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.registro-page .phone-input .form-control {
+  flex: 1;
+}
+
+.registro-page .phone-input select {
+  max-width: 110px;
+}
+
+.registro-page .password-wrapper {
+  position: relative;
+}
+
+.registro-page .password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #444;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 8px;
+}
+
+.registro-page .password-toggle:hover {
+  color: #0088b4;
+}
+
+.registro-page .btn-login {
+  width: 100%;
+  padding: 12px;
+  background: #0088b4;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 800;
+  margin-top: 12px;
+  box-shadow: 0 8px 18px rgba(0, 136, 180, 0.18);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  cursor: pointer;
+  font-family: 'Roboto', sans-serif;
+  font-size: 16px;
+}
+
+.registro-page .btn-login:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(0, 136, 180, 0.22);
+}
+
+.registro-page .btn-login:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.registro-page .btn-outline {
+  width: 100%;
+  padding: 12px;
+  background: #fff;
+  color: #2f2e41;
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
+  font-weight: 800;
+  margin-top: 12px;
+  cursor: pointer;
+  font-family: 'Roboto', sans-serif;
+  font-size: 16px;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.registro-page .btn-outline:hover:not(:disabled) {
+  background: #f5f7fa;
+  border-color: #c9d0db;
+}
+
+.registro-page .btn-outline:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.registro-page .forgot {
+  display: block;
+  margin-top: 12px;
+  color: #0088b4;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.registro-page .forgot:hover {
+  text-decoration: underline;
+}
+
+.registro-page .forgot-center {
+  text-align: center;
+}
+
+.registro-page .forgot-center:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.registro-page .alert {
+  margin-top: 12px;
+  margin-bottom: 12px;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #f5c6cb;
+}
+
+.registro-page .alert-error {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.registro-page .alert-success {
+  background: #d4edda;
+  color: #155724;
+  border-color: #c3e6cb;
+}
+
+/* Footer */
+.registro-page .footer {
+  z-index: 15;
+}
+
+.registro-page .footer-top {
+  background: #353241;
+  color: #fff;
+  padding: 22px 16px;
+}
+
+.registro-page .footer-top .container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.registro-page .ft-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.registro-page .ft-left img {
+  height: 48px;
+}
+
+.registro-page .ft-socials {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.registro-page .ft-socials img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.registro-page .ft-item {
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+}
+
+.registro-page .ft-item i {
+  color: #f95c19;
+}
+
+.registro-page .footer-bottom {
+  background: #262431;
+  color: #ddd;
+  padding: 18px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.registro-page .footer-bottom .container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.registro-page .footer-bottom a {
+  color: #0088b4;
+  text-decoration: none;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+  .registro-page .navbar {
+    top: 18px;
+  }
+
+  .registro-page .hero-logo {
+    top: 170px !important;
+  }
+
+  .registro-page .form-wrapper {
+    margin-top: 340px;
+    padding: 26px;
+  }
+
+  .registro-page .hero-logo img {
+    width: 180px;
+  }
+}
+
+@media (max-width: 768px) {
+  .registro-page .navbar {
+    top: 18px;
+    padding: 1rem;
+  }
+
+  .registro-page .hero-logo {
+    top: 90px !important;
+  }
+
+  .registro-page .form-wrapper {
+    margin-top: 280px;
+    padding: 20px;
+    margin-left: 16px;
+    margin-right: 16px;
+  }
+
+  .registro-page .hero-logo img {
+    width: 160px;
+  }
+
+  .registro-page .phone-input {
+    flex-direction: column;
+  }
+
+  .registro-page .phone-input select {
+    max-width: 100%;
+  }
+
+  .registro-page .footer-top .container {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .registro-page .ft-item {
+    padding: 4px 0;
+  }
+
+  .registro-page .tabs {
+    gap: 8px;
+  }
+
+  .registro-page .tab-btn {
+    font-size: 14px;
+    padding: 6px 8px;
+  }
+}

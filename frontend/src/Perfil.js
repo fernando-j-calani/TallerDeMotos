@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Login.css';
-import { getHomeRouteByRole } from './navigation';
 import { PASSWORD_POLICY_MESSAGE, validateStrongPassword } from './passwordPolicy';
 import { API_BASE_URL } from './config';
+import { repairText } from './textNormalization';
 
 const API = `${API_BASE_URL}/api`;
 
@@ -110,51 +110,58 @@ const Perfil = () => {
     setOk('Contraseña actualizada correctamente.');
   };
 
-  const volver = () => {
-    navigate(getHomeRouteByRole(usuarioLocal?.rol));
-  };
-
   return (
-    <div style={{ padding: '30px', backgroundColor: '#121212', minHeight: '100vh', color: 'white' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <h2 style={{ color: '#ff6600', margin: 0 }}>Mi Perfil (CU17)</h2>
-        <button onClick={volver} style={{ padding: '8px 16px', backgroundColor: '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Volver</button>
+    <div className="app-container perfil-page">
+      <div className="page-bg-layer page-bg-layer--a" style={{ backgroundImage: 'url(/static/img/perfil/fondo-perfil-1.png)' }}></div>
+      <div className="page-bg-layer page-bg-layer--b" style={{ backgroundImage: 'url(/static/img/perfil/fondo-perfil-2.png)' }}></div>
+      <div className="page-bg-overlay"></div>
+
+      <div className="top-panel">
+        <div className="page-title">
+          <h2>Mi Perfil (CU17)</h2>
+          <div className="page-subtitle">Datos personales, seguridad de la cuenta y accesos asignados</div>
+        </div>
+        <div className="user-actions">
+          <span>👤 {repairText(usuarioLocal?.nombre)} ({repairText(usuarioLocal?.rol)})</span>
+          <button onClick={() => navigate('/inicio')} className="btn-secondary">Inicio</button>
+          <button onClick={() => navigate(-1)} className="btn-secondary">Atrás</button>
+        </div>
       </div>
 
-      {error && <div className="error-box" style={{ marginBottom: '15px' }}>{error}</div>}
-      {ok && <div style={{ marginBottom: '15px', backgroundColor: 'rgba(0,255,0,0.15)', color: '#7dff7d', padding: '10px 12px', borderRadius: '6px' }}>{ok}</div>}
+      {error && <div className="error-box" style={{ marginTop: '20px' }}>{error}</div>}
+      {ok && <div className="success-box" style={{ marginTop: '20px' }}>{ok}</div>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-        <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
-          <h3>Datos personales</h3>
+      <div className="perfil-content">
+        <div className="bitacora-panel perfil-panel">
+          <h3 className="usuarios-panel-title">Datos personales</h3>
           <form onSubmit={guardarPerfil}>
             <div className="input-group"><label>Nombre</label><input value={perfil.nombre || ''} onChange={(e) => setPerfil({ ...perfil, nombre: e.target.value })} required /></div>
             <div className="input-group"><label>Email</label><input value={perfil.email || ''} readOnly /></div>
             <div className="input-group"><label>Teléfono</label><input value={perfil.telefono || ''} onChange={(e) => setPerfil({ ...perfil, telefono: e.target.value })} /></div>
             <div className="input-group"><label>Rol</label><input value={perfil.rol_nombre || ''} readOnly /></div>
-            <button type="submit" className="btn-login">Guardar perfil</button>
+            <button type="submit" className="bitacora-btn bitacora-btn--filter" style={{ marginTop: '4px' }}>Guardar perfil</button>
           </form>
         </div>
 
-        <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
-          <h3>Cambiar contraseña</h3>
-          <p style={{ marginTop: '-4px', marginBottom: '14px', opacity: 0.9 }}>{PASSWORD_POLICY_MESSAGE}</p>
+        <div className="bitacora-panel perfil-panel">
+          <h3 className="usuarios-panel-title">Cambiar contraseña</h3>
+          <p className="perfil-password-hint">{PASSWORD_POLICY_MESSAGE}</p>
           <form onSubmit={cambiarPassword}>
             <div className="input-group"><label>Contraseña actual</label><input type="password" value={passwords.password_actual} onChange={(e) => setPasswords({ ...passwords, password_actual: e.target.value })} required /></div>
             <div className="input-group"><label>Nueva contraseña</label><input type="password" value={passwords.password_nueva} onChange={(e) => setPasswords({ ...passwords, password_nueva: e.target.value })} required /></div>
             <div className="input-group"><label>Confirmar nueva contraseña</label><input type="password" value={passwords.password_confirmacion} onChange={(e) => setPasswords({ ...passwords, password_confirmacion: e.target.value })} required /></div>
-            <button type="submit" className="btn-login">Actualizar contraseña</button>
+            <button type="submit" className="bitacora-btn bitacora-btn--filter" style={{ marginTop: '4px' }}>Actualizar contraseña</button>
           </form>
         </div>
 
-        <div style={{ backgroundColor: '#1e1e1e', padding: '20px', borderRadius: '10px' }}>
-          <h3>Accesos asignados</h3>
+        <div className="bitacora-panel perfil-panel perfil-accesos-panel">
+          <h3 className="usuarios-panel-title">Accesos asignados</h3>
           {permisosCargando ? (
             <p>Cargando permisos...</p>
           ) : permisosPerfil.length === 0 ? (
             <p>No hay permisos asignados para este rol.</p>
           ) : (
-            <div style={{ maxHeight: '320px', overflowY: 'auto' }}>
+            <div className="perfil-permisos-list">
               {Object.values(
                 permisosPerfil.reduce((acc, permiso) => {
                   const key = `${permiso.codigo_cu}_${permiso.nombre_modulo}`;
@@ -168,10 +175,12 @@ const Perfil = () => {
                   acc[key].acciones.push(permiso.accion);
                   return acc;
                 }, {})
-              ).map((permiso) => (
-                <div key={`${permiso.codigo_cu}_${permiso.nombre_modulo}`} style={{ marginBottom: '12px' }}>
-                  <strong style={{ color: '#ff6600' }}>{permiso.codigo_cu} – {permiso.nombre_modulo}</strong>
-                  <div style={{ marginTop: '6px', color: '#ccc' }}>{permiso.acciones.join(', ')}</div>
+              )
+                .sort((a, b) => a.codigo_cu.localeCompare(b.codigo_cu))
+                .map((permiso) => (
+                <div key={`${permiso.codigo_cu}_${permiso.nombre_modulo}`} className="perfil-permiso-item">
+                  <strong>{permiso.codigo_cu} – {repairText(permiso.nombre_modulo)}</strong>
+                  <div className="perfil-permiso-acciones">{permiso.acciones.join(', ')}</div>
                 </div>
               ))}
             </div>

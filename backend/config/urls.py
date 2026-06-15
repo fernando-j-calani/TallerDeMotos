@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.urls import path
 from taller.views import (
+    debug_login,
     login_api,
     bitacora_api,
     usuarios_api,
@@ -26,10 +27,15 @@ from taller.views import (
     ordenes_trabajo_api,
     orden_trabajo_detalle_api,
     notas_trabajo_api,
+    nota_trabajo_detalle_api,
     perfil_api,
     force_change_password_api,
     forgot_password_request_api,
     reset_password_confirm_api,
+    verify_reset_code_api,
+    registro_api,
+    verify_register_code_api,
+    resend_register_code_api,
     aceptar_cotizacion_api,
     logout_api,
     permisos_api,
@@ -38,15 +44,22 @@ from taller.views import (
     HistorialMantenimientoAPI,
     SeguimientoClientesAPI,
     reportes_api,
+    dashboard_api,
 )
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # Debug endpoint
+    path('api/debug/login/', debug_login, name='api_debug_login'),
     # Ruta para el CU01
     path('api/login/', login_api, name='api_login'),
     path('api/password/forgot/', forgot_password_request_api, name='api_password_forgot'),
+    path('api/password/verify-code/', verify_reset_code_api, name='api_password_verify_code'),
     path('api/password/reset/', reset_password_confirm_api, name='api_password_reset'),
     path('api/password/force-change/', force_change_password_api, name='api_password_force_change'),
+    path('api/register/', registro_api, name='api_register'),
+    path('api/register/verify/', verify_register_code_api, name='api_register_verify'),
+    path('api/register/resend/', resend_register_code_api, name='api_register_resend'),
     path('api/logout/', logout_api, name='api_logout'),
     # Ruta para el CU20
     path('api/bitacora/', bitacora_api, name='api_bitacora'),
@@ -74,6 +87,7 @@ urlpatterns = [
     path('api/ordenes-trabajo/', ordenes_trabajo_api, name='api_ordenes_trabajo'),
     path('api/ordenes-trabajo/<int:orden_id>/', orden_trabajo_detalle_api, name='api_orden_trabajo_detalle'),
     path('api/notas-trabajo/', notas_trabajo_api, name='api_notas_trabajo'),
+    path('api/notas-trabajo/<int:nota_id>/', nota_trabajo_detalle_api, name='api_nota_trabajo_detalle'),
     path('api/perfil/', perfil_api, name='api_perfil'),
     path('api/cotizaciones/<int:cotizacion_id>/aceptar/', aceptar_cotizacion_api, name='api_cotizacion_aceptar'),
     path('api/permisos/', permisos_api, name='api_permisos'),
@@ -82,6 +96,8 @@ urlpatterns = [
     path('api/historial-mantenimiento/', HistorialMantenimientoAPI.as_view(), name='api_historial_mantenimiento'),
     path('api/historial-mantenimiento/<int:orden_id>/', HistorialMantenimientoAPI.as_view(), name='api_historial_mantenimiento_detalle'),
     path('api/historial-mantenimiento/reporte/', HistorialMantenimientoAPI.as_view(), name='api_historial_mantenimiento_reporte'),
+    path('api/seguimiento/', SeguimientoClientesAPI.as_view(), name='api_seguimiento'),
     path('api/seguimiento-clientes/', SeguimientoClientesAPI.as_view(), name='api_seguimiento_clientes'),
     path('api/reportes/', reportes_api, name='api_reportes'),
+    path('api/dashboard/', dashboard_api, name='api_dashboard'),
 ]

@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Edit",
+      "Write",
+      "Read",
+      "Glob",
+      "Grep",
+      "NotebookEdit",
+      "TodoWrite",
+      "WebFetch",
+      "WebSearch",
+      "Bash(*)"
+    ],
+    "ask": [
+      "Bash(git:*)",
+      "Bash(gh:*)"
+    ]
+  }
+}

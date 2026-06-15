@@ -343,3 +343,11 @@ SELECT pg_catalog.setval('public.producto_codigo_seq', 5, true);
 SELECT pg_catalog.setval('public.proveedor_codigo_seq', 2, true);
 SELECT pg_catalog.setval('public.rol_codigo_seq', 5, true);
 SELECT pg_catalog.setval('public.usuario_codigo_seq', 15, true);
+
+
+
+select *
+from cliente;
+
+
+SELECT COUNT(*) FROM permiso_modulo;  -- Debe ser > 0
