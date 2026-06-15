@@ -852,10 +852,10 @@ export default function RegistroPage() {
             <div className="ft-left">
               <img src="/static/img/registro/footer-logo.png" alt="Logo" />
               <div className="ft-socials">
-                <a href="https://www.facebook.com/mototallerMR" target="_blank" rel="noopener noreferrer">
+                <a href="https://www.facebook.com" target="_blank" rel="noopener noreferrer">
                   <img src="/static/img/registro/facebook.png" alt="Facebook" />
                 </a>
-                <a href="https://www.instagram.com/mototallerMR" target="_blank" rel="noopener noreferrer">
+                <a href="https://www.instagram.com" target="_blank" rel="noopener noreferrer">
                   <img src="/static/img/registro/instagram.png" alt="Instagram" />
                 </a>
               </div>
