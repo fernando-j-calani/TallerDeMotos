@@ -42,8 +42,5 @@ backend/media/
 backend/staticfiles/
 _backup_*/
 
-# Datos personales de pago (QR real del taller, no subir al repo)
-frontend/public/static/img/facturacion/qr-pago.*
-
 
 backend/fix_db.py
