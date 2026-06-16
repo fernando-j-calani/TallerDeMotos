@@ -67,11 +67,15 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_872ACD9C975942129A6E140BCB3A4679 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_E6862147DFA34027B5B4DFABC3F02022 }}
 
+      - name: Clear startup command
+        run: |
+          RESOURCE_GROUP=$(az webapp list --query "[?name=='tallermotoslaroca'].resourceGroup" -o tsv)
+          az webapp config set --name tallermotoslaroca --resource-group "$RESOURCE_GROUP" --startup-file ""
+
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
           app-name: 'tallermotoslaroca'
           slot-name: 'Production'
-          startup-command: ''
           
