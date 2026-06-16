@@ -67,11 +67,38 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_872ACD9C975942129A6E140BCB3A4679 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_E6862147DFA34027B5B4DFABC3F02022 }}
 
+      - name: Clear startup command
+        run: |
+          echo "Buscando resource group de tallermotoslaroca..."
+          RESOURCE_GROUP=$(az resource list \
+            --name tallermotoslaroca \
+            --resource-type "Microsoft.Web/sites" \
+            --query "[0].resourceGroup" \
+            --output tsv 2>/dev/null | tr -d '[:space:]')
+
+          if [ -z "$RESOURCE_GROUP" ]; then
+            echo "Intento alternativo con az webapp list..."
+            RESOURCE_GROUP=$(az webapp list \
+              --query "[?name=='tallermotoslaroca'].resourceGroup | [0]" \
+              --output tsv 2>/dev/null | tr -d '[:space:]')
+          fi
+
+          if [ -z "$RESOURCE_GROUP" ]; then
+            echo "ERROR: No se pudo determinar el resource group."
+            exit 1
+          fi
+
+          echo "Resource group encontrado: $RESOURCE_GROUP"
+          az webapp config set \
+            --name tallermotoslaroca \
+            --resource-group "$RESOURCE_GROUP" \
+            --startup-file ""
+          echo "Startup command limpiado exitosamente."
+
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
           app-name: 'tallermotoslaroca'
           slot-name: 'Production'
-          startup-command: '/antenv/bin/gunicorn --chdir /home/site/wwwroot/backend config.wsgi:application --bind=0.0.0.0:8000 --workers=2 --timeout=600'
           
