@@ -81,6 +81,7 @@ jobs:
             --name tallermotoslaroca \
             --resource-group TallerLaRoca-RG \
             --application-logging filesystem \
+            --docker-container-logging filesystem \
             --level verbose
 
       - name: 'Deploy to Azure Web App'
@@ -93,10 +94,20 @@ jobs:
       - name: Show startup logs
         if: always()
         run: |
-          echo "Esperando 60s para que la app intente arrancar..."
-          sleep 60
-          echo "=== Logs de arranque ==="
-          timeout 30 az webapp log tail \
+          echo "Esperando 90s para que la app intente arrancar..."
+          sleep 90
+          echo "=== Descargando logs de Docker ==="
+          az webapp log download \
             --name tallermotoslaroca \
             --resource-group TallerLaRoca-RG \
-            --provider application 2>&1 || true
+            --log-file /tmp/applogs.zip 2>&1 || echo "No se pudieron descargar logs"
+          if [ -f /tmp/applogs.zip ]; then
+            unzip -o /tmp/applogs.zip -d /tmp/applogs/ 2>&1 | tail -5
+            echo "=== Archivos de log encontrados ==="
+            find /tmp/applogs -type f | sort
+            echo "=== Contenido de logs de Docker (ultimas 200 lineas) ==="
+            find /tmp/applogs -name "*docker*" -o -name "*2026*" | head -5 | while read f; do
+              echo "--- $f ---"
+              tail -200 "$f"
+            done
+          fi
