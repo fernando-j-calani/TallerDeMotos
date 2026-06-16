@@ -75,9 +75,28 @@ jobs:
           echo "Configuracion aplicada. Esperando 90s para que Azure estabilice..."
           sleep 90
 
+      - name: Enable application logging
+        run: |
+          az webapp log config \
+            --name tallermotoslaroca \
+            --resource-group TallerLaRoca-RG \
+            --application-logging filesystem \
+            --level verbose
+
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
           app-name: 'tallermotoslaroca'
           slot-name: 'Production'
+
+      - name: Show startup logs
+        if: always()
+        run: |
+          echo "Esperando 60s para que la app intente arrancar..."
+          sleep 60
+          echo "=== Logs de arranque ==="
+          timeout 30 az webapp log tail \
+            --name tallermotoslaroca \
+            --resource-group TallerLaRoca-RG \
+            --provider application 2>&1 || true
