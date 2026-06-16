@@ -24,28 +24,17 @@ jobs:
         with:
           python-version: '3.13'
 
-      # 🛠️ Local Build Section (Optional)
-      # The following section in your workflow is designed to catch build issues early on the client side, before deployment. This can be helpful for debugging and validation. However, if this step significantly increases deployment time and early detection is not critical for your workflow, you may remove this section to streamline the deployment process.
-      - name: Create and Start virtual environment and Install dependencies
+      - name: Create virtual environment and install dependencies
         run: |
           python -m venv antenv
           source antenv/bin/activate
           pip install -r requirements.txt
-                
-      # By default, when you enable GitHub CI/CD integration through the Azure portal, the platform automatically sets the SCM_DO_BUILD_DURING_DEPLOYMENT application setting to true. This triggers the use of Oryx, a build engine that handles application compilation and dependency installation (e.g., pip install) directly on the platform during deployment. Hence, we exclude the antenv virtual environment directory from the deployment artifact to reduce the payload size. 
+
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
         with:
           name: python-app
-          path: |
-            .
-            !antenv/
-
-      # 🚫 Opting Out of Oryx Build
-      # If you prefer to disable the Oryx build process during deployment, follow these steps:
-      # 1. Remove the SCM_DO_BUILD_DURING_DEPLOYMENT app setting from your Azure App Service Environment variables.
-      # 2. Refer to sample workflows for alternative deployment strategies: https://github.com/Azure/actions-workflow-samples/tree/master/AppService
-      
+          path: .
 
   deploy:
     runs-on: ubuntu-latest
@@ -59,7 +48,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: python-app
-      
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -67,40 +56,19 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_872ACD9C975942129A6E140BCB3A4679 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_E6862147DFA34027B5B4DFABC3F02022 }}
 
-      - name: Set startup command
+      - name: Configure Azure App Service
         run: |
-          echo "Buscando resource group de tallermotoslaroca..."
-          RESOURCE_GROUP=$(az resource list \
+          az webapp config appsettings set \
             --name tallermotoslaroca \
-            --resource-type "Microsoft.Web/sites" \
-            --query "[0].resourceGroup" \
-            --output tsv 2>/dev/null | tr -d '[:space:]')
+            --resource-group TallerLaRoca-RG \
+            --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false
 
-          if [ -z "$RESOURCE_GROUP" ]; then
-            echo "Intento alternativo con az webapp list..."
-            RESOURCE_GROUP=$(az webapp list \
-              --query "[?name=='tallermotoslaroca'].resourceGroup | [0]" \
-              --output tsv 2>/dev/null | tr -d '[:space:]')
-          fi
-
-          if [ -z "$RESOURCE_GROUP" ]; then
-            echo "ERROR: No se pudo determinar el resource group."
-            exit 1
-          fi
-
-          echo "Resource group encontrado: $RESOURCE_GROUP"
-          echo "Startup command actual:"
-          az webapp config show \
-            --name tallermotoslaroca \
-            --resource-group "$RESOURCE_GROUP" \
-            --query "appCommandLine" --output tsv
-
-          STARTUP_CMD="source /antenv/bin/activate && cd /home/site/wwwroot/backend && exec gunicorn config.wsgi:application --bind=0.0.0.0:8000 --workers=2 --timeout=600"
           az webapp config set \
             --name tallermotoslaroca \
-            --resource-group "$RESOURCE_GROUP" \
-            --startup-file "$STARTUP_CMD"
-          echo "Startup command establecido exitosamente."
+            --resource-group TallerLaRoca-RG \
+            --startup-file "/home/site/wwwroot/antenv/bin/gunicorn --chdir /home/site/wwwroot/backend config.wsgi:application --bind=0.0.0.0:8000 --workers=2 --timeout=600"
+
+          echo "Configuracion de Azure App Service aplicada."
 
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
@@ -108,4 +76,3 @@ jobs:
         with:
           app-name: 'tallermotoslaroca'
           slot-name: 'Production'
-          
