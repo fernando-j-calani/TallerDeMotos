@@ -73,5 +73,5 @@ jobs:
         with:
           app-name: 'tallermotoslaroca'
           slot-name: 'Production'
-          startup-command: 'cd /home/site/wwwroot/backend && python manage.py migrate --noinput && gunicorn config.wsgi:application --bind=0.0.0.0:8000 --timeout=600'
+          startup-command: 'bash /home/site/wwwroot/backend/startup.sh'
           
