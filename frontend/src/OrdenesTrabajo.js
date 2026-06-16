@@ -207,6 +207,19 @@ const OrdenesTrabajo = () => {
     }
   }, [editOrden.costo_mano_obra, editOrden.costo_repuestos]);
 
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        cargarClientes();
+        cargarMotocicletas();
+        cargarCotizaciones();
+        cargarUsuarios();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+
   const cargarClientes = async () => {
     const res = await fetch(`${API}/clientes/`, { headers: headers(false) });
     const data = await res.json();

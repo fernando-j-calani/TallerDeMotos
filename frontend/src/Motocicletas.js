@@ -46,6 +46,14 @@ const Motocicletas = () => {
     cargarBase();
   }, [navigate, usuarioLocal]);
 
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') cargarClientes();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+
   const cargarBase = async () => {
     await Promise.all([cargarMotos('', mostrarInactivos), cargarClientes()]);
   };

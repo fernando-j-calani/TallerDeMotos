@@ -183,6 +183,17 @@ const Cotizaciones = () => {
     validarAcceso();
   }, [navigate, usuarioLocal]);
 
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        cargarClientes();
+        cargarMotocicletas();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+
   const cargarClientes = async () => {
     const res = await fetch(`${API}/clientes/`, { headers: headers() });
     const data = await res.json();

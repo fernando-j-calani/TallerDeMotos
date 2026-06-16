@@ -133,6 +133,17 @@ const NotasTrabajo = () => {
     validarAcceso();
   }, [navigate, usuarioLocal]);
 
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        cargarOrdenes();
+        cargarNotas();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+
   const cargarOrdenes = async () => {
     const res = await fetch(`${API}/ordenes-trabajo/`, { headers: headers() });
     const data = await res.json();
