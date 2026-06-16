@@ -67,7 +67,7 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_872ACD9C975942129A6E140BCB3A4679 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_E6862147DFA34027B5B4DFABC3F02022 }}
 
-      - name: Clear startup command
+      - name: Set startup command
         run: |
           echo "Buscando resource group de tallermotoslaroca..."
           RESOURCE_GROUP=$(az resource list \
@@ -89,11 +89,18 @@ jobs:
           fi
 
           echo "Resource group encontrado: $RESOURCE_GROUP"
+          echo "Startup command actual:"
+          az webapp config show \
+            --name tallermotoslaroca \
+            --resource-group "$RESOURCE_GROUP" \
+            --query "appCommandLine" --output tsv
+
+          STARTUP_CMD="source /antenv/bin/activate && cd /home/site/wwwroot/backend && exec gunicorn config.wsgi:application --bind=0.0.0.0:8000 --workers=2 --timeout=600"
           az webapp config set \
             --name tallermotoslaroca \
             --resource-group "$RESOURCE_GROUP" \
-            --startup-file ""
-          echo "Startup command limpiado exitosamente."
+            --startup-file "$STARTUP_CMD"
+          echo "Startup command establecido exitosamente."
 
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
