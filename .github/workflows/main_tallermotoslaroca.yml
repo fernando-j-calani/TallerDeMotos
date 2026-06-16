@@ -74,10 +74,19 @@ jobs:
           app-name: 'tallermotoslaroca'
           slot-name: 'Production'
 
-      - name: Configurar startup command (migrate + gunicorn)
+      - name: Configurar startup command y forzar restart
         run: |
           az webapp config set \
             --name tallermotoslaroca \
             --resource-group TallerLaRoca-RG \
-            --startup-file "cd /home/site/wwwroot/backend && /antenv/bin/python manage.py migrate --no-input && /antenv/bin/gunicorn config.wsgi:application --bind=0.0.0.0:8000 --workers=2 --timeout=600"
-          echo "Startup command configurado. App reiniciando con migracion incluida..."
+            --startup-file "cd /home/site/wwwroot/backend && /antenv/bin/python manage.py migrate --no-input; /antenv/bin/gunicorn --chdir /home/site/wwwroot/backend config.wsgi:application --bind=0.0.0.0:8000 --workers=2 --timeout=600"
+          echo "Startup command seteado. Forzando restart..."
+          az webapp restart \
+            --name tallermotoslaroca \
+            --resource-group TallerLaRoca-RG
+          echo "Restart forzado. Esperando 120s para que el contenedor arranque..."
+          sleep 120
+          echo "=== Verificacion final ==="
+          curl -s -o /dev/null -w "HTTP %{http_code} despues de %{time_total}s\n" \
+            --max-time 60 "https://tallermotoslaroca.azurewebsites.net/api/login/" \
+            || echo "Sin respuesta en 60s"
