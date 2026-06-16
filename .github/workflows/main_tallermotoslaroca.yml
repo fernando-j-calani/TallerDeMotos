@@ -58,31 +58,14 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_872ACD9C975942129A6E140BCB3A4679 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_E6862147DFA34027B5B4DFABC3F02022 }}
 
-      - name: Restore Azure App Service to working state
+      - name: Habilitar Oryx build
         run: |
-          # Re-habilitar Oryx para que construya el virtualenv en /antenv/
           az webapp config appsettings set \
             --name tallermotoslaroca \
             --resource-group TallerLaRoca-RG \
             --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true
-
-          # Startup command explicito usando el virtualenv que Oryx construye
-          az webapp config set \
-            --name tallermotoslaroca \
-            --resource-group TallerLaRoca-RG \
-            --startup-file "/antenv/bin/gunicorn --chdir /home/site/wwwroot/backend config.wsgi:application --bind=0.0.0.0:8000 --workers=2 --timeout=600"
-
-          echo "Configuracion aplicada. Esperando 90s para que Azure estabilice..."
-          sleep 90
-
-      - name: Enable application logging
-        run: |
-          az webapp log config \
-            --name tallermotoslaroca \
-            --resource-group TallerLaRoca-RG \
-            --application-logging filesystem \
-            --docker-container-logging filesystem \
-            --level verbose
+          echo "SCM_DO_BUILD_DURING_DEPLOYMENT=true aplicado. Esperando 15s..."
+          sleep 15
 
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
@@ -91,28 +74,10 @@ jobs:
           app-name: 'tallermotoslaroca'
           slot-name: 'Production'
 
-      - name: Show startup logs
-        if: always()
+      - name: Configurar startup command (migrate + gunicorn)
         run: |
-          echo "Esperando 90s para que la app intente arrancar..."
-          sleep 90
-          echo "=== Descargando logs de Docker ==="
-          az webapp log download \
+          az webapp config set \
             --name tallermotoslaroca \
             --resource-group TallerLaRoca-RG \
-            --log-file /tmp/applogs.zip 2>&1 || echo "No se pudieron descargar logs"
-          if [ -f /tmp/applogs.zip ]; then
-            unzip -o /tmp/applogs.zip -d /tmp/applogs/ 2>&1 | tail -5
-            echo "=== Failure logs ==="
-            find /tmp/applogs -name "*failure*" | while read f; do
-              echo "--- $f ---"; cat "$f"
-            done
-            echo "=== Docker logs (hoy) ==="
-            find /tmp/applogs -name "*2026_06_16*docker*" | while read f; do
-              echo "--- $f ---"; tail -300 "$f"
-            done
-            echo "=== Container stream (hoy) ==="
-            find /tmp/applogs -name "*2026_06_16*containerStream*" | while read f; do
-              echo "--- $f ---"; tail -200 "$f"
-            done
-          fi
+            --startup-file "cd /home/site/wwwroot/backend && /antenv/bin/python manage.py migrate --no-input && /antenv/bin/gunicorn config.wsgi:application --bind=0.0.0.0:8000 --workers=2 --timeout=600"
+          echo "Startup command configurado. App reiniciando con migracion incluida..."
