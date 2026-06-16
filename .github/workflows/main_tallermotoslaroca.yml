@@ -79,7 +79,17 @@ jobs:
           az webapp config set \
             --name tallermotoslaroca \
             --resource-group TallerLaRoca-RG \
-            --startup-file "cd /home/site/wwwroot/backend && /antenv/bin/python manage.py migrate --no-input; /antenv/bin/gunicorn --chdir /home/site/wwwroot/backend config.wsgi:application --bind=0.0.0.0:8000 --workers=2 --timeout=600"
+            --startup-file "bash /home/site/wwwroot/backend/startup.sh"
+          echo "Startup command seteado. Forzando restart..."
+          az webapp restart \
+            --name tallermotoslaroca \
+            --resource-group TallerLaRoca-RG
+          echo "Restart forzado. Esperando 120s para que el contenedor arranque..."
+          sleep 120
+          echo "=== Verificacion final ==="
+          curl -s -o /dev/null -w "HTTP %{http_code} despues de %{time_total}s\n" \
+            --max-time 60 "https://tallermotoslaroca.azurewebsites.net/api/login/" \
+            || echo "Sin respuesta en 60s"
           echo "Startup command seteado. Forzando restart..."
           az webapp restart \
             --name tallermotoslaroca \

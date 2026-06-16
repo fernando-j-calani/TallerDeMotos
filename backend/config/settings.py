@@ -68,7 +68,8 @@ if not ALLOWED_HOSTS:
     if WEBSITE_HOSTNAME == 'localhost':
         ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]', 'testserver']
     else:
-        ALLOWED_HOSTS = [WEBSITE_HOSTNAME]
+        # Añadimos el comodín '*' para permitir los pings de salud de la red interna de Azure
+        ALLOWED_HOSTS = [WEBSITE_HOSTNAME, '*']
 
 CSRF_TRUSTED_ORIGINS = []
 frontend_origin = build_origin(FRONTEND_URL)
