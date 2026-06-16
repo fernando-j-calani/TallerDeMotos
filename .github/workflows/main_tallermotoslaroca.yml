@@ -68,7 +68,8 @@ jobs:
             --resource-group TallerLaRoca-RG \
             --startup-file "/home/site/wwwroot/antenv/bin/gunicorn --chdir /home/site/wwwroot/backend config.wsgi:application --bind=0.0.0.0:8000 --workers=2 --timeout=600"
 
-          echo "Configuracion de Azure App Service aplicada."
+          echo "Configuracion aplicada. Esperando 90s para que Azure estabilice el contenedor SCM..."
+          sleep 90
 
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
