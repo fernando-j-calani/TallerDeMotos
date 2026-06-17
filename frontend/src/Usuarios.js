@@ -44,7 +44,7 @@ const Usuarios = () => {
 
   // Estado para el formulario del nuevo usuario
   const [nuevoUsuario, setNuevoUsuario] = useState({
-    nombre: '', email: '', password: '', telefono: '', id_rol: ''
+    nombre: '', email: '', password: '', telefono: '', id_rol: '', cedula: ''
   });
   const [usuarioEdicion, setUsuarioEdicion] = useState(null);
   const [editUsuario, setEditUsuario] = useState({ nombre: '', email: '', telefono: '', id_rol: '' });
@@ -183,6 +183,10 @@ const Usuarios = () => {
     setNuevoUsuario({ ...nuevoUsuario, [e.target.name]: e.target.value });
   };
 
+  const rolSeleccionadoEsCliente = roles.some(
+    (rol) => String(rol.codigo) === String(nuevoUsuario.id_rol) && (rol.nombre || '').trim().toLowerCase() === 'cliente'
+  );
+
   const crearUsuario = async (e) => {
     e.preventDefault();
     try {
@@ -201,7 +205,7 @@ const Usuarios = () => {
       
       if (datos.exito) {
         setError('');
-        setNuevoUsuario({ nombre: '', email: '', password: '', telefono: '', id_rol: '' }); // Limpiar formulario
+        setNuevoUsuario({ nombre: '', email: '', password: '', telefono: '', id_rol: '', cedula: '' }); // Limpiar formulario
         cargarDatos(); // Recargar la tabla
       } else {
         setError(datos.error || 'No se pudo crear usuario.');
@@ -335,6 +339,12 @@ const Usuarios = () => {
                 ))}
               </select>
             </div>
+            {rolSeleccionadoEsCliente && (
+              <div className="input-group">
+                <label>Cédula del Cliente</label>
+                <input type="text" name="cedula" value={nuevoUsuario.cedula} onChange={manejarCambio} required />
+              </div>
+            )}
             <button type="submit" className="bitacora-btn bitacora-btn--filter">Registrar Usuario</button>
           </form>
         </div>

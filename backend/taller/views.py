@@ -1003,6 +1003,14 @@ def usuarios_api(request):
         try:
             rol_asignado = Rol.objects.get(codigo=datos['id_rol'])
 
+            es_rol_cliente = (rol_asignado.nombre or '').strip().lower() == 'cliente'
+            cedula = (datos.get('cedula') or '').strip()
+            if es_rol_cliente:
+                if not cedula:
+                    return Response({"exito": False, "error": "La cédula es obligatoria para usuarios con rol Cliente."}, status=400)
+                if Cliente.objects.filter(cedula=cedula).exists():
+                    return Response({"exito": False, "error": "Ya existe un cliente registrado con esa cédula."}, status=400)
+
             nuevo_usuario = Usuario.objects.create(
                 nombre=datos['nombre'],
                 email=email,
@@ -1021,6 +1029,22 @@ def usuarios_api(request):
             )
             # ---------------------------------------------
 
+            # Si el rol es Cliente, generamos tambien su registro en la tabla Cliente
+            # para que aparezca en /clientes (antes solo se creaba en la direccion inversa).
+            if es_rol_cliente:
+                cliente_nuevo = Cliente.objects.create(
+                    cedula=cedula,
+                    nombre=nuevo_usuario.nombre,
+                    telefono=nuevo_usuario.telefono,
+                    email=nuevo_usuario.email,
+                    fecha_registro=timezone.now().date(),
+                    estado='Activo',
+                )
+                registrar_bitacora(
+                    usuario_sesion,
+                    'CREACIÓN',
+                    f"Generó cliente vinculado: {cliente_nuevo.nombre} ({cliente_nuevo.cedula})."
+                )
 
             return Response({"exito": True, "mensaje": "Usuario creado exitosamente"}, status=201)
         except Rol.DoesNotExist:
