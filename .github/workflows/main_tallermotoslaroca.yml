@@ -118,6 +118,31 @@ jobs:
             --max-time 60 "https://tallermotoslaroca.azurewebsites.net/api/login/" \
             || echo "Sin respuesta en 60s"
 
+      - name: 'Diagnostico: comparar archivo desplegado vs WEBSITE_RUN_FROM_PACKAGE'
+        if: always()
+        run: |
+          rfp_post_build=$(az webapp config appsettings list \
+            --name tallermotoslaroca \
+            --resource-group TallerLaRoca-RG \
+            --query "[?name=='WEBSITE_RUN_FROM_PACKAGE'].value | [0]" -o tsv)
+          echo "WEBSITE_RUN_FROM_PACKAGE despues del build de Oryx: '$rfp_post_build'"
+
+          creds=$(az webapp deployment list-publishing-credentials \
+            --name tallermotoslaroca \
+            --resource-group TallerLaRoca-RG \
+            --query "{u:publishingUserName,p:publishingPassword}" -o tsv)
+          kuduUser=$(echo "$creds" | cut -f1)
+          kuduPass=$(echo "$creds" | cut -f2)
+
+          curl -s -u "$kuduUser:$kuduPass" \
+            "https://tallermotoslaroca.scm.azurewebsites.net/api/vfs/site/wwwroot/backend/config/urls.py" \
+            -o /tmp/remote_urls.py
+          if grep -q "vincular-cliente" /tmp/remote_urls.py; then
+            echo "El archivo urls.py EN EL SERVIDOR ya contiene la ruta nueva."
+          else
+            echo "El archivo urls.py EN EL SERVIDOR NO contiene la ruta nueva (deploy no llego al disco)."
+          fi
+
       - name: 'Verificar que el codigo desplegado sea el del commit actual'
         run: |
           # api/usuarios/<id>/vincular-cliente/ solo existe en urls.py a partir de este commit.
