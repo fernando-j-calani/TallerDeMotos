@@ -58,13 +58,13 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_872ACD9C975942129A6E140BCB3A4679 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_E6862147DFA34027B5B4DFABC3F02022 }}
 
-      - name: Habilitar Oryx build
+      - name: Habilitar Oryx build y deshabilitar Run-From-Package
         run: |
           az webapp config appsettings set \
             --name tallermotoslaroca \
             --resource-group TallerLaRoca-RG \
-            --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true
-          echo "SCM_DO_BUILD_DURING_DEPLOYMENT=true aplicado. Esperando 15s..."
+            --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true WEBSITE_RUN_FROM_PACKAGE=0
+          echo "Settings aplicados. Esperando 15s..."
           sleep 15
 
       - name: 'Deploy to Azure Web App'
@@ -90,7 +90,7 @@ jobs:
           curl -s -o /dev/null -w "HTTP %{http_code} despues de %{time_total}s\n" \
             --max-time 60 "https://tallermotoslaroca.azurewebsites.net/api/login/" \
             || echo "Sin respuesta en 60s"
-          echo "Startup command seteado. Forzando restart..."
+          echo "Startup command seteado (segunda pasada). Forzando restart..."
           az webapp restart \
             --name tallermotoslaroca \
             --resource-group TallerLaRoca-RG
@@ -100,3 +100,15 @@ jobs:
           curl -s -o /dev/null -w "HTTP %{http_code} despues de %{time_total}s\n" \
             --max-time 60 "https://tallermotoslaroca.azurewebsites.net/api/login/" \
             || echo "Sin respuesta en 60s"
+
+      - name: 'Verificar que el codigo desplegado sea el del commit actual'
+        run: |
+          # api/usuarios/<id>/vincular-cliente/ solo existe en urls.py a partir de este commit.
+          # Si el servidor responde 404, el deploy NO tomo el codigo nuevo (sigue corriendo el anterior).
+          codigo=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 -X POST \
+            "https://tallermotoslaroca.azurewebsites.net/api/usuarios/0/vincular-cliente/")
+          echo "Codigo HTTP recibido: $codigo"
+          if [ "$codigo" = "404" ]; then
+            echo "::error::El backend sigue sirviendo codigo viejo (ruta nueva no encontrada). El deploy no se aplico realmente."
+            exit 1
+          fi
