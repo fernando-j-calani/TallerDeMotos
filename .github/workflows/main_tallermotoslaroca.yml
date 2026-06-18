@@ -58,6 +58,18 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_872ACD9C975942129A6E140BCB3A4679 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_E6862147DFA34027B5B4DFABC3F02022 }}
 
+      - name: 'Diagnostico: confirmar que el recurso gestionado es el que sirve el dominio publico'
+        run: |
+          set +e
+          echo "::notice::Apps llamadas 'tallermotoslaroca' en la suscripcion (nombre|resourceGroup|defaultHostName|state):"
+          az webapp list --query "[?contains(name,'tallermotoslaroca')].[name,resourceGroup,defaultHostName,state]" -o tsv \
+            | while IFS=$'\t' read -r n rg h st; do echo "::notice::APP: $n | $rg | $h | $st"; done
+
+          hostnames=$(az webapp show --name tallermotoslaroca --resource-group TallerLaRoca-RG \
+            --query "{default:defaultHostName,hostNames:hostNames}" -o json 2>&1)
+          echo "::notice::Detalle del recurso gestionado (tallermotoslaroca/TallerLaRoca-RG): $hostnames"
+          set -e
+
       - name: Habilitar Oryx build y deshabilitar Run-From-Package
         run: |
           # Cambiar appsettings reinicia el contenedor SCM. Si el deploy arranca
