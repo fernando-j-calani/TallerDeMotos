@@ -36,7 +36,6 @@ Thumbs.db
 BACKUP_SI1_20260415_174943.code-workspace
 
 # Local/backup data not needed to run
-BACKUP_SQL_SI1/
 PROYECTO APARTE UNIR/
 backend/media/
 backend/staticfiles/
