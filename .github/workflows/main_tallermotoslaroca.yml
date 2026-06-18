@@ -121,27 +121,35 @@ jobs:
       - name: 'Diagnostico: comparar archivo desplegado vs WEBSITE_RUN_FROM_PACKAGE'
         if: always()
         run: |
+          set +e
           rfp_post_build=$(az webapp config appsettings list \
             --name tallermotoslaroca \
             --resource-group TallerLaRoca-RG \
-            --query "[?name=='WEBSITE_RUN_FROM_PACKAGE'].value | [0]" -o tsv)
+            --query "[?name=='WEBSITE_RUN_FROM_PACKAGE'].value | [0]" -o tsv 2>&1)
           echo "WEBSITE_RUN_FROM_PACKAGE despues del build de Oryx: '$rfp_post_build'"
 
           creds=$(az webapp deployment list-publishing-credentials \
             --name tallermotoslaroca \
             --resource-group TallerLaRoca-RG \
-            --query "{u:publishingUserName,p:publishingPassword}" -o tsv)
-          kuduUser=$(echo "$creds" | cut -f1)
-          kuduPass=$(echo "$creds" | cut -f2)
-
-          curl -s -u "$kuduUser:$kuduPass" \
-            "https://tallermotoslaroca.scm.azurewebsites.net/api/vfs/site/wwwroot/backend/config/urls.py" \
-            -o /tmp/remote_urls.py
-          if grep -q "vincular-cliente" /tmp/remote_urls.py; then
-            echo "El archivo urls.py EN EL SERVIDOR ya contiene la ruta nueva."
+            --query "{u:publishingUserName,p:publishingPassword}" -o tsv 2>&1)
+          if [ $? -ne 0 ]; then
+            echo "No se pudieron obtener credenciales de Kudu: $creds"
           else
-            echo "El archivo urls.py EN EL SERVIDOR NO contiene la ruta nueva (deploy no llego al disco)."
+            kuduUser=$(echo "$creds" | cut -f1)
+            kuduPass=$(echo "$creds" | cut -f2)
+
+            http_code=$(curl -s -o /tmp/remote_urls.py -w "%{http_code}" -u "$kuduUser:$kuduPass" \
+              "https://tallermotoslaroca.scm.azurewebsites.net/api/vfs/site/wwwroot/backend/config/urls.py")
+            echo "Kudu VFS respondio HTTP $http_code al leer urls.py"
+            if [ "$http_code" = "200" ] && grep -q "vincular-cliente" /tmp/remote_urls.py; then
+              echo "El archivo urls.py EN EL SERVIDOR ya contiene la ruta nueva."
+            elif [ "$http_code" = "200" ]; then
+              echo "El archivo urls.py EN EL SERVIDOR NO contiene la ruta nueva (deploy no llego al disco)."
+            else
+              echo "No se pudo leer el archivo via Kudu VFS (HTTP $http_code)."
+            fi
           fi
+          set -e
 
       - name: 'Verificar que el codigo desplegado sea el del commit actual'
         run: |
