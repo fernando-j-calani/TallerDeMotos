@@ -60,12 +60,29 @@ jobs:
 
       - name: Habilitar Oryx build y deshabilitar Run-From-Package
         run: |
-          az webapp config appsettings set \
+          # Cambiar appsettings reinicia el contenedor SCM. Si el deploy arranca
+          # mientras ese reinicio sigue en curso, Azure lo mata a mitad de camino
+          # ("Deployment has been stopped due to SCM container restart"). Por eso
+          # solo tocamos los settings cuando realmente difieren, y si los tocamos,
+          # esperamos lo suficiente para que el contenedor termine de reiniciar.
+          actuales=$(az webapp config appsettings list \
             --name tallermotoslaroca \
             --resource-group TallerLaRoca-RG \
-            --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true WEBSITE_RUN_FROM_PACKAGE=0
-          echo "Settings aplicados. Esperando 15s..."
-          sleep 15
+            --query "[?name=='SCM_DO_BUILD_DURING_DEPLOYMENT' || name=='WEBSITE_RUN_FROM_PACKAGE'].[name,value]" \
+            -o tsv)
+          scm_ok=$(echo "$actuales" | awk -F'\t' '$1=="SCM_DO_BUILD_DURING_DEPLOYMENT" && $2=="true"')
+          rfp_ok=$(echo "$actuales" | awk -F'\t' '$1=="WEBSITE_RUN_FROM_PACKAGE" && $2=="0"')
+
+          if [ -n "$scm_ok" ] && [ -n "$rfp_ok" ]; then
+            echo "Settings ya estaban correctos, no se reinicia el contenedor."
+          else
+            az webapp config appsettings set \
+              --name tallermotoslaroca \
+              --resource-group TallerLaRoca-RG \
+              --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true WEBSITE_RUN_FROM_PACKAGE=0
+            echo "Settings aplicados (hubo cambio). Esperando 90s a que el contenedor SCM termine de reiniciar..."
+            sleep 90
+          fi
 
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
