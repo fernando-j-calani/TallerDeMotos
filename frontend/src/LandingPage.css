@@ -1029,35 +1029,6 @@ body, .lp-page {
   }
 
   .lp-nav {
-    gap: 20px;
-    margin-left: auto;
-    margin-right: 20px;
-  }
-
-  .lp-about-grid {
-    gap: 30px;
-  }
-
-  .lp-footer-content {
-    gap: 30px;
-  }
-}
-
-@media (max-width: 768px) {
-  .lp-header {
-    padding: 10px 15px;
-  }
-
-  .lp-logo {
-    height: 28px;
-    gap: 6px;
-  }
-
-  .lp-logo img {
-    height: 28px;
-  }
-
-  .lp-nav {
     position: absolute;
     top: 65px;
     left: 0;
@@ -1092,6 +1063,29 @@ body, .lp-page {
 
   .lp-menu-toggle {
     display: flex;
+  }
+
+  .lp-about-grid {
+    gap: 30px;
+  }
+
+  .lp-footer-content {
+    gap: 30px;
+  }
+}
+
+@media (max-width: 768px) {
+  .lp-header {
+    padding: 10px 15px;
+  }
+
+  .lp-logo {
+    height: 28px;
+    gap: 6px;
+  }
+
+  .lp-logo img {
+    height: 28px;
   }
 
   .lp-hero {
