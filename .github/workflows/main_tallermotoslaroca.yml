@@ -103,6 +103,21 @@ jobs:
           app-name: 'tallermotoslaroca'
           slot-name: 'Production'
 
+      - name: 'Diagnostico: historial de deployments e instancias activas'
+        if: always()
+        run: |
+          set +e
+          echo "::notice::Ultimos 3 deployments (id|status|complete|active|end_time):"
+          az webapp deployment list --name tallermotoslaroca --resource-group TallerLaRoca-RG \
+            --query "sort_by(@,&end_time)[-3:].[id,status,complete,active,end_time]" -o tsv 2>&1 \
+            | while IFS=$'\t' read -r id st comp act endt; do echo "::notice::DEPLOY: $id | status=$st | complete=$comp | active=$act | end=$endt"; done
+
+          echo "::notice::Instancias activas del App Service:"
+          az webapp list-instances --name tallermotoslaroca --resource-group TallerLaRoca-RG \
+            --query "[].[name,state]" -o tsv 2>&1 \
+            | while IFS=$'\t' read -r n st; do echo "::notice::INSTANCIA: $n | $st"; done
+          set -e
+
       - name: Configurar startup command y forzar restart
         run: |
           az webapp config set \
