@@ -987,7 +987,12 @@ def usuarios_api(request):
         # Devolvemos todos los usuarios ordenados por ID
         usuarios = Usuario.objects.all().order_by('codigo')
         serializer = UsuarioSerializer(usuarios, many=True)
-        return Response(serializer.data, status=200)
+        data = serializer.data
+        for usuario_data, usuario_obj in zip(data, usuarios):
+            es_rol_cliente = (usuario_data.get('rol_nombre') or '').strip().lower() == 'cliente'
+            usuario_data['es_rol_cliente'] = es_rol_cliente
+            usuario_data['cliente_vinculado'] = bool(es_rol_cliente and obtener_cliente_vinculado(usuario_obj))
+        return Response(data, status=200)
 
     elif request.method == 'POST':
         # Lógica para CREAR un nuevo usuario
@@ -1105,6 +1110,53 @@ def usuario_detalle_api(request, usuario_id):
     )
 
     return Response({"exito": True, "mensaje": "Usuario actualizado."}, status=200)
+
+
+@api_view(['POST'])
+def usuario_vincular_cliente_api(request, usuario_id):
+    """Genera el registro Cliente faltante para un Usuario con rol Cliente
+    creado antes de que existiera la vinculación automática (ver CU02)."""
+    usuario_sesion, error_auth = obtener_usuario_autenticado(request)
+    if error_auth:
+        return error_auth
+
+    error_admin = exigir_admin(usuario_sesion)
+    if error_admin:
+        return error_admin
+
+    try:
+        usuario_obj = Usuario.objects.get(codigo=usuario_id)
+    except Usuario.DoesNotExist:
+        return Response({"exito": False, "error": "Usuario no encontrado."}, status=404)
+
+    if (usuario_obj.id_rol.nombre or '').strip().lower() != 'cliente':
+        return Response({"exito": False, "error": "El usuario no tiene rol Cliente."}, status=400)
+
+    if obtener_cliente_vinculado(usuario_obj):
+        return Response({"exito": False, "error": "Este usuario ya tiene un cliente vinculado."}, status=400)
+
+    cedula = (request.data.get('cedula') or '').strip()
+    if not cedula:
+        return Response({"exito": False, "error": "La cédula es obligatoria."}, status=400)
+
+    if Cliente.objects.filter(cedula=cedula).exists():
+        return Response({"exito": False, "error": "Ya existe un cliente registrado con esa cédula."}, status=400)
+
+    cliente_nuevo = Cliente.objects.create(
+        cedula=cedula,
+        nombre=usuario_obj.nombre,
+        telefono=usuario_obj.telefono,
+        email=usuario_obj.email,
+        fecha_registro=timezone.now().date(),
+        estado='Activo',
+    )
+    registrar_bitacora(
+        usuario_sesion,
+        'CREACIÓN',
+        f"Vinculó manualmente al cliente: {cliente_nuevo.nombre} ({cliente_nuevo.cedula})."
+    )
+
+    return Response({"exito": True, "mensaje": "Cliente vinculado exitosamente."}, status=201)
 
 # ==========================================
 # CU03: GESTIONAR ROLES (Solo lectura por ahora)

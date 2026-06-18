@@ -8,6 +8,7 @@ from taller.views import (
     bitacora_api,
     usuarios_api,
     usuario_detalle_api,
+    usuario_vincular_cliente_api,
     roles_api,
     rol_detalle_api,
     privilegios_api,
@@ -73,6 +74,7 @@ urlpatterns = [
     # NUEVAS RUTAS FASE B:
     path('api/usuarios/', usuarios_api, name='api_usuarios'),
     path('api/usuarios/<int:usuario_id>/', usuario_detalle_api, name='api_usuario_detalle'),
+    path('api/usuarios/<int:usuario_id>/vincular-cliente/', usuario_vincular_cliente_api, name='api_usuario_vincular_cliente'),
     path('api/roles/', roles_api, name='api_roles'),
     path('api/roles/<int:rol_id>/', rol_detalle_api, name='api_rol_detalle'),
     path('api/privilegios/', privilegios_api, name='api_privilegios'),

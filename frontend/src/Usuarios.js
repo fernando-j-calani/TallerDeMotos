@@ -48,6 +48,8 @@ const Usuarios = () => {
   });
   const [usuarioEdicion, setUsuarioEdicion] = useState(null);
   const [editUsuario, setEditUsuario] = useState({ nombre: '', email: '', telefono: '', id_rol: '' });
+  const [usuarioVincular, setUsuarioVincular] = useState(null);
+  const [cedulaVincular, setCedulaVincular] = useState('');
 
     useEffect(() => {
         // 1. Verificamos la seguridad
@@ -257,6 +259,41 @@ const Usuarios = () => {
     }
   };
 
+  const abrirVincularCliente = (usuario) => {
+    setUsuarioVincular(usuario);
+    setCedulaVincular('');
+  };
+
+  const confirmarVincularCliente = async (e) => {
+    e.preventDefault();
+    if (!usuarioVincular) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const respuesta = await fetch(`${API_BASE_URL}/api/usuarios/${usuarioVincular.codigo}/vincular-cliente/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ cedula: cedulaVincular }),
+      });
+
+      const datos = await respuesta.json();
+      if (!respuesta.ok || !datos.exito) {
+        setError(datos.error || 'No se pudo vincular el cliente.');
+        return;
+      }
+
+      setError('');
+      setOk(`Cliente vinculado para ${usuarioVincular.nombre}.`);
+      setUsuarioVincular(null);
+      cargarDatos();
+    } catch {
+      setError('Error de conexión al vincular cliente.');
+    }
+  };
+
   const cambiarEstadoUsuario = async (usuario) => {
     const nuevoEstado = usuario.estado === 'Activo' ? 'Inactivo' : 'Activo';
 
@@ -368,7 +405,14 @@ const Usuarios = () => {
                   <tr key={u.codigo}>
                     <td>{repairText(u.nombre)}</td>
                     <td>{u.email}</td>
-                    <td className="bitacora-user">{repairText(u.rol_nombre)}</td>
+                    <td className="bitacora-user">
+                      {repairText(u.rol_nombre)}
+                      {u.es_rol_cliente && !u.cliente_vinculado && (
+                        <span className="usuario-status-badge usuario-status-badge--inactivo" style={{ marginLeft: '8px' }}>
+                          Sin vincular
+                        </span>
+                      )}
+                    </td>
                     <td>
                       <span className={`usuario-status-badge ${u.estado === 'Activo' ? 'usuario-status-badge--activo' : 'usuario-status-badge--inactivo'}`}>
                         {u.estado}
@@ -381,6 +425,11 @@ const Usuarios = () => {
                       <button onClick={() => cambiarEstadoUsuario(u)} className={`table-action-btn ${u.estado === 'Activo' ? 'table-action-btn--danger' : 'table-action-btn--success'}`}>
                         {u.estado === 'Activo' ? 'Desactivar' : 'Activar'}
                       </button>
+                      {u.es_rol_cliente && !u.cliente_vinculado && (
+                        <button onClick={() => abrirVincularCliente(u)} className="table-action-btn table-action-btn--success">
+                          Vincular cliente
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -423,6 +472,27 @@ const Usuarios = () => {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                 <button type="button" onClick={() => setUsuarioEdicion(null)} className="btn-secondary">Cancelar</button>
                 <button type="submit" className="bitacora-btn bitacora-btn--filter">Guardar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {usuarioVincular && (
+        <div className="usuarios-modal-overlay">
+          <div className="usuarios-modal usuarios-modal--sm">
+            <h3 style={{ marginTop: 0, color: 'var(--color-accent)' }}>Vincular cliente</h3>
+            <p style={{ color: 'var(--color-text-muted)' }}>
+              El usuario <strong>{repairText(usuarioVincular.nombre)}</strong> tiene rol Cliente pero fue creado antes de que existiera la vinculación automática. Ingresa su cédula para generar su registro en /clientes.
+            </p>
+            <form onSubmit={confirmarVincularCliente}>
+              <div className="input-group">
+                <label>Cédula del Cliente</label>
+                <input type="text" value={cedulaVincular} onChange={(e) => setCedulaVincular(e.target.value)} required />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button type="button" onClick={() => setUsuarioVincular(null)} className="btn-secondary">Cancelar</button>
+                <button type="submit" className="bitacora-btn bitacora-btn--filter">Vincular</button>
               </div>
             </form>
           </div>
