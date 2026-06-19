@@ -19,3 +19,6 @@ RUN pip install --no-cache-dir -r requerimientos.txt
 
 # 6. Copiar el resto del código a la carpeta de trabajo
 COPY . /app/
+
+# 7. Aplicar migraciones y arrancar gunicorn (Render no tiene Pre-Deploy Command en plan Free)
+CMD python manage.py migrate --noinput && exec gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --timeout 600 --workers 2
