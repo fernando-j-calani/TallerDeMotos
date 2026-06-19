@@ -15,3 +15,6 @@ COPY . ./
 
 # 6. Exponer el puerto 3000
 EXPOSE 3000
+
+# 7. Arrancar el servidor de desarrollo de React (Render no usa docker-compose)
+CMD ["npm", "start"]
