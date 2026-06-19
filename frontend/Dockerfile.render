@@ -1,0 +1,36 @@
+# Dockerfile de PRODUCCION para Render (no se usa en docker-compose local).
+# Compila el build estatico de React y lo sirve con "serve", mucho mas
+# liviano en RAM que el dev server (react-scripts start) usado en local.
+
+# --- Etapa 1: build ---
+FROM node:18-alpine AS build
+WORKDIR /app
+
+COPY package.json ./
+RUN npm install
+
+COPY . ./
+
+# Variables que React necesita "hornear" dentro del build.
+# Render las pasa solas como build args si coinciden con el nombre
+# de las variables de entorno configuradas en el dashboard del servicio.
+ARG REACT_APP_API_BASE_URL
+ARG REACT_APP_BANCO_NOMBRE
+ARG REACT_APP_BANCO_TIPO_CUENTA
+ARG REACT_APP_BANCO_NUMERO_CUENTA
+ARG REACT_APP_BANCO_TITULAR
+ARG REACT_APP_BANCO_NIT
+ARG REACT_APP_PAYPAL_CLIENT_ID
+
+RUN npm run build
+
+# --- Etapa 2: servir los archivos estaticos ---
+FROM node:18-alpine
+WORKDIR /app
+
+RUN npm install -g serve
+
+COPY --from=build /app/build ./build
+
+EXPOSE 3000
+CMD ["serve", "-s", "build", "-l", "3000"]
