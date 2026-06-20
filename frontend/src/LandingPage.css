@@ -1433,7 +1433,14 @@ body, .lp-page {
 
 @media (max-width: 360px) {
   .lp-carousel-indicators {
-    display: none;
+    bottom: 16px;
+    left: 30px;
+    gap: 10px;
+    max-width: calc(100% - 45px);
+  }
+
+  .lp-indicator {
+    font-size: 12px;
   }
 
   .lp-slide-content h1 {
