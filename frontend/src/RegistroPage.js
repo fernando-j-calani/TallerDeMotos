@@ -860,8 +860,8 @@ export default function RegistroPage() {
                 </a>
               </div>
             </div>
-            <div className="ft-item"><i className="fas fa-phone"></i> <span>+591 77712345</span></div>
-            <div className="ft-item"><i className="fas fa-map-pin"></i> <span>Av. Radial 27, Santa Cruz - Bolivia</span></div>
+            <div className="ft-item"><i className="fas fa-phone"></i> <span>+591 73766956</span></div>
+            <div className="ft-item"><i className="fas fa-map-pin"></i> <span>6to Anillo, entre Av. 2 de Agosto y Av. Alemana, Santa Cruz - Bolivia</span></div>
             <div className="ft-item" style={{ textAlign: 'left' }}>
               <i className="fas fa-clock"></i>
               <div>Lunes a Viernes<br/>8:00 AM - 5:30 PM</div>

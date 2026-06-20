@@ -492,8 +492,8 @@ const FormFacturacion = () => {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.text('Casa Matriz', marginX, 21);
-    doc.text('Direccion: Av. Principal', marginX, 25);
-    doc.text('Telefono: 77712345', marginX, 29);
+    doc.text('Direccion: 6to Anillo, entre Av. 2 de Agosto y Av. Alemana', marginX, 25);
+    doc.text('Telefono: 73766956', marginX, 29);
     doc.text('Santa Cruz - Bolivia', marginX, 33);
 
     // Encabezado derecho (Caja fiscal)

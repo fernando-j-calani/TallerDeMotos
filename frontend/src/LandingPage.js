@@ -5,7 +5,7 @@ import { faWrench, faMotorcycle, faCog, faGasPump, faHand, faStethoscope, faClip
 import { faFacebook, faInstagram, faWhatsapp, faWaze } from '@fortawesome/free-brands-svg-icons';
 import './LandingPage.css';
 
-const WHATSAPP_NUMERO = '59177712345';
+const WHATSAPP_NUMERO = '59173766956';
 
 const LandingPage = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -58,9 +58,10 @@ const LandingPage = () => {
   const handleWhatsAppForm = (e) => {
     e.preventDefault();
     const nombre = document.querySelector('input[name="nombre"]')?.value || 'Cliente';
+    const correo = document.querySelector('input[name="correo"]')?.value || 'No proporcionado';
     const moto = document.querySelector('input[name="moto"]')?.value || 'Mi moto';
     const mensaje = document.querySelector('textarea[name="mensaje"]')?.value || 'Hola, necesito información';
-    const text = `Hola, soy ${nombre}. Tengo una ${moto}. ${mensaje}`;
+    const text = `Hola, soy ${nombre}. Mi correo es ${correo}. Tengo una ${moto}. ${mensaje}`;
     window.open(`https://wa.me/${WHATSAPP_NUMERO}?text=${encodeURIComponent(text)}`);
   };
 
@@ -240,7 +241,7 @@ const LandingPage = () => {
               </div>
               <div>
                 <strong>Dirección</strong>
-                <p>Av. Radial 27, Santa Cruz - Bolivia</p>
+                <p>6to Anillo, entre Av. 2 de Agosto y Av. Alemana, Santa Cruz - Bolivia</p>
               </div>
             </div>
             <div className="lp-contact-top-item">
@@ -251,7 +252,7 @@ const LandingPage = () => {
                 <strong>WhatsApp</strong>
                 <p>
                   <a href={`https://wa.me/${WHATSAPP_NUMERO}`} target="_blank" rel="noopener noreferrer">
-                    +591 77712345
+                    +591 73766956
                   </a>
                 </p>
               </div>
@@ -263,8 +264,8 @@ const LandingPage = () => {
               <div>
                 <strong>Waze</strong>
                 <p>
-                  <a href="https://waze.com/ul?q=Av.+Radial+27,+Santa+Cruz+-+Bolivia" target="_blank" rel="noopener noreferrer">
-                    Av. Radial 27, Santa Cruz - Bolivia
+                  <a href="https://waze.com/ul?q=6to+Anillo%2C+entre+Av.+2+de+Agosto+y+Av.+Alemana%2C+Santa+Cruz+-+Bolivia" target="_blank" rel="noopener noreferrer">
+                    6to Anillo, entre Av. 2 de Agosto y Av. Alemana, Santa Cruz - Bolivia
                   </a>
                 </p>
               </div>
@@ -283,7 +284,7 @@ const LandingPage = () => {
             </div>
             <div className="lp-form-group">
               <label htmlFor="lp-correo">Correo Electrónico</label>
-              <input id="lp-correo" type="email" placeholder="Tu correo electrónico" required />
+              <input id="lp-correo" type="email" name="correo" placeholder="Tu correo electrónico" required />
             </div>
             <div className="lp-form-group">
               <label htmlFor="lp-moto">Marca y Modelo de la Moto</label>
@@ -354,7 +355,7 @@ const LandingPage = () => {
             </div>
             <div>
               <h4>Contacto</h4>
-              <p>+591 77712345</p>
+              <p>+591 73766956</p>
             </div>
           </div>
         </div>
