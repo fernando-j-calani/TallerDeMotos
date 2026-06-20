@@ -1298,13 +1298,13 @@ body, .lp-page {
 
   .lp-carousel-indicators {
     bottom: 20px;
-    left: 20px;
-    gap: 10px;
-    max-width: calc(100% - 40px);
+    left: 45px;
+    gap: 14px;
+    max-width: calc(100% - 60px);
   }
 
   .lp-indicator {
-    font-size: 10px;
+    font-size: 15px;
   }
 
   .lp-section {
