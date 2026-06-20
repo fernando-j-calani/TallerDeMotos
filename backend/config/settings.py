@@ -1,5 +1,18 @@
 import os
+import socket
 from urllib.parse import urlparse
+
+# Algunos proveedores de hosting (Render incluido) no enrutan bien IPv6 saliente,
+# y Gmail SMTP a veces resuelve primero a una direccion IPv6, causando
+# "[Errno 101] Network is unreachable". Forzamos resolucion DNS solo IPv4.
+_getaddrinfo_original = socket.getaddrinfo
+
+
+def _getaddrinfo_solo_ipv4(host, port, family=0, type=0, proto=0, flags=0):
+    return _getaddrinfo_original(host, port, socket.AF_INET, type, proto, flags)
+
+
+socket.getaddrinfo = _getaddrinfo_solo_ipv4
 """
 Django settings for config project.
 
