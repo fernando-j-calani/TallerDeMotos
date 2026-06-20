@@ -3458,6 +3458,25 @@ class HistorialMantenimientoAPI(APIView):
             status=200,
         )
 
+    def solicita_detalles_orden_especifica(self, request, orden_id):
+        try:
+            orden = Ordentrabajo.objects.select_related(
+                'id_cliente', 'id_motocicleta', 'id_mecanico'
+            ).get(codigo=orden_id)
+        except Ordentrabajo.DoesNotExist:
+            return Response({"exito": False, "error": "Orden no encontrada."}, status=404)
+
+        detalles = Detalleordentrabajo.objects.filter(id_orden_trabajo=orden).order_by('codigo')
+
+        return Response(
+            {
+                "exito": True,
+                "orden": OrdenTrabajoSerializer(orden).data,
+                "detalles": DetalleOrdenTrabajoSerializer(detalles, many=True).data,
+            },
+            status=200,
+        )
+
     def retorna_datos_y_url_reporte(self, data):
         response_data = dict(data or {})
         response_data.setdefault("reporte_url", None)
