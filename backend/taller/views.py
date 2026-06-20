@@ -1545,11 +1545,31 @@ def cliente_detalle_api(request, cliente_id):
         return Response({"exito": False, "error": "Cliente no encontrado."}, status=404)
 
     if request.method == 'PUT':
+        nombre_anterior = cliente.nombre
+
         serializer = ClienteSerializer(cliente, data=request.data, partial=True)
         if not serializer.is_valid():
             return Response({"exito": False, "errores": serializer.errors}, status=400)
 
         cliente_actualizado = serializer.save()
+
+        if cliente_actualizado.nombre != nombre_anterior:
+            nombre_anterior_normalizado = normalizar_usuario_desde_nombre(nombre_anterior)
+            usuario_vinculado = Usuario.objects.filter(
+                id_rol__nombre='Cliente'
+            ).filter(
+                nombre__iexact=nombre_anterior
+            ).first()
+            if not usuario_vinculado:
+                # Reintenta comparando el nombre normalizado por si difiere en tildes/espacios.
+                for candidato in Usuario.objects.filter(id_rol__nombre='Cliente'):
+                    if normalizar_usuario_desde_nombre(candidato.nombre) == nombre_anterior_normalizado:
+                        usuario_vinculado = candidato
+                        break
+            if usuario_vinculado:
+                usuario_vinculado.nombre = cliente_actualizado.nombre
+                usuario_vinculado.save(update_fields=['nombre'])
+
         registrar_bitacora(usuario_sesion, 'MODIFICACIÓN', f"Actualizó cliente: {cliente_actualizado.nombre}.")
         return Response({"exito": True, "mensaje": "Cliente actualizado."}, status=200)
 
