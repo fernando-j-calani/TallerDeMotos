@@ -108,8 +108,9 @@ PASSWORD_RESET_LOG_TO_CONSOLE = get_bool_env('PASSWORD_RESET_LOG_TO_CONSOLE', Tr
 EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT_SECONDS', '15'))
 EMAIL_SEND_RETRIES = int(os.environ.get('EMAIL_SEND_RETRIES', '3'))
 
+BREVO_API_KEY = os.environ.get('BREVO_API_KEY', '').strip()
+
 if MAIL_MODE == 'online':
-    EMAIL_BACKEND = os.environ.get('MAIL_ONLINE_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
     EMAIL_HOST = os.environ.get('MAIL_ONLINE_HOST', 'smtp.gmail.com')
     EMAIL_PORT = int(os.environ.get('MAIL_ONLINE_PORT', '587'))
     EMAIL_HOST_USER = os.environ.get('MAIL_ONLINE_USER', '')
@@ -118,6 +119,12 @@ if MAIL_MODE == 'online':
     EMAIL_USE_SSL = get_bool_env('MAIL_ONLINE_USE_SSL', False)
     DEFAULT_FROM_EMAIL = f"TALLER DE MOTOS - LA ROCA <{os.environ.get('MAIL_ONLINE_FROM_EMAIL', EMAIL_HOST_USER or 'acovi2014@gmail.com')}>"
     MAIL_ONLINE_TEST_INBOX = os.environ.get('MAIL_ONLINE_TEST_INBOX', 'teteryu79e@gmail.com').strip().lower()
+    # Si hay API key de Brevo, manda por HTTPS (Render bloquea los puertos SMTP).
+    # Si no, cae al SMTP normal (funciona bien en local).
+    if BREVO_API_KEY:
+        EMAIL_BACKEND = 'taller.email_backend.BrevoApiEmailBackend'
+    else:
+        EMAIL_BACKEND = os.environ.get('MAIL_ONLINE_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
 else:
     EMAIL_BACKEND = os.environ.get('MAIL_OFFLINE_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
     EMAIL_HOST = os.environ.get('MAIL_OFFLINE_HOST', 'mailpit')
