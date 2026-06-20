@@ -28,7 +28,16 @@ const Motocicletas = () => {
     kilometraje_actual: '',
   });
   const [motoEdicion, setMotoEdicion] = useState(null);
-  const [editForm, setEditForm] = useState({ marca: '', modelo: '' });
+  const [editForm, setEditForm] = useState({
+    marca: '',
+    modelo: '',
+    anio: '',
+    cilindraje: '',
+    color: '',
+    numero_motor: '',
+    numero_chasis: '',
+    kilometraje_actual: '',
+  });
 
   const headers = (json = true) => {
     const token = localStorage.getItem('token');
@@ -104,7 +113,16 @@ const Motocicletas = () => {
 
   const abrirEdicion = (moto) => {
     setMotoEdicion(moto);
-    setEditForm({ marca: moto.marca || '', modelo: moto.modelo || '' });
+    setEditForm({
+      marca: moto.marca || '',
+      modelo: moto.modelo || '',
+      anio: moto.anio || '',
+      cilindraje: moto.cilindraje || '',
+      color: moto.color || '',
+      numero_motor: moto.numero_motor || '',
+      numero_chasis: moto.numero_chasis || '',
+      kilometraje_actual: moto.kilometraje_actual || '',
+    });
   };
 
   const guardarEdicion = async (e) => {
@@ -183,6 +201,11 @@ const Motocicletas = () => {
             <div className="input-group"><label>Marca</label><input value={nuevo.marca} onChange={(e) => setNuevo({ ...nuevo, marca: e.target.value })} /></div>
             <div className="input-group"><label>Modelo</label><input value={nuevo.modelo} onChange={(e) => setNuevo({ ...nuevo, modelo: e.target.value })} /></div>
             <div className="input-group"><label>Año</label><input type="number" value={nuevo.anio} onChange={(e) => setNuevo({ ...nuevo, anio: e.target.value })} /></div>
+            <div className="input-group"><label>Cilindraje</label><input value={nuevo.cilindraje} onChange={(e) => setNuevo({ ...nuevo, cilindraje: e.target.value })} /></div>
+            <div className="input-group"><label>Color</label><input value={nuevo.color} onChange={(e) => setNuevo({ ...nuevo, color: e.target.value })} /></div>
+            <div className="input-group"><label>N° de motor</label><input value={nuevo.numero_motor} onChange={(e) => setNuevo({ ...nuevo, numero_motor: e.target.value })} /></div>
+            <div className="input-group"><label>N° de chasis</label><input value={nuevo.numero_chasis} onChange={(e) => setNuevo({ ...nuevo, numero_chasis: e.target.value })} /></div>
+            <div className="input-group"><label>Kilometraje actual</label><input type="number" value={nuevo.kilometraje_actual} onChange={(e) => setNuevo({ ...nuevo, kilometraje_actual: e.target.value })} /></div>
             <button type="submit" className="bitacora-btn bitacora-btn--filter">Crear motocicleta</button>
           </form>
         </div>
@@ -260,6 +283,12 @@ const Motocicletas = () => {
             <form onSubmit={guardarEdicion}>
               <div className="input-group"><label>Marca</label><input value={editForm.marca} onChange={(e) => setEditForm({ ...editForm, marca: e.target.value })} /></div>
               <div className="input-group"><label>Modelo</label><input value={editForm.modelo} onChange={(e) => setEditForm({ ...editForm, modelo: e.target.value })} /></div>
+              <div className="input-group"><label>Año</label><input type="number" value={editForm.anio} onChange={(e) => setEditForm({ ...editForm, anio: e.target.value })} /></div>
+              <div className="input-group"><label>Cilindraje</label><input value={editForm.cilindraje} onChange={(e) => setEditForm({ ...editForm, cilindraje: e.target.value })} /></div>
+              <div className="input-group"><label>Color</label><input value={editForm.color} onChange={(e) => setEditForm({ ...editForm, color: e.target.value })} /></div>
+              <div className="input-group"><label>N° de motor</label><input value={editForm.numero_motor} onChange={(e) => setEditForm({ ...editForm, numero_motor: e.target.value })} /></div>
+              <div className="input-group"><label>N° de chasis</label><input value={editForm.numero_chasis} onChange={(e) => setEditForm({ ...editForm, numero_chasis: e.target.value })} /></div>
+              <div className="input-group"><label>Kilometraje actual</label><input type="number" value={editForm.kilometraje_actual} onChange={(e) => setEditForm({ ...editForm, kilometraje_actual: e.target.value })} /></div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                 <button type="button" onClick={() => setMotoEdicion(null)} className="btn-secondary">Cancelar</button>
                 <button type="submit" className="bitacora-btn bitacora-btn--filter">Guardar</button>
