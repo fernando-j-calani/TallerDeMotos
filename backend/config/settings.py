@@ -103,7 +103,7 @@ if MAIL_MODE == 'online':
     EMAIL_HOST_PASSWORD = os.environ.get('MAIL_ONLINE_PASSWORD', '')
     EMAIL_USE_TLS = get_bool_env('MAIL_ONLINE_USE_TLS', True)
     EMAIL_USE_SSL = get_bool_env('MAIL_ONLINE_USE_SSL', False)
-    DEFAULT_FROM_EMAIL = os.environ.get('MAIL_ONLINE_FROM_EMAIL', EMAIL_HOST_USER or 'acovi2014@gmail.com')
+    DEFAULT_FROM_EMAIL = f"TALLER DE MOTOS - LA ROCA <{os.environ.get('MAIL_ONLINE_FROM_EMAIL', EMAIL_HOST_USER or 'acovi2014@gmail.com')}>"
     MAIL_ONLINE_TEST_INBOX = os.environ.get('MAIL_ONLINE_TEST_INBOX', 'teteryu79e@gmail.com').strip().lower()
 else:
     EMAIL_BACKEND = os.environ.get('MAIL_OFFLINE_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
@@ -113,7 +113,7 @@ else:
     EMAIL_HOST_PASSWORD = os.environ.get('MAIL_OFFLINE_PASSWORD', '')
     EMAIL_USE_TLS = get_bool_env('MAIL_OFFLINE_USE_TLS', False)
     EMAIL_USE_SSL = get_bool_env('MAIL_OFFLINE_USE_SSL', False)
-    DEFAULT_FROM_EMAIL = os.environ.get('MAIL_OFFLINE_FROM_EMAIL', 'taller@laroca.com')
+    DEFAULT_FROM_EMAIL = f"TALLER DE MOTOS - LA ROCA <{os.environ.get('MAIL_OFFLINE_FROM_EMAIL', 'taller@laroca.com')}>"
 
 
 # Application definition

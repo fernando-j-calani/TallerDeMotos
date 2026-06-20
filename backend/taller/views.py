@@ -1093,6 +1093,8 @@ def usuario_detalle_api(request, usuario_id):
     if email_duplicado:
         return Response({"exito": False, "error": "Ya existe otro usuario con ese email."}, status=400)
 
+    cliente_vinculado = obtener_cliente_vinculado(usuario_obj)
+
     usuario_obj.nombre = nombre
     usuario_obj.email = email
     usuario_obj.telefono = telefono
@@ -1102,6 +1104,12 @@ def usuario_detalle_api(request, usuario_id):
         usuario_obj.save(update_fields=['nombre', 'email', 'telefono', 'estado', 'id_rol'])
     except IntegrityError:
         return Response({"exito": False, "error": "Ya existe otro usuario con ese email."}, status=400)
+
+    if cliente_vinculado:
+        cliente_vinculado.nombre = nombre
+        cliente_vinculado.email = email
+        cliente_vinculado.telefono = telefono
+        cliente_vinculado.save(update_fields=['nombre', 'email', 'telefono'])
 
     registrar_bitacora(
         usuario_sesion,
@@ -3574,9 +3582,13 @@ class SeguimientoClientesAPI(APIView):
             except Cliente.DoesNotExist:
                 return None, Response({"exito": False, "error": "Cliente no encontrado."}, status=404)
 
+            cuerpo_correo = f"Tipo de gestión: {tipo_gestion}\n\n{texto}"
+            if observaciones:
+                cuerpo_correo += f"\n\nObservaciones: {observaciones}"
+
             send_mail(
                 subject=asunto,
-                message=texto,
+                message=cuerpo_correo,
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[email],
                 fail_silently=False,
