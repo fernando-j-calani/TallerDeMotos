@@ -315,6 +315,13 @@ const InicioOperativo = () => {
       icono: 'fa-headset',
     },
     {
+      cu: 'CU15',
+      titulo: 'Historial de Mantenimiento',
+      descripcion: 'Consulta el historial de servicios realizados por motocicleta.',
+      path: '/historial-mantenimiento',
+      icono: 'fa-clock-rotate-left',
+    },
+    {
       cu: 'CU18',
       titulo: 'Reportes',
       descripcion: 'Consulta y exporta reportes operativos del taller.',
