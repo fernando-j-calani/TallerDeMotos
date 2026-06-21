@@ -44,6 +44,7 @@ from taller.views import (
     resend_register_code_api,
     aceptar_cotizacion_api,
     logout_api,
+    get_client_ip_api,
     permisos_api,
     facturacion_api,
     factura_detalle_api,
@@ -74,6 +75,7 @@ urlpatterns = [
     path('api/register/verify/', verify_register_code_api, name='api_register_verify'),
     path('api/register/resend/', resend_register_code_api, name='api_register_resend'),
     path('api/logout/', logout_api, name='api_logout'),
+    path('api/get-client-ip/', get_client_ip_api, name='api_get_client_ip'),
     # Ruta para el CU20
     path('api/bitacora/', bitacora_api, name='api_bitacora'),
     # NUEVAS RUTAS FASE B:

@@ -25,25 +25,28 @@ def obtener_ip_request_actual():
     if not request:
         return None
     
-    # Intenta extraer la IP real desde encabezados comunes de proxy
-    # En Render, Docker Compose, etc., vienen en estos headers
+    # 1. PRIMERO: Si el frontend envía X-Client-IP (que obtuvo desde /api/get-client-ip/),
+    #    usarla como fuente primaria
+    client_ip_header = request.META.get('HTTP_X_CLIENT_IP', '').strip()
+    if client_ip_header and client_ip_header not in ('127.0.0.1', '::1', 'unknown'):
+        return client_ip_header
     
-    # 1. X-Forwarded-For: lista de IPs, la última es la más confiable
+    # 2. SEGUNDO: Intentar extraer de X-Forwarded-For (para proxies)
+    #    Tomar la última IP porque es la del cliente real
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR', '').strip()
     if x_forwarded_for:
         ips = [ip.strip() for ip in x_forwarded_for.split(',') if ip.strip()]
-        # Tomar la última IP válida (cliente real)
         for ip in reversed(ips):
             if ip and ip not in ('127.0.0.1', '::1'):
                 return ip
     
-    # 2. Otros headers comunes de proxies/CDNs
+    # 3. TERCERO: Otros headers comunes de proxies/CDNs
     for header in ['HTTP_CF_CONNECTING_IP', 'HTTP_X_REAL_IP']:
         ip = request.META.get(header, '').strip()
         if ip and ip not in ('127.0.0.1', '::1'):
             return ip
     
-    # 3. REMOTE_ADDR (último recurso, puede ser el proxy)
+    # 4. ÚLTIMO: REMOTE_ADDR (puede ser el proxy en Docker/proxies)
     remote_addr = request.META.get('REMOTE_ADDR', '').strip()
     if remote_addr and remote_addr not in ('127.0.0.1', '::1'):
         return remote_addr

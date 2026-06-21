@@ -875,6 +875,18 @@ def logout_api(request):
     return Response({"exito": True}, status=200)
 
 # ==========================================
+# GET CLIENT IP (Para que el frontend obtenga su IP real)
+# ==========================================
+@api_view(['GET', 'OPTIONS'])
+def get_client_ip_api(request):
+    """
+    Endpoint que devuelve la IP real del cliente.
+    Útil para que el frontend obtenga su IP desde el servidor.
+    """
+    ip = obtener_ip_request_actual()
+    return Response({"ip": ip or "unknown"}, status=200)
+
+# ==========================================
 # CU20: GESTIONAR BITÁCORA
 # ==========================================
 @api_view(['GET'])
