@@ -315,7 +315,7 @@ const InicioOperativo = () => {
       icono: 'fa-headset',
     },
     {
-      cu: 'CU15',
+      cu: 'CU18',
       titulo: 'Reportes',
       descripcion: 'Consulta y exporta reportes operativos del taller.',
       path: '/reportes',
@@ -429,9 +429,6 @@ const InicioOperativo = () => {
               <div className="taller-panel taller-orders-panel">
                 <div className="taller-panel-header">
                   <h3><i className="fa-solid fa-list-check"></i> Mis Órdenes de Trabajo</h3>
-                  {puedeVerCu('CU08') && (
-                    <button onClick={() => navigate('/ordenes-trabajo')} className="btn-secondary">Ver todas</button>
-                  )}
                 </div>
 
                 {!puedeVerCu('CU08') ? (
@@ -491,9 +488,6 @@ const InicioOperativo = () => {
               <div className="taller-panel taller-tasks-panel">
                 <div className="taller-panel-header">
                   <h3><i className="fa-solid fa-clipboard-list"></i> Tareas Técnicas{ordenSeleccionada ? ` · Orden #${ordenSeleccionada}` : ''}</h3>
-                  {puedeVerCu('CU09') && (
-                    <button onClick={() => navigate('/notas-trabajo')} className="btn-secondary">Notas de Trabajo</button>
-                  )}
                 </div>
 
                 {!ordenSeleccionada ? (

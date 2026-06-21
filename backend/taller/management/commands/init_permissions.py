@@ -119,27 +119,30 @@ class Command(BaseCommand):
             },
         }
         
+        # IMPORTANTE: deben coincidir EXACTAMENTE con PERMISOS_DATA en
+        # frontend/src/AsignarPrivilegios.js, para no crear filas duplicadas
+        # con un nombre distinto al que usa la UI de asignar privilegios.
         nombres_modulos = {
-            'CU01': 'Iniciar/Cerrar Sesión',
-            'CU02': 'Administrar Usuarios',
-            'CU03': 'Configurar Roles',
+            'CU01': 'Gestionar Inicio y Cierre de Sesión',
+            'CU02': 'Gestionar Usuarios y Asignar Roles',
+            'CU03': 'Gestionar Roles y Asignar Permisos',
             'CU04': 'Gestionar Permisos',
-            'CU05': 'Clientes',
-            'CU06': 'Motocicletas',
-            'CU07': 'Cotizaciones',
-            'CU08': 'Órdenes de Trabajo',
-            'CU09': 'Notas de Trabajo',
-            'CU10': 'Productos',
-            'CU11': 'Proveedores',
-            'CU12': 'Compras',
-            'CU13': 'Inventario',
-            'CU14': 'Facturación',
-            'CU15': 'Reportes',
-            'CU16': 'Seguimiento de Clientes',
-            'CU17': 'Mi Perfil',
-            'CU18': 'Gestión de Roles y Permisos',
-            'CU19': 'Dashboard Analítico',
-            'CU20': 'Bitácora',
+            'CU05': 'Gestionar Clientes',
+            'CU06': 'Gestionar Motocicletas',
+            'CU07': 'Elaborar Cotizaciones',
+            'CU08': 'Gestionar Órdenes de Trabajo',
+            'CU09': 'Redactar Notas de Trabajo',
+            'CU10': 'Gestionar Productos (Repuestos)',
+            'CU11': 'Monitorear Inventario',
+            'CU12': 'Procesar Compras a Proveedores',
+            'CU13': 'Administrar Proveedores',
+            'CU14': 'Emitir Facturación',
+            'CU15': 'Consultar Historial de Mantenimiento',
+            'CU16': 'Dar Seguimiento para Clientes',
+            'CU17': 'Configuración de Perfil Personal',
+            'CU18': 'Generar Reportes',
+            'CU19': 'Visualizar Dashboard Analítico',
+            'CU20': 'Auditoría de Operaciones – Bitácora',
         }
         
         try:

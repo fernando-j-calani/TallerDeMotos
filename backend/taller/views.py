@@ -289,20 +289,26 @@ def _inicializar_permisos():
         },
     }
     
+    # IMPORTANTE: estos nombres deben coincidir EXACTAMENTE con los de
+    # PERMISOS_DATA en frontend/src/AsignarPrivilegios.js. Si difieren,
+    # get_or_create() crea una fila duplicada con el nombre nuevo en vez de
+    # reutilizar la fila existente, y una revocación hecha desde Asignar
+    # Privilegios queda "fantasma": la fila vieja (con el nombre antiguo y
+    # permitido=True) sigue otorgando el permiso aunque el admin lo haya quitado.
     nombres_modulos = {
-        'CU05': 'Clientes',
-        'CU06': 'Motocicletas',
-        'CU07': 'Cotizaciones',
-        'CU08': 'Órdenes de Trabajo',
-        'CU09': 'Notas de Trabajo',
-        'CU10': 'Productos',
-        'CU11': 'Proveedores',
-        'CU12': 'Compras',
-        'CU13': 'Inventario',
-        'CU14': 'Facturación',
-        'CU15': 'Reportes',
-        'CU16': 'Seguimiento de Clientes',
-        'CU18': 'Gestión de Roles y Permisos',
+        'CU05': 'Gestionar Clientes',
+        'CU06': 'Gestionar Motocicletas',
+        'CU07': 'Elaborar Cotizaciones',
+        'CU08': 'Gestionar Órdenes de Trabajo',
+        'CU09': 'Redactar Notas de Trabajo',
+        'CU10': 'Gestionar Productos (Repuestos)',
+        'CU11': 'Monitorear Inventario',
+        'CU12': 'Procesar Compras a Proveedores',
+        'CU13': 'Administrar Proveedores',
+        'CU14': 'Emitir Facturación',
+        'CU15': 'Consultar Historial de Mantenimiento',
+        'CU16': 'Dar Seguimiento para Clientes',
+        'CU18': 'Generar Reportes',
     }
     
     try:
@@ -1904,10 +1910,6 @@ def obtener_fecha_bolivia():
     return (timezone.now() - timedelta(hours=4)).date()
 
 
-def obtener_datetime_bolivia():
-    return timezone.now() - timedelta(hours=4)
-
-
 def _es_rol_mecanico(usuario):
     nombre_rol = (usuario.id_rol.nombre or '').strip().lower()
     return 'mec' in nombre_rol and 'nico' in nombre_rol
@@ -2719,7 +2721,7 @@ def ordenes_trabajo_api(request):
         Notatrabajo.objects.create(
             id_orden_trabajo=orden,
             id_mecanico=autor_nota,
-            fecha_hora=obtener_datetime_bolivia(),
+            fecha_hora=timezone.now(),
             contenido=f"Orden de trabajo creada con estado '{orden.estado}'.",
             tipo_nota='Sistema',
         )
@@ -2832,7 +2834,7 @@ def notas_trabajo_api(request):
 
     data = NotasTrabajo.EnviaPayloadNota(dict(request.data))
     if not data.get('fecha_hora'):
-        data['fecha_hora'] = obtener_datetime_bolivia()
+        data['fecha_hora'] = timezone.now()
     data['id_mecanico'] = usuario_sesion.codigo
 
     tipo_nota = (data.get('tipo_nota') or '').strip()
