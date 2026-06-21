@@ -1,5 +1,10 @@
 # Taller de Motos (SI1)
 
+![React](https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB)
+![Django](https://img.shields.io/badge/Django-092E20?logo=django&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
+
 Proyecto con **Django + React + PostgreSQL** levantado con **Docker Compose**.
 
 ## Requisitos
