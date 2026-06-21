@@ -260,7 +260,7 @@ def _inicializar_permisos():
             'CU05': ['Mostrar', 'Buscar', 'Adicionar', 'Editar', 'Eliminar'],
             'CU06': ['Mostrar', 'Buscar', 'Adicionar', 'Editar', 'Eliminar'],
             'CU07': ['Mostrar', 'Buscar', 'Adicionar', 'Editar', 'Eliminar'],
-            'CU08': ['Mostrar', 'Buscar', 'Adicionar', 'Editar'],
+            'CU08': ['Mostrar', 'Buscar', 'Adicionar', 'Editar', 'Eliminar'],
             'CU09': ['Mostrar', 'Buscar', 'Adicionar'],
             'CU10': ['Mostrar', 'Buscar', 'Adicionar', 'Editar', 'Eliminar'],
             'CU11': ['Mostrar', 'Buscar', 'Adicionar', 'Editar', 'Eliminar'],
@@ -1889,6 +1889,27 @@ class Cotizaciones:
         return True
 
 
+ESTADOS_ORDEN_TRABAJO_VALIDOS = ('Pendiente', 'Esperando Repuesto', 'Finalizado', 'Facturado')
+
+
+def obtener_fecha_bolivia():
+    # Bolivia no observa horario de verano: UTC-4 fijo.
+    return (timezone.now() - timedelta(hours=4)).date()
+
+
+def _es_rol_mecanico(usuario):
+    nombre_rol = (usuario.id_rol.nombre or '').strip().lower()
+    return 'mec' in nombre_rol and 'nico' in nombre_rol
+
+
+def calcular_costos_desde_cotizacion(cotizacion):
+    items = Detallecotizacion.objects.filter(id_cotizacion=cotizacion)
+    costo_mano_obra = sum((i.subtotal for i in items if (i.tipo or '').strip().lower() == 'mano de obra'), Decimal('0'))
+    costo_repuestos = sum((i.subtotal for i in items if (i.tipo or '').strip().lower() == 'repuesto'), Decimal('0'))
+    total = cotizacion.total if cotizacion.total is not None else (costo_mano_obra + costo_repuestos)
+    return costo_mano_obra, costo_repuestos, total
+
+
 class OrdenTrabajo:
     @staticmethod
     def EnviaDatos(data):
@@ -2498,14 +2519,41 @@ def ordenes_trabajo_api(request):
         datos_orden = OrdenTrabajo.EnviaDatos(request.data)
         serializer = OrdenTrabajoSerializer(data=datos_orden)
         serializer.is_valid(raise_exception=True)
+        datos = serializer.validated_data
 
-        id_cotizacion = serializer.validated_data.get('id_cotizacion')
+        if not datos.get('fecha_inicio'):
+            return Response({"exito": False, "error": "La fecha de inicio es obligatoria."}, status=400)
+
+        estado = (datos.get('estado') or 'Pendiente').strip()
+        if estado not in ESTADOS_ORDEN_TRABAJO_VALIDOS:
+            return Response(
+                {"exito": False, "error": f"Estado inválido. Debe ser uno de: {', '.join(ESTADOS_ORDEN_TRABAJO_VALIDOS)}."},
+                status=400,
+            )
+        datos['estado'] = estado
+
+        datos['fecha_creacion'] = obtener_fecha_bolivia()
+
+        mecanico = datos.get('id_mecanico')
+        if mecanico is not None and not _es_rol_mecanico(mecanico):
+            return Response({"exito": False, "error": "El usuario seleccionado no tiene rol de Mecánico."}, status=400)
+
+        id_cotizacion = datos.get('id_cotizacion')
         if id_cotizacion is not None:
             origen_cotizacion = OrdenTrabajo.ValidaCotizacionOrigen(id_cotizacion)
             if origen_cotizacion is None:
                 return Response({"exito": False, "error": "Cotización de origen no válida."}, status=400)
+            if (origen_cotizacion.estado or '').strip().lower() != 'aprobada':
+                return Response({"exito": False, "error": "Solo se pueden generar órdenes desde cotizaciones Aprobadas."}, status=400)
 
-        orden = Ordentrabajo.objects.create(**serializer.validated_data)
+            datos['id_cliente'] = origen_cotizacion.id_cliente
+            datos['id_motocicleta'] = origen_cotizacion.id_motocicleta
+            costo_mano_obra, costo_repuestos, total = calcular_costos_desde_cotizacion(origen_cotizacion)
+            datos['costo_mano_obra'] = costo_mano_obra
+            datos['costo_repuestos'] = costo_repuestos
+            datos['total'] = total
+
+        orden = Ordentrabajo.objects.create(**datos)
         OrdenTrabajo.SolicitaRegistroBitacora(
             usuario_sesion,
             'CREACIÓN',
@@ -2520,11 +2568,29 @@ def ordenes_trabajo_api(request):
         return Response({"error_critico": str(e), "trace": trace}, status=500)
 
 
-@api_view(['PUT'])
+@api_view(['PUT', 'DELETE'])
 def orden_trabajo_detalle_api(request, orden_id):
     usuario_sesion, error_auth = obtener_usuario_autenticado(request)
     if error_auth:
         return error_auth
+
+    if request.method == 'DELETE':
+        error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU08', 'Eliminar')
+        if error_permiso:
+            return error_permiso
+
+        try:
+            orden = Ordentrabajo.objects.get(codigo=orden_id)
+        except Ordentrabajo.DoesNotExist:
+            return Response({"exito": False, "error": "Orden de trabajo no encontrada."}, status=404)
+
+        if (orden.estado or '').strip().lower() == 'cancelado':
+            return Response({"exito": False, "error": "Esta orden ya está cancelada."}, status=400)
+
+        orden.estado = 'Cancelado'
+        orden.save(update_fields=['estado'])
+        OrdenTrabajo.SolicitaRegistroBitacora(usuario_sesion, 'MODIFICACIÓN', f"Canceló orden de trabajo #{orden.codigo}.")
+        return Response({"exito": True, "mensaje": "Orden de trabajo cancelada."}, status=200)
 
     error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU08', 'Editar')
     if error_permiso:
@@ -2535,8 +2601,22 @@ def orden_trabajo_detalle_api(request, orden_id):
     except Ordentrabajo.DoesNotExist:
         return Response({"exito": False, "error": "Orden de trabajo no encontrada."}, status=404)
 
+    estado_solicitado = request.data.get('estado')
+    if estado_solicitado and estado_solicitado.strip() not in ESTADOS_ORDEN_TRABAJO_VALIDOS:
+        return Response(
+            {"exito": False, "error": f"Estado inválido. Debe ser uno de: {', '.join(ESTADOS_ORDEN_TRABAJO_VALIDOS)}."},
+            status=400,
+        )
+
+    if request.data.get('fecha_inicio') in ('', None) and 'fecha_inicio' in request.data:
+        return Response({"exito": False, "error": "La fecha de inicio es obligatoria."}, status=400)
+
     serializer = OrdenTrabajoSerializer(orden, data=request.data, partial=True)
     serializer.is_valid(raise_exception=True)
+
+    mecanico = serializer.validated_data.get('id_mecanico')
+    if mecanico is not None and not _es_rol_mecanico(mecanico):
+        return Response({"exito": False, "error": "El usuario seleccionado no tiene rol de Mecánico."}, status=400)
 
     orden_actualizada = serializer.save()
     OrdenTrabajo.ModificaEstado(orden_actualizada, request.data.get('estado'))

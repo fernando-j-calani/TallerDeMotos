@@ -45,8 +45,20 @@ const OrdenesTrabajo = () => {
     total: 0,
   });
 
-  const normalizarRol = (rol = '') => rol.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
-  const esMecanico = (usuario) => normalizarRol(usuario?.rol_nombre) === 'mecanico';
+  const esMecanico = (usuario) => {
+    const rol = (usuario?.rol_nombre || '').toLowerCase();
+    return rol.includes('mec') && rol.includes('nico');
+  };
+  const fechaBoliviaHoy = () => {
+    const ahora = new Date();
+    const utcMs = ahora.getTime() + ahora.getTimezoneOffset() * 60000;
+    const bolivia = new Date(utcMs - 4 * 60 * 60000);
+    return bolivia.toISOString().slice(0, 10);
+  };
+  const sumarItemsPorTipo = (cotizacion, tipoBuscado) =>
+    (cotizacion?.detalles || [])
+      .filter((d) => (d.tipo || '').trim().toLowerCase() === tipoBuscado)
+      .reduce((sum, d) => sum + Number(d.subtotal || 0), 0);
   const toNumber = (value, fallback = 0) => {
     const num = Number(value);
     return Number.isNaN(num) ? fallback : num;
@@ -143,14 +155,14 @@ const OrdenesTrabajo = () => {
   };
 
   const eliminarOrden = async (orden) => {
-    if (!window.confirm(`¿Eliminar orden #${orden.codigo}?`)) return;
+    if (!window.confirm(`¿Cancelar orden #${orden.codigo}? Esto no borra el historial, solo la marca como Cancelada.`)) return;
     setError('');
     const res = await fetch(`${API}/ordenes-trabajo/${orden.codigo}/`, {
       method: 'DELETE',
       headers: headers(),
     });
     const data = await res.json();
-    if (!res.ok) return setError(data.error || 'No se pudo eliminar la orden.');
+    if (!res.ok) return setError(data.error || 'No se pudo cancelar la orden.');
     await cargarOrdenes(busqueda);
   };
 
@@ -190,13 +202,14 @@ const OrdenesTrabajo = () => {
   }, [navigate, usuarioLocal]);
 
   useEffect(() => {
+    if (nuevo.id_cotizacion) return;
     const mano = Number(nuevo.costo_mano_obra || 0);
     const repuestos = Number(nuevo.costo_repuestos || 0);
     const total = Number((mano + repuestos).toFixed(2));
     if (Number(nuevo.total || 0) !== total) {
       setNuevo((prev) => ({ ...prev, total }));
     }
-  }, [nuevo.costo_mano_obra, nuevo.costo_repuestos]);
+  }, [nuevo.costo_mano_obra, nuevo.costo_repuestos, nuevo.id_cotizacion]);
 
   useEffect(() => {
     const mano = Number(editOrden.costo_mano_obra || 0);
@@ -243,13 +256,12 @@ const OrdenesTrabajo = () => {
     const data = await res.json();
     if (res.ok) {
       const lista = Array.isArray(data) ? data : [];
-      const mecanicos = lista.filter(esMecanico);
-      setMecanicos(mecanicos.length ? mecanicos : lista);
+      setMecanicos(lista.filter(esMecanico));
     }
   };
 
   const obtenerMecanicoActual = (clienteId) => {
-    const ordenActiva = ordenes.find((o) => Number(o.id_cliente) === Number(clienteId) && !['Finalizado', 'Rechazado'].includes(o.estado));
+    const ordenActiva = ordenes.find((o) => Number(o.id_cliente) === Number(clienteId) && !['Finalizado', 'Facturado', 'Cancelado'].includes(o.estado));
     return ordenActiva ? ordenActiva.id_mecanico || ordenActiva.id_mecanico : '';
   };
 
@@ -337,9 +349,27 @@ const OrdenesTrabajo = () => {
           <form onSubmit={crearOrden}>
             <div className="input-group"><label>Cotización</label><select value={nuevo.id_cotizacion} onChange={(e) => {
               const value = e.target.value;
-              setNuevo({ ...nuevo, id_cotizacion: value ? Number(value) : '' });
-            }}><option value="">Ninguna</option>{cotizaciones.map((c) => (<option key={c.codigo} value={c.codigo}>{`#${c.codigo} (${c.id_cliente_nombre})`}</option>))}</select></div>
-            <div className="input-group"><label>Cliente</label><select value={nuevo.id_cliente} onChange={(e) => {
+              if (!value) {
+                setNuevo({ ...nuevo, id_cotizacion: '', id_cliente: '', id_motocicleta: '', costo_mano_obra: 0, costo_repuestos: 0, total: 0 });
+                return;
+              }
+              const cot = cotizaciones.find((c) => c.codigo === Number(value));
+              const moto = motocicletas.find((m) => m.codigo === cot?.id_motocicleta);
+              setNuevo({
+                ...nuevo,
+                id_cotizacion: Number(value),
+                id_cliente: cot?.id_cliente || '',
+                id_motocicleta: cot?.id_motocicleta || '',
+                kilometraje_ingreso: moto ? Number(moto.kilometraje_actual || 0) : nuevo.kilometraje_ingreso,
+                costo_mano_obra: sumarItemsPorTipo(cot, 'mano de obra'),
+                costo_repuestos: sumarItemsPorTipo(cot, 'repuesto'),
+                total: Number(cot?.total || 0),
+              });
+            }}>
+              <option value="">Ninguna</option>
+              {cotizaciones.filter((c) => (c.estado || '').toLowerCase() === 'aprobada').map((c) => (<option key={c.codigo} value={c.codigo}>{`#${c.codigo} (${c.id_cliente_nombre})`}</option>))}
+            </select></div>
+            <div className="input-group"><label>Cliente</label><select value={nuevo.id_cliente} disabled={!!nuevo.id_cotizacion} onChange={(e) => {
               const clienteId = e.target.value;
               const clienteNumero = clienteId ? Number(clienteId) : '';
               setNuevo({
@@ -348,23 +378,24 @@ const OrdenesTrabajo = () => {
                 id_mecanico: clienteId ? obtenerMecanicoActual(clienteId) : '',
               });
             }} required><option value="">Seleccione</option>{clientes.map((c) => (<option key={c.codigo} value={c.codigo}>{c.nombre}</option>))}</select></div>
-            <div className="input-group"><label>Motocicleta</label><select value={nuevo.id_motocicleta} onChange={(e) => {
+            <div className="input-group"><label>Motocicleta</label><select value={nuevo.id_motocicleta} disabled={!!nuevo.id_cotizacion} onChange={(e) => {
               const value = e.target.value;
-              setNuevo({ ...nuevo, id_motocicleta: value ? Number(value) : '' });
+              const moto = motocicletas.find((m) => m.codigo === Number(value));
+              setNuevo({ ...nuevo, id_motocicleta: value ? Number(value) : '', kilometraje_ingreso: moto ? Number(moto.kilometraje_actual || 0) : nuevo.kilometraje_ingreso });
             }} required><option value="">Seleccione</option>{motocicletas.map((m) => (<option key={m.codigo} value={m.codigo}>{`${m.placa} - ${m.marca || ''} ${m.modelo || ''}`}</option>))}</select></div>
             <div className="input-group"><label>Mecánico</label><select value={nuevo.id_mecanico} onChange={(e) => {
               const value = e.target.value;
               setNuevo({ ...nuevo, id_mecanico: value ? Number(value) : '' });
             }}><option value="">Seleccione</option>{mecanicos.map((m) => (<option key={m.codigo} value={m.codigo}>{m.nombre}</option>))}</select></div>
-            <div className="input-group"><label>Fecha creación</label><input type="date" value={nuevo.fecha_creacion} onChange={(e) => setNuevo({ ...nuevo, fecha_creacion: e.target.value })} required /></div>
-            <div className="input-group"><label>Fecha inicio</label><input type="date" value={nuevo.fecha_inicio} onChange={(e) => setNuevo({ ...nuevo, fecha_inicio: e.target.value })} /></div>
+            <div className="input-group"><label>Fecha creación</label><input type="date" value={fechaBoliviaHoy()} disabled /></div>
+            <div className="input-group"><label>Fecha inicio</label><input type="date" value={nuevo.fecha_inicio} onChange={(e) => setNuevo({ ...nuevo, fecha_inicio: e.target.value })} required /></div>
             <div className="input-group"><label>Fecha fin</label><input type="date" value={nuevo.fecha_fin} onChange={(e) => setNuevo({ ...nuevo, fecha_fin: e.target.value })} /></div>
             <div className="input-group"><label>Kilometraje ingreso</label><input type="number" value={nuevo.kilometraje_ingreso} onChange={(e) => setNuevo({ ...nuevo, kilometraje_ingreso: Number(e.target.value) })} /></div>
             <div className="input-group"><label>Prioridad</label><select value={nuevo.prioridad} onChange={(e) => setNuevo({ ...nuevo, prioridad: e.target.value })}><option value="Normal">Normal</option><option value="Alta">Alta</option><option value="Urgente">Urgente</option></select></div>
-            <div className="input-group"><label>Costo mano de obra</label><input type="number" step="0.01" value={nuevo.costo_mano_obra} onChange={(e) => setNuevo({ ...nuevo, costo_mano_obra: Number(e.target.value) })} /></div>
-            <div className="input-group"><label>Costo repuestos</label><input type="number" step="0.01" value={nuevo.costo_repuestos} onChange={(e) => setNuevo({ ...nuevo, costo_repuestos: Number(e.target.value) })} /></div>
+            <div className="input-group"><label>Costo mano de obra</label><input type="number" step="0.01" value={nuevo.costo_mano_obra} disabled={!!nuevo.id_cotizacion} onChange={(e) => setNuevo({ ...nuevo, costo_mano_obra: Number(e.target.value) })} /></div>
+            <div className="input-group"><label>Costo repuestos</label><input type="number" step="0.01" value={nuevo.costo_repuestos} disabled={!!nuevo.id_cotizacion} onChange={(e) => setNuevo({ ...nuevo, costo_repuestos: Number(e.target.value) })} /></div>
             <div className="input-group"><label>Total</label><input type="number" step="0.01" value={nuevo.total} readOnly /></div>
-            <div className="input-group"><label>Estado</label><select value={nuevo.estado} onChange={(e) => setNuevo({ ...nuevo, estado: e.target.value })}><option value="Pendiente">Pendiente</option><option value="Aprobado">Aprobado</option><option value="Rechazado">Rechazado</option></select></div>
+            <div className="input-group"><label>Estado</label><select value={nuevo.estado} onChange={(e) => setNuevo({ ...nuevo, estado: e.target.value })}><option value="Pendiente">Pendiente</option><option value="Esperando Repuesto">Esperando Repuesto</option><option value="Finalizado">Finalizado</option><option value="Facturado">Facturado</option></select></div>
             <button type="submit" className="bitacora-btn bitacora-btn--filter" style={{ marginTop: '16px' }}>Crear orden</button>
           </form>
         </div>
@@ -427,7 +458,9 @@ const OrdenesTrabajo = () => {
                       <td>${o.total || 0}</td>
                       <td>
                         <button onClick={() => abrirEdicionOrden(o)} className="table-action-btn table-action-btn--edit">Editar</button>
-                        <button onClick={() => eliminarOrden(o)} className="table-action-btn table-action-btn--danger">Eliminar</button>
+                        {(o.estado || '').toLowerCase() !== 'cancelado' && (
+                          <button onClick={() => eliminarOrden(o)} className="table-action-btn table-action-btn--danger">Cancelar</button>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -447,9 +480,9 @@ const OrdenesTrabajo = () => {
                 const value = e.target.value;
                 setEditOrden({ ...editOrden, id_mecanico: value ? Number(value) : '' });
               }}><option value="">Seleccione</option>{mecanicos.map((m) => (<option key={m.codigo} value={m.codigo}>{m.nombre}</option>))}</select></div>
-              <div className="input-group"><label>Fecha inicio</label><input type="date" value={editOrden.fecha_inicio} onChange={(e) => setEditOrden({ ...editOrden, fecha_inicio: e.target.value })} /></div>
+              <div className="input-group"><label>Fecha inicio</label><input type="date" value={editOrden.fecha_inicio} onChange={(e) => setEditOrden({ ...editOrden, fecha_inicio: e.target.value })} required /></div>
               <div className="input-group"><label>Fecha fin</label><input type="date" value={editOrden.fecha_fin} onChange={(e) => setEditOrden({ ...editOrden, fecha_fin: e.target.value })} /></div>
-              <div className="input-group"><label>Estado</label><select value={editOrden.estado} onChange={(e) => setEditOrden({ ...editOrden, estado: e.target.value })}><option value="Pendiente">Pendiente</option><option value="Aprobado">Aprobado</option><option value="Rechazado">Rechazado</option><option value="Finalizado">Finalizado</option></select></div>
+              <div className="input-group"><label>Estado</label><select value={editOrden.estado} onChange={(e) => setEditOrden({ ...editOrden, estado: e.target.value })}><option value="Pendiente">Pendiente</option><option value="Esperando Repuesto">Esperando Repuesto</option><option value="Finalizado">Finalizado</option><option value="Facturado">Facturado</option></select></div>
               <div className="input-group"><label>Prioridad</label><select value={editOrden.prioridad} onChange={(e) => setEditOrden({ ...editOrden, prioridad: e.target.value })}><option value="Normal">Normal</option><option value="Alta">Alta</option><option value="Urgente">Urgente</option></select></div>
               <div className="input-group"><label>Costo mano de obra</label><input type="number" step="0.01" value={editOrden.costo_mano_obra} onChange={(e) => setEditOrden({ ...editOrden, costo_mano_obra: Number(e.target.value) })} /></div>
               <div className="input-group"><label>Costo repuestos</label><input type="number" step="0.01" value={editOrden.costo_repuestos} onChange={(e) => setEditOrden({ ...editOrden, costo_repuestos: Number(e.target.value) })} /></div>
