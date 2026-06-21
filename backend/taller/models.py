@@ -92,6 +92,20 @@ class Bitacora(models.Model):
         db_table = 'bitacora'
 
 
+class AjusteInventario(models.Model):
+    codigo = models.AutoField(primary_key=True)
+    id_producto = models.ForeignKey('Producto', models.DO_NOTHING, db_column='id_producto')
+    id_usuario = models.ForeignKey('Usuario', models.DO_NOTHING, db_column='id_usuario')
+    cantidad = models.IntegerField()
+    motivo = models.CharField(max_length=255, blank=True, null=True)
+    fecha_hora = models.DateTimeField(blank=True, null=True)
+    stock_resultante = models.IntegerField()
+
+    class Meta:
+        managed = False
+        db_table = 'ajusteinventario'
+
+
 class Seguimiento(models.Model):
     codigo = models.AutoField(primary_key=True)
     id_cliente = models.ForeignKey('Cliente', models.DO_NOTHING, db_column='id_cliente')

@@ -18,6 +18,7 @@ const Inventario = () => {
   const [historial, setHistorial] = useState([]);
   const [ajusteCodigo, setAjusteCodigo] = useState('');
   const [ajusteCantidad, setAjusteCantidad] = useState(0);
+  const [ajusteMotivo, setAjusteMotivo] = useState('');
   const [ajusteMensaje, setAjusteMensaje] = useState('');
 
   const ValidarStockYAlertas = (producto) => {
@@ -26,41 +27,66 @@ const Inventario = () => {
 
   const RecibeConfirmacionYDatos = (datos) => datos;
 
-  const ConsultaHistorialProductos = () => {
+  const resolverProducto = (valor) => productos.find(
+    (p) => String(p.codigo) === String(valor).trim()
+      || (p.codigo_barras || '').toLowerCase() === String(valor).trim().toLowerCase()
+  );
+
+  const ConsultaHistorialProductos = async () => {
     if (!historialCodigo.trim()) {
-      setError('Ingresa el código del producto para consultar historial.');
+      setError('Ingresa el código o código de barras del producto para consultar historial.');
       return;
     }
     setError('');
-    const producto = productos.find((p) => String(p.codigo) === String(historialCodigo));
+    const producto = resolverProducto(historialCodigo);
     if (!producto) {
       setHistorial([]);
       setAjusteMensaje(`Producto ${historialCodigo} no encontrado en el inventario.`);
       return;
     }
-    setHistorial([{ fecha: new Date().toISOString(), descripcion: `Historial simulado para ${producto.nombre}`, cantidad: producto.stock_actual }]);
-    setAjusteMensaje(`Historial cargado para producto #${historialCodigo}.`);
+    try {
+      const res = await fetch(`${API}/inventario/historial/?producto=${producto.codigo}`, { headers: headers() });
+      const data = await res.json();
+      if (!res.ok) return setError(data.error || 'No se pudo consultar el historial.');
+      setHistorial(Array.isArray(data) ? data : []);
+      setAjusteMensaje(`Historial cargado para ${producto.nombre} (#${producto.codigo}).`);
+    } catch {
+      setError('Error de conexión consultando historial.');
+    }
   };
 
-  const RegistraAjusteManual = () => {
+  const RegistraAjusteManual = async () => {
     if (!ajusteCodigo.trim()) {
-      setError('Ingresa el código del producto para ajustar stock.');
+      setError('Ingresa el código o código de barras del producto para ajustar stock.');
       return;
     }
-    if (isNaN(Number(ajusteCantidad))) {
-      setError('Ingresa una cantidad válida para el ajuste.');
+    const producto = resolverProducto(ajusteCodigo);
+    if (!producto) {
+      setError(`Producto ${ajusteCodigo} no encontrado en el inventario.`);
+      return;
+    }
+    const cantidad = Number(ajusteCantidad);
+    if (!cantidad) {
+      setError('Ingresa una cantidad distinta de cero para el ajuste.');
       return;
     }
     setError('');
-    const codigo = String(ajusteCodigo);
-    const cantidad = Number(ajusteCantidad);
-    setProductos((prev) => prev.map((producto) => {
-      if (String(producto.codigo) !== codigo) return producto;
-      return { ...producto, stock_actual: Number(producto.stock_actual || 0) + cantidad };
-    }));
-    setAjusteMensaje(`Ajuste manual aplicado al producto ${codigo}: ${cantidad >= 0 ? `+${cantidad}` : cantidad}.`);
-    setAjusteCodigo('');
-    setAjusteCantidad(0);
+    try {
+      const res = await fetch(`${API}/inventario/ajuste/`, {
+        method: 'POST',
+        headers: { ...headers(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_producto: producto.codigo, cantidad, motivo: ajusteMotivo }),
+      });
+      const data = await res.json();
+      if (!res.ok) return setError(data.error || 'No se pudo aplicar el ajuste.');
+      setAjusteMensaje(`Ajuste aplicado a ${producto.nombre}: ${cantidad >= 0 ? `+${cantidad}` : cantidad} (stock resultante: ${data.producto.stock_actual}).`);
+      setAjusteCodigo('');
+      setAjusteCantidad(0);
+      setAjusteMotivo('');
+      await cargarInventario(mostrarBajoStock);
+    } catch {
+      setError('Error de conexión aplicando el ajuste.');
+    }
   };
 
   const productosOrdenados = useMemo(
@@ -151,6 +177,7 @@ const Inventario = () => {
             <thead>
               <tr>
                 <th>Código</th>
+                <th>Código barras</th>
                 <th>Nombre</th>
                 <th>Marca</th>
                 <th>Categoría</th>
@@ -165,7 +192,7 @@ const Inventario = () => {
             </thead>
             <tbody>
               {productosOrdenados.length === 0 ? (
-                <tr><td colSpan="11" style={{ textAlign: 'center' }}>No hay productos en inventario.</td></tr>
+                <tr><td colSpan="12" style={{ textAlign: 'center' }}>No hay productos en inventario.</td></tr>
               ) : (
                 productosOrdenados.map((p) => {
                   const stockMinimo = Math.max(1, Number(p.stock_minimo) || 1);
@@ -174,6 +201,7 @@ const Inventario = () => {
                   return (
                     <tr key={p.codigo} className={estaBajo ? 'inventario-row--bajo' : ''}>
                       <td>#{p.codigo}</td>
+                      <td>{p.codigo_barras || '-'}</td>
                       <td>{p.nombre || '-'}</td>
                       <td>{p.marca || '-'}</td>
                       <td>{p.categoria || '-'}</td>
@@ -200,15 +228,15 @@ const Inventario = () => {
       <div className="inventario-content">
         <div className="bitacora-panel inventario-form-panel">
           <h3 className="usuarios-panel-title">Consultar historial de producto</h3>
-          <div className="input-group"><label>Código del producto</label><input value={historialCodigo} onChange={(e) => setHistorialCodigo(e.target.value)} /></div>
+          <div className="input-group"><label>Código o código de barras del producto</label><input value={historialCodigo} onChange={(e) => setHistorialCodigo(e.target.value)} placeholder="Ej. 86 o PROD-085" /></div>
           <button type="button" onClick={ConsultaHistorialProductos} className="bitacora-btn bitacora-btn--filter">Consultar historial</button>
           {ajusteMensaje && <div className="inventario-mensaje">{ajusteMensaje}</div>}
           {historial.length > 0 && (
             <div className="inventario-historial-list">
-              <h4>Historial simulado</h4>
+              <h4>Movimientos</h4>
               <ul>
                 {historial.map((item, index) => (
-                  <li key={index}>{`${item.fecha}: ${item.descripcion} (${item.cantidad})`}</li>
+                  <li key={index}>{`${item.fecha} · ${item.tipo}: ${item.descripcion} (${item.cantidad >= 0 ? `+${item.cantidad}` : item.cantidad})`}</li>
                 ))}
               </ul>
             </div>
@@ -216,8 +244,9 @@ const Inventario = () => {
         </div>
         <div className="bitacora-panel inventario-form-panel">
           <h3 className="usuarios-panel-title">Registrar ajuste manual</h3>
-          <div className="input-group"><label>Código del producto</label><input value={ajusteCodigo} onChange={(e) => setAjusteCodigo(e.target.value)} /></div>
+          <div className="input-group"><label>Código o código de barras del producto</label><input value={ajusteCodigo} onChange={(e) => setAjusteCodigo(e.target.value)} placeholder="Ej. 86 o PROD-085" /></div>
           <div className="input-group"><label>Cantidad a ajustar</label><input type="number" value={ajusteCantidad} onChange={(e) => setAjusteCantidad(Number(e.target.value))} /></div>
+          <div className="input-group"><label>Motivo</label><input value={ajusteMotivo} onChange={(e) => setAjusteMotivo(e.target.value)} placeholder="Ej. Merma, conteo físico, daño" /></div>
           <button type="button" onClick={RegistraAjusteManual} className="bitacora-btn bitacora-btn--filter">Aplicar ajuste</button>
           {ajusteMensaje && <div className="inventario-mensaje">{ajusteMensaje}</div>}
         </div>

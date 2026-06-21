@@ -45,6 +45,7 @@ from .models import (
     Proveedor,
     Compra,
     Detallecompra,
+    AjusteInventario,
 )
 from .serializers import BitacoraSerializer
 from .serializers import (
@@ -2244,6 +2245,100 @@ def inventario_api(request):
 
     serializer = ProductoSerializer(productos, many=True)
     return Response(Inventario.RetornaDatosYConfirmacion(serializer.data), status=200)
+
+
+@api_view(['POST'])
+def inventario_ajuste_api(request):
+    usuario_sesion, error_auth = obtener_usuario_autenticado(request)
+    if error_auth:
+        return error_auth
+
+    error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU11', 'Editar')
+    if error_permiso:
+        return error_permiso
+
+    try:
+        producto = Producto.objects.get(codigo=request.data.get('id_producto'))
+    except (Producto.DoesNotExist, ValueError, TypeError):
+        return Response({"exito": False, "error": "Producto no encontrado."}, status=404)
+
+    try:
+        cantidad = int(request.data.get('cantidad'))
+    except (ValueError, TypeError):
+        return Response({"exito": False, "error": "Cantidad inválida."}, status=400)
+    if cantidad == 0:
+        return Response({"exito": False, "error": "La cantidad del ajuste no puede ser cero."}, status=400)
+
+    motivo = (request.data.get('motivo') or '').strip()
+
+    producto = Inventario.RegistraAjusteManual(producto, cantidad)
+    AjusteInventario.objects.create(
+        id_producto=producto,
+        id_usuario=usuario_sesion,
+        cantidad=cantidad,
+        motivo=motivo or None,
+        fecha_hora=timezone.now(),
+        stock_resultante=producto.stock_actual,
+    )
+    registrar_bitacora(
+        usuario_sesion,
+        'MODIFICACIÓN',
+        f"Ajuste manual de stock: {producto.nombre} ({'+' if cantidad > 0 else ''}{cantidad}). "
+        f"Motivo: {motivo or 'No especificado'}.",
+    )
+
+    serializer = ProductoSerializer(producto)
+    return Response({"exito": True, "mensaje": "Ajuste registrado.", "producto": serializer.data}, status=201)
+
+
+@api_view(['GET'])
+def inventario_historial_api(request):
+    usuario_sesion, error_auth = obtener_usuario_autenticado(request)
+    if error_auth:
+        return error_auth
+
+    error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU11', 'Buscar')
+    if error_permiso:
+        return error_permiso
+
+    try:
+        producto = Producto.objects.get(codigo=request.GET.get('producto'))
+    except (Producto.DoesNotExist, ValueError, TypeError):
+        return Response({"exito": False, "error": "Producto no encontrado."}, status=404)
+
+    movimientos = []
+
+    for detalle in Detallecompra.objects.filter(id_producto=producto).select_related('id_compra__id_proveedor'):
+        compra = detalle.id_compra
+        movimientos.append({
+            "fecha": compra.fecha,
+            "tipo": "Compra",
+            "cantidad": detalle.cantidad,
+            "descripcion": f"Compra #{compra.codigo} a {compra.id_proveedor.empresa} (factura {compra.numero_factura or 'N/D'}).",
+        })
+
+    consumos = Detalleordentrabajo.objects.filter(
+        id_producto=producto, tipo='Repuesto', provisto_por_cliente=False
+    ).select_related('id_orden_trabajo')
+    for detalle in consumos:
+        orden = detalle.id_orden_trabajo
+        movimientos.append({
+            "fecha": orden.fecha_creacion,
+            "tipo": "Consumo en orden",
+            "cantidad": -detalle.cantidad,
+            "descripcion": f"Usado en orden de trabajo #{orden.codigo}.",
+        })
+
+    for ajuste in AjusteInventario.objects.filter(id_producto=producto).select_related('id_usuario'):
+        movimientos.append({
+            "fecha": ajuste.fecha_hora,
+            "tipo": "Ajuste manual",
+            "cantidad": ajuste.cantidad,
+            "descripcion": f"{ajuste.motivo or 'Ajuste manual de stock'} (por {ajuste.id_usuario.nombre}).",
+        })
+
+    movimientos.sort(key=lambda m: str(m["fecha"] or ''), reverse=True)
+    return Response(movimientos, status=200)
 
 
 # ==========================================
