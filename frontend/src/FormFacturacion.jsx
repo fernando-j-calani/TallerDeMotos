@@ -10,6 +10,10 @@ import { generarPdfFactura } from './facturaPdfUtils';
 
 const API = `${API_BASE_URL}/api`;
 
+// Si el backend usa Cloudinary, comprobante_pago ya viene como URL absoluta (https://...).
+// Si usa almacenamiento local, viene como ruta ya resuelta (ej. /media/comprobantes/x.png).
+const urlComprobante = (valor) => (valor && valor.startsWith('http') ? valor : `${API_BASE_URL}${valor}`);
+
 // Datos configurables via frontend/.env.local (no se suben al repositorio)
 const DATOS_CUENTA_BANCARIA = {
   banco: process.env.REACT_APP_BANCO_NOMBRE || 'Banco Ejemplo',
@@ -664,7 +668,7 @@ const FormFacturacion = () => {
                         item?.factura?.comprobante_pago ? `PayPal: ${item.factura.comprobante_pago}` : '-'
                       ) : item?.factura?.comprobante_pago ? (
                         <a
-                          href={`${API_BASE_URL}/media/${item.factura.comprobante_pago}`}
+                          href={urlComprobante(item.factura.comprobante_pago)}
                           target="_blank"
                           rel="noopener noreferrer"
                           title="Ver comprobante"

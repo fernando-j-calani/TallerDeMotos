@@ -2874,7 +2874,8 @@ def envia_payload_cobro(request):
                 status=400,
             )
         nombre_archivo = f"comprobantes/orden_{orden_id}_{comprobante_archivo.name}"
-        comprobante_pago = default_storage.save(nombre_archivo, comprobante_archivo)
+        nombre_guardado = default_storage.save(nombre_archivo, comprobante_archivo)
+        comprobante_pago = default_storage.url(nombre_guardado)
 
     datos_validados = {
         'metodo_pago': metodo_pago,
@@ -3192,7 +3193,8 @@ def mis_pagos_qr_api(request):
         return Response({"exito": False, "error": "Debe adjuntar el comprobante de pago."}, status=400)
 
     nombre_archivo = f"comprobantes/orden_{orden.codigo}_{comprobante_archivo.name}"
-    comprobante_pago = default_storage.save(nombre_archivo, comprobante_archivo)
+    nombre_guardado = default_storage.save(nombre_archivo, comprobante_archivo)
+    comprobante_pago = default_storage.url(nombre_guardado)
 
     datos_validados = {
         'metodo_pago': 'QR',

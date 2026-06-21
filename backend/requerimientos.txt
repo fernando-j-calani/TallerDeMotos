@@ -6,3 +6,5 @@ whitenoise
 reportlab
 openpyxl
 gunicorn
+django-cloudinary-storage
+cloudinary
