@@ -86,6 +86,7 @@ class Bitacora(models.Model):
     fecha_hora = models.DateTimeField(blank=True, null=True)
     accion = models.CharField(max_length=50)
     descripcion = models.TextField()
+    ip = models.CharField(max_length=45, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -499,6 +500,7 @@ class Usuario(models.Model):
     telefono = models.CharField(max_length=20, blank=True, null=True)
     estado = models.CharField(max_length=20, blank=True, null=True)
     fecha_registro = models.DateField(blank=True, null=True)
+    sesion_actual = models.CharField(max_length=64, blank=True, null=True)
 
     class Meta:
         managed = False

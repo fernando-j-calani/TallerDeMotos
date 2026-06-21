@@ -13,6 +13,7 @@ from django.core.cache import cache
 from django.db import connection, IntegrityError, OperationalError, transaction
 from django.db.models import Q, F, Sum
 from django.utils.dateparse import parse_date
+from .middleware import obtener_ip_request_actual
 from datetime import datetime, timedelta
 import math
 import logging
@@ -78,11 +79,13 @@ logger = logging.getLogger(__name__)
 
 
 def registrar_bitacora(usuario, accion, descripcion):
+    ip = obtener_ip_request_actual()
     Bitacora.objects.create(
         id_usuario=usuario,
         fecha_hora=timezone.now(),
         accion=accion,
         descripcion=descripcion,
+        ip=ip,
     )
 
 
@@ -103,6 +106,16 @@ def obtener_usuario_autenticado(request):
         current_pwd_sig = usuario.contrasena[-16:]
         if pwd_sig != current_pwd_sig:
             return None, Response({"exito": False, "error": "Sesión inválida. Inicie sesión nuevamente."}, status=401)
+
+        if token_data.get('sesion') != usuario.sesion_actual:
+            return None, Response(
+                {
+                    "exito": False,
+                    "error": "Tu sesión se cerró porque iniciaste sesión en otro dispositivo.",
+                    "sesion_reemplazada": True,
+                },
+                status=401,
+            )
 
         requiere_cambio = (
             usuario.id_rol.nombre == 'Cliente'
@@ -779,20 +792,27 @@ def login_api(request):
                 and check_password(settings.CLIENT_TEMP_PASSWORD, usuario.contrasena)
             )
             
+            # Sesión única por cuenta: cada login genera un identificador nuevo y lo
+            # guarda en el usuario, invalidando cualquier sesión anterior (otro
+            # dispositivo/navegador) ya que su token quedará con un 'sesion' viejo.
+            nueva_sesion = secrets.token_hex(16)
+            usuario.sesion_actual = nueva_sesion
+            usuario.save(update_fields=['sesion_actual'])
+
             # Generamos un TOKEN firmado criptográficamente para que React lo guarde
             token_data = {
                 'id_usuario': usuario.codigo,
                 'rol': usuario.id_rol.nombre,
                 'pwd_sig': usuario.contrasena[-16:],
+                'sesion': nueva_sesion,
             }
             token_seguro = signing.dumps(token_data)
 
-            # --- NUEVO: REGISTRAR LOGIN EN BITÁCORA ---
-            Bitacora.objects.create(
-                id_usuario=usuario,
-                fecha_hora=timezone.now(),
-                accion='LOGIN',
-                descripcion=f"El usuario {usuario.nombre} inició sesión en el sistema."
+            # --- NUEVO: REGISTRAR LOGIN EN BITÁCORA CON IP ---
+            registrar_bitacora(
+                usuario,
+                'LOGIN',
+                f"El usuario {usuario.nombre} inició sesión en el sistema."
             )
             # ------------------------------------------
 
@@ -842,6 +862,9 @@ def logout_api(request):
     usuario_sesion, error_auth = obtener_usuario_autenticado(request)
     if error_auth:
         return error_auth
+
+    usuario_sesion.sesion_actual = None
+    usuario_sesion.save(update_fields=['sesion_actual'])
 
     # --- NUEVO: REGISTRAR LOGOUT EN BITÁCORA ---
     registrar_bitacora(
@@ -905,7 +928,7 @@ def bitacora_api(request):
         response['Content-Disposition'] = 'attachment; filename="bitacora.csv"'
 
         writer = csv.writer(response)
-        writer.writerow(['codigo', 'fecha_hora', 'usuario', 'rol', 'accion', 'descripcion'])
+        writer.writerow(['codigo', 'fecha_hora', 'usuario', 'rol', 'accion', 'descripcion', 'ip'])
 
         for reg in registros:
             writer.writerow([
@@ -915,6 +938,7 @@ def bitacora_api(request):
                 reg.id_usuario.id_rol.nombre if reg.id_usuario and reg.id_usuario.id_rol else '',
                 reg.accion,
                 reg.descripcion,
+                reg.ip if reg.ip else '',
             ])
         return response
 

@@ -6,6 +6,15 @@ import { getHomeRouteByRole } from './navigation';
 import { repairText } from './textNormalization';
 import { API_BASE_URL } from './config';
 import { PASSWORD_POLICY_MESSAGE, validateStrongPassword } from './passwordPolicy';
+import { logoutUniversal } from './auth';
+
+const leerUsuarioLocal = () => {
+  try {
+    return JSON.parse(localStorage.getItem('usuario'));
+  } catch {
+    return null;
+  }
+};
 
 const maskEmail = (value) => {
   const [local, domain] = (value || '').split('@');
@@ -43,7 +52,21 @@ const Login = () => {
   const heroLogoRef = useRef(null);
   const formWrapperRef = useRef(null);
 
+  // Sesión ya activa en este navegador (otra pestaña/ventana con localStorage compartido)
+  const [usuarioConSesion, setUsuarioConSesion] = useState(() => leerUsuarioLocal());
+  const [forzarFormulario, setForzarFormulario] = useState(false);
+  const [cambiandoCuenta, setCambiandoCuenta] = useState(false);
+  const haySesionActiva = !!localStorage.getItem('token') && !!usuarioConSesion && !forzarFormulario;
+
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const motivo = localStorage.getItem('sesion_cerrada_motivo');
+    if (motivo) {
+      setError(repairText(motivo));
+      localStorage.removeItem('sesion_cerrada_motivo');
+    }
+  }, []);
 
   const resolveHomeRoute = async (usuario) => {
     if (!usuario?.rol) {
@@ -114,6 +137,22 @@ const Login = () => {
       setError('Error de conexión con el servidor. ¿Está encendido Docker?');
     } finally {
       setCargando(false);
+    }
+  };
+
+  const irAMiCuenta = async () => {
+    const homeRoute = await resolveHomeRoute(usuarioConSesion);
+    navigate(homeRoute);
+  };
+
+  const cambiarDeCuenta = async () => {
+    setCambiandoCuenta(true);
+    try {
+      await logoutUniversal();
+    } finally {
+      setUsuarioConSesion(null);
+      setForzarFormulario(true);
+      setCambiandoCuenta(false);
     }
   };
 
@@ -289,7 +328,22 @@ const Login = () => {
 
         {/* Formulario */}
         <div className="form-wrapper" ref={formWrapperRef}>
-          {recoveryStep === null && (
+          {haySesionActiva && (
+            <div className="sesion-activa-card">
+              <h1 className="form-title">Ya tienes una sesión activa</h1>
+              <p>
+                Iniciaste sesión como <strong>{repairText(usuarioConSesion?.nombre)}</strong> ({repairText(usuarioConSesion?.rol)}) en este navegador.
+              </p>
+              <button type="button" className="btn-login" onClick={irAMiCuenta}>
+                Ir a mi cuenta
+              </button>
+              <button type="button" className="forgot" onClick={cambiarDeCuenta} disabled={cambiandoCuenta}>
+                {cambiandoCuenta ? 'Cerrando sesión...' : 'Cerrar sesión e ingresar con otra cuenta'}
+              </button>
+            </div>
+          )}
+
+          {recoveryStep === null && !haySesionActiva && (
             <form onSubmit={manejarSubmit}>
               <h1 className="form-title">Iniciar sesión</h1>
 

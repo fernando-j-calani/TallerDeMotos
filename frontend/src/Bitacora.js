@@ -184,12 +184,13 @@ const Bitacora = () => {
                 <th>Usuario</th>
                 <th>Rol</th>
                 <th>Acción</th>
+                <th>IP</th>
                 <th>Descripción Detallada</th>
               </tr>
             </thead>
             <tbody>
               {registros.length === 0 ? (
-                <tr><td colSpan="6" style={{ padding: '20px', textAlign: 'center' }}>No hay registros en la bitácora aún.</td></tr>
+                <tr><td colSpan="7" style={{ padding: '20px', textAlign: 'center' }}>No hay registros en la bitácora aún.</td></tr>
               ) : (
                 registros.map((reg) => {
                   const descripcion = repairText(reg.descripcion);
@@ -216,6 +217,15 @@ const Bitacora = () => {
                             {repairText(reg.accion)}
                           </span>
                         </td>
+                        <td className="bitacora-ip">
+                          {reg.ip ? (
+                            <code style={{ fontSize: '0.85em', backgroundColor: '#f5f5f5', padding: '2px 4px', borderRadius: '3px' }}>
+                              {reg.ip}
+                            </code>
+                          ) : (
+                            <span style={{ color: '#999' }}>N/A</span>
+                          )}
+                        </td>
                         <td>
                           {truncarDescripcion(descripcion)}
                           {esLarga && (
@@ -225,7 +235,7 @@ const Bitacora = () => {
                       </tr>
                       {expandida && (
                         <tr className="bitacora-detail-row">
-                          <td colSpan="6">{descripcion}</td>
+                          <td colSpan="7">{descripcion}</td>
                         </tr>
                       )}
                     </React.Fragment>

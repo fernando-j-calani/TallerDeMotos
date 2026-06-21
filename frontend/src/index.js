@@ -30,6 +30,7 @@ import AsignarPrivilegios from './AsignarPrivilegios';
 import ForgotPasswordRequest from './ForgotPasswordRequest';
 import ResetPassword from './ResetPassword';
 import ForceChangePassword from './ForceChangePassword';
+import SessionGuard from './SessionGuard';
 import './index.css';
 
 document.body.style.margin = "0";
@@ -38,6 +39,7 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
     <BrowserRouter>
+      <SessionGuard />
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />

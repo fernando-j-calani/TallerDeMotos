@@ -125,6 +125,17 @@ html, body {
   font-weight: 800;
 }
 
+.sesion-activa-card p {
+  text-align: center;
+  color: #555;
+  margin-bottom: 22px;
+}
+
+.sesion-activa-card .forgot {
+  text-align: center;
+  width: 100%;
+}
+
 .confirm-title {
   text-align: left;
   font-size: 26px;
