@@ -18,6 +18,7 @@ import calendar
 import math
 import logging
 import traceback
+import json
 import uuid
 import secrets
 import csv
@@ -2112,16 +2113,31 @@ class Inventario:
 
 class Compras:
     @staticmethod
-    def SolicitarValidacion(proveedor_id, detalles):
-        try:
-            proveedor = Proveedor.objects.get(codigo=proveedor_id)
-        except Proveedor.DoesNotExist:
-            return False
+    def SolicitarValidacion(proveedor, detalles):
         return proveedor is not None and isinstance(detalles, list)
 
     @staticmethod
     def EnviarPayloadComprasYDetalle(data):
-        return data
+        detalles_raw = data.get('detalles', [])
+        if isinstance(detalles_raw, str):
+            try:
+                detalles = json.loads(detalles_raw)
+            except (TypeError, ValueError):
+                detalles = []
+        else:
+            detalles = detalles_raw
+
+        datos_compra = {
+            'id_proveedor': data.get('id_proveedor') or None,
+            'numero_factura': data.get('numero_factura'),
+            'fecha': data.get('fecha'),
+            'subtotal': data.get('subtotal'),
+            'impuesto': data.get('impuesto'),
+            'total': data.get('total'),
+            'metodo_pago': data.get('metodo_pago'),
+            'estado': data.get('estado'),
+        }
+        return datos_compra, detalles, (data.get('proveedor_nuevo_nombre') or '').strip()
 
     @staticmethod
     def SolicitaActualizarStockYRegistrarBitacora(usuario, producto, cantidad):
@@ -2251,8 +2267,22 @@ def compras_api(request):
     if error_permiso:
         return error_permiso
 
-    detalles = request.data.get('detalles', [])
-    datos_compra = Compras.EnviarPayloadComprasYDetalle(request.data)
+    datos_compra, detalles, proveedor_nuevo_nombre = Compras.EnviarPayloadComprasYDetalle(request.data)
+
+    if not datos_compra.get('id_proveedor') and proveedor_nuevo_nombre:
+        nuevo_proveedor = Proveedor.objects.create(empresa=proveedor_nuevo_nombre, nit='S/N')
+        datos_compra['id_proveedor'] = nuevo_proveedor.codigo
+        registrar_bitacora(usuario_sesion, 'CREACIÓN', f"Registró nuevo proveedor (vía Compras): {nuevo_proveedor.empresa}.")
+
+    metodo_pago = datos_compra.get('metodo_pago')
+    if metodo_pago in ('Transferencia', 'QR'):
+        comprobante_archivo = request.FILES.get('comprobante_pago')
+        if not comprobante_archivo:
+            return Response({"exito": False, "error": "Debe adjuntar el comprobante de pago."}, status=400)
+        nombre_archivo = f"comprobantes_compra/{datos_compra.get('numero_factura') or 'compra'}_{comprobante_archivo.name}"
+        nombre_guardado = default_storage.save(nombre_archivo, comprobante_archivo)
+        datos_compra['comprobante_pago'] = default_storage.url(nombre_guardado)
+
     serializer = CompraSerializer(data=datos_compra)
     if not serializer.is_valid():
         return Response({"exito": False, "errores": serializer.errors}, status=400)
@@ -2262,10 +2292,25 @@ def compras_api(request):
 
     compra = Compras.RegistraCompra(serializer.validated_data)
     for detalle in detalles:
-        try:
-            producto = Producto.objects.get(codigo=detalle.get('id_producto'))
-        except Producto.DoesNotExist:
-            continue
+        id_producto = detalle.get('id_producto')
+        producto_nuevo_nombre = (detalle.get('producto_nuevo_nombre') or '').strip()
+
+        if not id_producto and producto_nuevo_nombre:
+            precio_compra_nuevo = detalle.get('precio_compra', 0)
+            producto = Producto.objects.create(
+                nombre=producto_nuevo_nombre,
+                precio_compra=precio_compra_nuevo,
+                precio_venta=precio_compra_nuevo,
+                stock_actual=0,
+                estado='Activo',
+                id_proveedor_id=compra.id_proveedor_id,
+            )
+            registrar_bitacora(usuario_sesion, 'CREACIÓN', f"Registró nuevo producto (vía Compras): {producto.nombre}.")
+        else:
+            try:
+                producto = Producto.objects.get(codigo=id_producto)
+            except Producto.DoesNotExist:
+                continue
 
         item = Detallecompra.objects.create(
             id_compra=compra,

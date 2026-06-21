@@ -132,6 +132,7 @@ class Compra(models.Model):
     total = models.DecimalField(max_digits=10, decimal_places=2)
     metodo_pago = models.CharField(max_length=50, blank=True, null=True)
     estado = models.CharField(max_length=20, blank=True, null=True)
+    comprobante_pago = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -434,6 +435,7 @@ class Producto(models.Model):
     precio_venta = models.DecimalField(max_digits=10, decimal_places=2)
     ubicacion_almacen = models.CharField(max_length=50, blank=True, null=True)
     estado = models.CharField(max_length=20, blank=True, null=True)
+    id_proveedor = models.ForeignKey('Proveedor', models.DO_NOTHING, db_column='id_proveedor', blank=True, null=True)
 
     class Meta:
         managed = False
