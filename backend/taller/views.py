@@ -1752,7 +1752,13 @@ def proveedor_detalle_api(request, proveedor_id):
     if error_permiso:
         return error_permiso
 
-    proveedor.delete()
+    try:
+        proveedor.delete()
+    except IntegrityError:
+        return Response(
+            {"exito": False, "error": "No se puede eliminar el proveedor porque tiene productos o compras asociadas."},
+            status=409,
+        )
     registrar_bitacora(usuario_sesion, 'ELIMINACIÓN', f"Eliminó proveedor: {proveedor.empresa}.")
     return Response({"exito": True, "mensaje": "Proveedor eliminado."}, status=200)
 
