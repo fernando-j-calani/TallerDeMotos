@@ -6,7 +6,7 @@ import { getHomeRouteByRole } from './navigation';
 import { repairText } from './textNormalization';
 import { API_BASE_URL } from './config';
 import { PASSWORD_POLICY_MESSAGE, validateStrongPassword } from './passwordPolicy';
-import { logoutUniversal, fetchWithIP } from './auth';
+import { logoutUniversal, fetchWithIP, fetchClientIPFromServer } from './auth';
 
 const leerUsuarioLocal = () => {
   try {
@@ -123,6 +123,12 @@ const Login = () => {
         localStorage.setItem('token', datos.token);
         localStorage.setItem('usuario', JSON.stringify(datos.usuario));
         localStorage.setItem('requires_password_change', datos.requires_password_change ? '1' : '0');
+        
+        // Obtener la IP del cliente en paralelo (NO BLOQUEANTE)
+        // Esto asegura que el login procede inmediatamente
+        fetchClientIPFromServer().catch(err => 
+          console.warn('⚠ No se pudo cachear IP:', err)
+        );
         
         if (datos.requires_password_change) {
           navigate('/cambiar-password-obligatorio');

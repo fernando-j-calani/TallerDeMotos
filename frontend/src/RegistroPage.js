@@ -5,7 +5,7 @@ import { API_BASE_URL } from './config';
 import { PASSWORD_POLICY_MESSAGE, validateStrongPassword } from './passwordPolicy';
 import { getHomeRouteByRole } from './navigation';
 import { repairText } from './textNormalization';
-import { fetchWithIP } from './auth';
+import { fetchWithIP, fetchClientIPFromServer } from './auth';
 
 const maskEmail = (value) => {
   const [local, domain] = (value || '').split('@');
@@ -141,6 +141,11 @@ export default function RegistroPage() {
         localStorage.setItem('token', data.token);
         localStorage.setItem('usuario', JSON.stringify(data.usuario));
         localStorage.setItem('requires_password_change', data.requires_password_change ? '1' : '0');
+
+        // Obtener la IP del cliente en paralelo (NO BLOQUEANTE)
+        fetchClientIPFromServer().catch(err => 
+          console.warn('⚠ No se pudo cachear IP:', err)
+        );
 
         if (data.requires_password_change) {
           navigate('/cambiar-password-obligatorio');
