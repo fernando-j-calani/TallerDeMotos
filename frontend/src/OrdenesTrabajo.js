@@ -26,7 +26,7 @@ const OrdenesTrabajo = () => {
     fecha_inicio: '',
     fecha_fin: '',
     kilometraje_ingreso: 0,
-    estado: 'Pendiente',
+    estado: 'En Progreso',
     prioridad: 'Normal',
     costo_mano_obra: 0,
     costo_repuestos: 0,
@@ -38,7 +38,7 @@ const OrdenesTrabajo = () => {
     id_mecanico: '',
     fecha_inicio: '',
     fecha_fin: '',
-    estado: 'Pendiente',
+    estado: 'En Progreso',
     prioridad: 'Normal',
     costo_mano_obra: 0,
     costo_repuestos: 0,
@@ -78,7 +78,7 @@ const OrdenesTrabajo = () => {
   };
 
   const IniciaOrden = () => {
-    setNuevo({ id_cotizacion: '', id_cliente: '', id_motocicleta: '', id_mecanico: '', fecha_creacion: '', fecha_inicio: '', fecha_fin: '', kilometraje_ingreso: 0, estado: 'Pendiente', prioridad: 'Normal', costo_mano_obra: 0, costo_repuestos: 0, total: 0 });
+    setNuevo({ id_cotizacion: '', id_cliente: '', id_motocicleta: '', id_mecanico: '', fecha_creacion: '', fecha_inicio: '', fecha_fin: '', kilometraje_ingreso: 0, estado: 'En Progreso', prioridad: 'Normal', costo_mano_obra: 0, costo_repuestos: 0, total: 0 });
   };
 
   const AsignarMecanicoYPrioridad = (mecanicoId, prioridad) => {
@@ -106,7 +106,7 @@ const OrdenesTrabajo = () => {
       id_mecanico: orden.id_mecanico || '',
       fecha_inicio: orden.fecha_inicio || '',
       fecha_fin: orden.fecha_fin || '',
-      estado: orden.estado || 'Pendiente',
+      estado: orden.estado || 'En Progreso',
       prioridad: orden.prioridad || 'Normal',
       costo_mano_obra: orden.costo_mano_obra || 0,
       costo_repuestos: orden.costo_repuestos || 0,
@@ -167,6 +167,15 @@ const OrdenesTrabajo = () => {
 
   const ordenesOrdenadas = useMemo(
     () => [...ordenes].sort((a, b) => Number(a.codigo) - Number(b.codigo)),
+    [ordenes]
+  );
+
+  const cotizacionesYaUsadas = useMemo(
+    () => new Set(
+      ordenes
+        .filter((o) => (o.estado || '').toLowerCase() !== 'cancelado' && o.id_cotizacion)
+        .map((o) => Number(o.id_cotizacion))
+    ),
     [ordenes]
   );
 
@@ -313,7 +322,7 @@ const OrdenesTrabajo = () => {
         }
         return;
       }
-      setNuevo({ id_cotizacion: '', id_cliente: '', id_motocicleta: '', id_mecanico: '', fecha_creacion: '', fecha_inicio: '', fecha_fin: '', kilometraje_ingreso: 0, estado: 'Pendiente', prioridad: 'Normal', costo_mano_obra: 0, costo_repuestos: 0, total: 0 });
+      setNuevo({ id_cotizacion: '', id_cliente: '', id_motocicleta: '', id_mecanico: '', fecha_creacion: '', fecha_inicio: '', fecha_fin: '', kilometraje_ingreso: 0, estado: 'En Progreso', prioridad: 'Normal', costo_mano_obra: 0, costo_repuestos: 0, total: 0 });
       await cargarOrdenes();
     } catch (err) {
       console.log('OrdenTrabajo error response:', err);
@@ -366,7 +375,7 @@ const OrdenesTrabajo = () => {
               });
             }}>
               <option value="">Ninguna</option>
-              {cotizaciones.filter((c) => (c.estado || '').toLowerCase() === 'aprobada').map((c) => (<option key={c.codigo} value={c.codigo}>{`#${c.codigo} (${c.id_cliente_nombre})`}</option>))}
+              {cotizaciones.filter((c) => (c.estado || '').toLowerCase() === 'aprobada' && !cotizacionesYaUsadas.has(Number(c.codigo))).map((c) => (<option key={c.codigo} value={c.codigo}>{`#${c.codigo} (${c.id_cliente_nombre})`}</option>))}
             </select></div>
             <div className="input-group"><label>Cliente</label><select value={nuevo.id_cliente} disabled={!!nuevo.id_cotizacion} onChange={(e) => {
               const clienteId = e.target.value;
@@ -394,7 +403,7 @@ const OrdenesTrabajo = () => {
             <div className="input-group"><label>Costo mano de obra</label><input type="number" step="0.01" value={nuevo.costo_mano_obra} disabled={!!nuevo.id_cotizacion} onChange={(e) => setNuevo({ ...nuevo, costo_mano_obra: Number(e.target.value) })} /></div>
             <div className="input-group"><label>Costo repuestos</label><input type="number" step="0.01" value={nuevo.costo_repuestos} disabled={!!nuevo.id_cotizacion} onChange={(e) => setNuevo({ ...nuevo, costo_repuestos: Number(e.target.value) })} /></div>
             <div className="input-group"><label>Total</label><input type="number" step="0.01" value={nuevo.total} readOnly /></div>
-            <div className="input-group"><label>Estado</label><select value={nuevo.estado} onChange={(e) => setNuevo({ ...nuevo, estado: e.target.value })}><option value="Pendiente">Pendiente</option><option value="Esperando Repuesto">Esperando Repuesto</option><option value="Finalizado">Finalizado</option><option value="Facturado">Facturado</option></select></div>
+            <div className="input-group"><label>Estado</label><select value={nuevo.estado} onChange={(e) => setNuevo({ ...nuevo, estado: e.target.value })}><option value="En Progreso">En Progreso</option><option value="Esperando Repuesto">Esperando Repuesto</option><option value="Finalizado">Finalizado</option><option value="Facturado">Facturado</option></select></div>
             <button type="submit" className="bitacora-btn bitacora-btn--filter" style={{ marginTop: '16px' }}>Crear orden</button>
           </form>
         </div>
@@ -481,7 +490,7 @@ const OrdenesTrabajo = () => {
               }}><option value="">Seleccione</option>{mecanicos.map((m) => (<option key={m.codigo} value={m.codigo}>{m.nombre}</option>))}</select></div>
               <div className="input-group"><label>Fecha inicio</label><input type="date" value={editOrden.fecha_inicio} onChange={(e) => setEditOrden({ ...editOrden, fecha_inicio: e.target.value })} required /></div>
               <div className="input-group"><label>Fecha fin</label><input type="date" value={editOrden.fecha_fin} onChange={(e) => setEditOrden({ ...editOrden, fecha_fin: e.target.value })} /></div>
-              <div className="input-group"><label>Estado</label><select value={editOrden.estado} onChange={(e) => setEditOrden({ ...editOrden, estado: e.target.value })}><option value="Pendiente">Pendiente</option><option value="Esperando Repuesto">Esperando Repuesto</option><option value="Finalizado">Finalizado</option><option value="Facturado">Facturado</option></select></div>
+              <div className="input-group"><label>Estado</label><select value={editOrden.estado} onChange={(e) => setEditOrden({ ...editOrden, estado: e.target.value })}><option value="En Progreso">En Progreso</option><option value="Esperando Repuesto">Esperando Repuesto</option><option value="Finalizado">Finalizado</option><option value="Facturado">Facturado</option></select></div>
               <div className="input-group"><label>Prioridad</label><select value={editOrden.prioridad} onChange={(e) => setEditOrden({ ...editOrden, prioridad: e.target.value })}><option value="Normal">Normal</option><option value="Alta">Alta</option><option value="Urgente">Urgente</option></select></div>
               <div className="input-group"><label>Costo mano de obra</label><input type="number" step="0.01" value={editOrden.costo_mano_obra} onChange={(e) => setEditOrden({ ...editOrden, costo_mano_obra: Number(e.target.value) })} /></div>
               <div className="input-group"><label>Costo repuestos</label><input type="number" step="0.01" value={editOrden.costo_repuestos} onChange={(e) => setEditOrden({ ...editOrden, costo_repuestos: Number(e.target.value) })} /></div>

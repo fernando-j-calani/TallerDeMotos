@@ -1889,7 +1889,7 @@ class Cotizaciones:
         return True
 
 
-ESTADOS_ORDEN_TRABAJO_VALIDOS = ('Pendiente', 'Esperando Repuesto', 'Finalizado', 'Facturado')
+ESTADOS_ORDEN_TRABAJO_VALIDOS = ('En Progreso', 'Esperando Repuesto', 'Finalizado', 'Facturado')
 
 
 def obtener_fecha_bolivia():
@@ -2528,7 +2528,7 @@ def ordenes_trabajo_api(request):
         if not datos.get('fecha_inicio'):
             return Response({"exito": False, "error": "La fecha de inicio es obligatoria."}, status=400)
 
-        estado = (datos.get('estado') or 'Pendiente').strip()
+        estado = (datos.get('estado') or 'En Progreso').strip()
         if estado not in ESTADOS_ORDEN_TRABAJO_VALIDOS:
             return Response(
                 {"exito": False, "error": f"Estado inválido. Debe ser uno de: {', '.join(ESTADOS_ORDEN_TRABAJO_VALIDOS)}."},
@@ -2549,6 +2549,17 @@ def ordenes_trabajo_api(request):
                 return Response({"exito": False, "error": "Cotización de origen no válida."}, status=400)
             if (origen_cotizacion.estado or '').strip().lower() != 'aprobada':
                 return Response({"exito": False, "error": "Solo se pueden generar órdenes desde cotizaciones Aprobadas."}, status=400)
+
+            orden_existente = (
+                Ordentrabajo.objects.filter(id_cotizacion=origen_cotizacion)
+                .exclude(estado__iexact='Cancelado')
+                .exists()
+            )
+            if orden_existente:
+                return Response(
+                    {"exito": False, "error": "Esta cotización ya tiene una orden de trabajo registrada."},
+                    status=400,
+                )
 
             datos['id_cliente'] = origen_cotizacion.id_cliente
             datos['id_motocicleta'] = origen_cotizacion.id_motocicleta
@@ -3557,7 +3568,7 @@ def dashboard_api(request):
         })
 
     # Servicios pendientes
-    servicios_pendientes_count = Ordentrabajo.objects.filter(estado__in=['Pendiente', 'En Diagnóstico']).count()
+    servicios_pendientes_count = Ordentrabajo.objects.filter(estado__in=['En Progreso', 'Esperando Repuesto']).count()
 
     # Serie temporal: últimos 14 días de ingresos
     series = []
