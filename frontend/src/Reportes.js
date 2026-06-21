@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Login.css';
 import { API_BASE_URL } from './config';
@@ -26,6 +26,10 @@ const Reportes = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [preguntaAsistente, setPreguntaAsistente] = useState('');
+  const [escuchando, setEscuchando] = useState(false);
+  const [consultandoAsistente, setConsultandoAsistente] = useState(false);
+  const reconocimientoRef = useRef(null);
 
   const API = `${API_BASE_URL}/api`;
   const headers = () => ({
@@ -104,6 +108,71 @@ const Reportes = () => {
     window.print();
   };
 
+  const SpeechRecognitionApi = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  const iniciarEscucha = () => {
+    if (!SpeechRecognitionApi) {
+      setError('Tu navegador no soporta reconocimiento de voz. Escribe la pregunta manualmente.');
+      return;
+    }
+    resetMessages();
+    const reconocimiento = new SpeechRecognitionApi();
+    reconocimiento.lang = 'es-ES';
+    reconocimiento.interimResults = false;
+    reconocimiento.maxAlternatives = 1;
+    reconocimiento.onresult = (event) => {
+      const texto = event.results[0][0].transcript;
+      setPreguntaAsistente(texto);
+      preguntarAsistente(texto);
+    };
+    reconocimiento.onerror = () => {
+      setError('No se pudo capturar el audio. Intenta nuevamente.');
+      setEscuchando(false);
+    };
+    reconocimiento.onend = () => setEscuchando(false);
+    reconocimientoRef.current = reconocimiento;
+    setEscuchando(true);
+    reconocimiento.start();
+  };
+
+  const detenerEscucha = () => {
+    reconocimientoRef.current?.stop();
+    setEscuchando(false);
+  };
+
+  const preguntarAsistente = async (textoOverride) => {
+    const pregunta = (textoOverride ?? preguntaAsistente).trim();
+    if (!pregunta) {
+      setError('Escribe o dicta una pregunta para el asistente.');
+      return;
+    }
+    resetMessages();
+    setConsultandoAsistente(true);
+    try {
+      const res = await fetch(`${API}/reportes/asistente-voz/`, {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({ pregunta }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'No se pudo interpretar la pregunta.');
+        return;
+      }
+      setTipoConsulta(data.tipo || '');
+      setFechaInicio(data.fecha_inicio || '');
+      setFechaFin(data.fecha_fin || '');
+      if (data.agrupacion) setAgrupacion(data.agrupacion);
+      if (data.top) setTop(data.top);
+      setResultados(Array.isArray(data.resultados) ? data.resultados : []);
+      setSuccess('El asistente interpretó tu pregunta y generó el reporte.');
+    } catch {
+      setError('Error de conexión consultando al asistente.');
+    } finally {
+      setConsultandoAsistente(false);
+    }
+  };
+
   const columnas = resultados.length > 0 ? Object.keys(resultados[0]) : ['fecha', 'categoria', 'descripcion', 'cantidad', 'monto', 'estado'];
   const formatBs = (v) => {
     if (v == null) return '-';
@@ -128,15 +197,19 @@ const Reportes = () => {
             </tr>
           </thead>
           <tbody>
-            {resultados.map((row, idx) => (
-              <tr key={idx}>
-                <td>{row.periodo || '-'}</td>
-                <td>{row.ordenes ?? '-'}</td>
-                <td>{formatBs(row.ingreso_bruto)}</td>
-                <td>{formatBs(row.impuesto)}</td>
-                <td>{formatBs(row.ingreso_neto)}</td>
-              </tr>
-            ))}
+            {resultados.length === 0 ? (
+              <tr><td colSpan={5} style={{ padding: '16px', textAlign: 'center' }}>Sin resultados para los filtros seleccionados.</td></tr>
+            ) : (
+              resultados.map((row, idx) => (
+                <tr key={idx}>
+                  <td>{row.periodo || '-'}</td>
+                  <td>{row.ordenes ?? '-'}</td>
+                  <td>{formatBs(row.ingreso_bruto)}</td>
+                  <td>{formatBs(row.impuesto)}</td>
+                  <td>{formatBs(row.ingreso_neto)}</td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       );
@@ -155,15 +228,19 @@ const Reportes = () => {
             </tr>
           </thead>
           <tbody>
-            {resultados.map((r, i) => (
-              <tr key={i}>
-                {mostrarPeriodoServicio && <td>{r.periodo || '-'}</td>}
-                <td>{r.servicio}</td>
-                <td>{r.veces_realizado}</td>
-                <td>{formatBs(r.ingreso_total)}</td>
-                <td>{r.porcentaje}%</td>
-              </tr>
-            ))}
+            {resultados.length === 0 ? (
+              <tr><td colSpan={mostrarPeriodoServicio ? 5 : 4} style={{ padding: '16px', textAlign: 'center' }}>Sin resultados para los filtros seleccionados.</td></tr>
+            ) : (
+              resultados.map((r, i) => (
+                <tr key={i}>
+                  {mostrarPeriodoServicio && <td>{r.periodo || '-'}</td>}
+                  <td>{r.servicio}</td>
+                  <td>{r.veces_realizado}</td>
+                  <td>{formatBs(r.ingreso_total)}</td>
+                  <td>{r.porcentaje}%</td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       );
@@ -181,14 +258,18 @@ const Reportes = () => {
             </tr>
           </thead>
           <tbody>
-            {resultados.map((r, i) => (
-              <tr key={i}>
-                <td>{r.repuesto}</td>
-                <td>{r.cantidad_vendida}</td>
-                <td>{formatBs(r.ingreso_total)}</td>
-                <td>{r.stock_actual}</td>
-              </tr>
-            ))}
+            {resultados.length === 0 ? (
+              <tr><td colSpan={4} style={{ padding: '16px', textAlign: 'center' }}>Sin resultados para los filtros seleccionados.</td></tr>
+            ) : (
+              resultados.map((r, i) => (
+                <tr key={i}>
+                  <td>{r.repuesto}</td>
+                  <td>{r.cantidad_vendida}</td>
+                  <td>{formatBs(r.ingreso_total)}</td>
+                  <td>{r.stock_actual}</td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       );
@@ -206,14 +287,18 @@ const Reportes = () => {
             </tr>
           </thead>
           <tbody>
-            {resultados.map((r, i) => (
-              <tr key={i}>
-                <td>{r.cliente}</td>
-                <td>{r.cedula}</td>
-                <td>{r.cantidad_servicios}</td>
-                <td>{formatBs(r.total_gastado)}</td>
-              </tr>
-            ))}
+            {resultados.length === 0 ? (
+              <tr><td colSpan={4} style={{ padding: '16px', textAlign: 'center' }}>Sin resultados para los filtros seleccionados.</td></tr>
+            ) : (
+              resultados.map((r, i) => (
+                <tr key={i}>
+                  <td>{r.cliente}</td>
+                  <td>{r.cedula}</td>
+                  <td>{r.cantidad_servicios}</td>
+                  <td>{formatBs(r.total_gastado)}</td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       );
@@ -230,13 +315,17 @@ const Reportes = () => {
             </tr>
           </thead>
           <tbody>
-            {resultados.map((r, i) => (
-              <tr key={i}>
-                <td>{r.estado}</td>
-                <td>{r.cantidad}</td>
-                <td>{r.porcentaje}%</td>
-              </tr>
-            ))}
+            {resultados.length === 0 ? (
+              <tr><td colSpan={3} style={{ padding: '16px', textAlign: 'center' }}>Sin resultados para los filtros seleccionados.</td></tr>
+            ) : (
+              resultados.map((r, i) => (
+                <tr key={i}>
+                  <td>{r.estado}</td>
+                  <td>{r.cantidad}</td>
+                  <td>{r.porcentaje}%</td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       );
@@ -255,15 +344,19 @@ const Reportes = () => {
             </tr>
           </thead>
           <tbody>
-            {resultados.map((r, i) => (
-              <tr key={i}>
-                <td>{r.producto}</td>
-                <td>{r.stock_actual}</td>
-                <td>{r.stock_minimo}</td>
-                <td>{r.diferencia}</td>
-                <td>{r.ubicacion}</td>
-              </tr>
-            ))}
+            {resultados.length === 0 ? (
+              <tr><td colSpan={5} style={{ padding: '16px', textAlign: 'center' }}>Sin productos por debajo del stock mínimo. ¡Inventario saludable!</td></tr>
+            ) : (
+              resultados.map((r, i) => (
+                <tr key={i}>
+                  <td>{r.producto}</td>
+                  <td>{r.stock_actual}</td>
+                  <td>{r.stock_minimo}</td>
+                  <td>{r.diferencia}</td>
+                  <td>{r.ubicacion}</td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       );
@@ -320,6 +413,36 @@ const Reportes = () => {
 
       {error && <div className="error-box" style={{ marginTop: '20px' }}>{error}</div>}
       {success && <div className="success-box" style={{ marginTop: '20px' }}>{success}</div>}
+
+      <div className="bitacora-panel reportes-panel" style={{ marginTop: '20px' }}>
+        <h3 className="usuarios-panel-title">Asistente de voz</h3>
+        <p className="reportes-hint">Pregunta en lenguaje natural, ej: "¿cuáles son los ingresos del último mes agrupados por semana?"</p>
+        <div className="reportes-asistente-row" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <input
+            type="text"
+            value={preguntaAsistente}
+            onChange={(e) => setPreguntaAsistente(e.target.value)}
+            placeholder="Escribe o dicta tu pregunta..."
+            style={{ flex: '1 1 280px' }}
+          />
+          <button
+            type="button"
+            onClick={escuchando ? detenerEscucha : iniciarEscucha}
+            className="bitacora-btn bitacora-btn--filter"
+            disabled={consultandoAsistente}
+          >
+            {escuchando ? '⏹ Detener' : '🎤 Hablar'}
+          </button>
+          <button
+            type="button"
+            onClick={preguntarAsistente}
+            className="bitacora-btn bitacora-btn--export"
+            disabled={consultandoAsistente || escuchando || !preguntaAsistente.trim()}
+          >
+            {consultandoAsistente ? 'Consultando...' : 'Preguntar'}
+          </button>
+        </div>
+      </div>
 
       <div className="bitacora-panel reportes-panel" style={{ marginTop: '20px' }}>
         <h3 className="usuarios-panel-title">Filtros dinámicos</h3>

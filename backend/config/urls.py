@@ -56,6 +56,7 @@ from taller.views import (
     HistorialMantenimientoAPI,
     SeguimientoClientesAPI,
     reportes_api,
+    reportes_asistente_voz_api,
     dashboard_api,
 )
 
@@ -121,6 +122,7 @@ urlpatterns = [
     path('api/seguimiento/', SeguimientoClientesAPI.as_view(), name='api_seguimiento'),
     path('api/seguimiento-clientes/', SeguimientoClientesAPI.as_view(), name='api_seguimiento_clientes'),
     path('api/reportes/', reportes_api, name='api_reportes'),
+    path('api/reportes/asistente-voz/', reportes_asistente_voz_api, name='api_reportes_asistente_voz'),
     path('api/dashboard/', dashboard_api, name='api_dashboard'),
 ]
 

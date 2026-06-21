@@ -257,6 +257,10 @@ if CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET:
     }
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
+# CU18: asistente de voz para reportes (interpreta la pregunta del usuario con Claude)
+ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '').strip()
+ANTHROPIC_MODEL = os.environ.get('ANTHROPIC_MODEL', 'claude-haiku-4-5-20251001').strip()
+
 # PayPal (pago en linea del cliente desde su perfil)
 PAYPAL_MODE = os.environ.get('PAYPAL_MODE', 'sandbox').strip().lower()
 PAYPAL_CLIENT_ID = os.environ.get('PAYPAL_CLIENT_ID', '')

@@ -65,7 +65,10 @@
 @media (max-width:576px){
   .hero-slider{height:60vh}
   .hero-slider .hero-title{font-size:1.8rem}
-  .slider-controls{display:none}
+  .slider-controls{left:62%;transform:translateX(-50%);bottom:1rem}
+  .slider-indicators{gap:16px}
+  .slider-indicators .num{font-size:1.1rem}
+  .slider-indicators .indicator.active::after{width:32px}
 }
 
 /* Make navbar transparent and sit above the hero background */

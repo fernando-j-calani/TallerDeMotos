@@ -6,3 +6,4 @@ gunicorn
 whitenoise
 reportlab
 openpyxl
+anthropic

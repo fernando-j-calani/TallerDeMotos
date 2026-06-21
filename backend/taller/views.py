@@ -14,7 +14,6 @@ from django.db import connection, IntegrityError, OperationalError, transaction
 from django.db.models import Q, F, Sum
 from django.utils.dateparse import parse_date
 from datetime import datetime, timedelta
-import calendar
 import math
 import logging
 import traceback
@@ -3423,38 +3422,34 @@ def mis_pagos_paypal_capturar_api(request):
 # ==========================================
 # CU18: MODULO DE REPORTES ANALITICOS
 # ==========================================
-@api_view(['GET'])
-def reportes_api(request):
-    usuario_sesion, error_auth = obtener_usuario_autenticado(request)
-    if error_auth:
-        return error_auth
+MESES_ES = [
+    '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+]
 
-    export = (request.GET.get('export') or '').strip().lower()
-    accion = 'Exportar' if export else 'Buscar'
-    error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU18', accion)
-    if error_permiso:
-        return error_permiso
 
-    tipo = (request.GET.get('tipo') or '').strip().lower()
-    fecha_inicio = parse_date((request.GET.get('fecha_inicio') or '').strip())
-    fecha_fin = parse_date((request.GET.get('fecha_fin') or '').strip())
-    top = request.GET.get('top')
-    try:
-        top = int(top) if top else 10
-    except ValueError:
-        top = 10
-    if top < 1:
-        top = 10
+TIPOS_REPORTE_VALIDOS = (
+    'ingresos_por_periodo',
+    'servicios_mas_realizados',
+    'repuestos_mas_vendidos',
+    'clientes_frecuentes',
+    'ordenes_por_estado',
+    'inventario_critico',
+)
 
-    email_destino = (request.GET.get('email_destino') or '').strip()
 
-    if fecha_inicio and fecha_fin and fecha_inicio > fecha_fin:
-        return Response({"exito": False, "error": "La fecha inicio no puede ser mayor que fecha fin."}, status=400)
+def construir_resultados_reporte(tipo, fecha_inicio, fecha_fin, agrupacion_param, top):
+    """Ejecuta la consulta real de CU18 para un tipo de reporte dado.
 
+    Reutilizada tanto por reportes_api (consulta/exportación manual) como por
+    reportes_asistente_voz_api (preguntas interpretadas por IA), para que la IA
+    nunca invente datos: siempre corre la misma consulta que el modulo de reportes.
+    Devuelve (resultados, error_mensaje).
+    """
     resultados = []
 
     if tipo == 'ingresos_por_periodo':
-        agrupacion = (request.GET.get('agrupacion') or 'dia').strip().lower()
+        agrupacion = (agrupacion_param or 'dia').strip().lower()
         facturas = Factura.objects.select_related('id_nota_servicio').all()
         if fecha_inicio:
             facturas = facturas.filter(fecha_emision__gte=fecha_inicio)
@@ -3478,7 +3473,7 @@ def reportes_api(request):
                 label = f"Semana {week} ({week_start.isoformat()}-{week_end.isoformat()})"
                 key = f"{year}-W{week}"
             elif agrupacion == 'mes':
-                label = f"{calendar.month_name[fecha.month]} {fecha.year}"
+                label = f"{MESES_ES[fecha.month]} {fecha.year}"
                 key = f"{fecha.year}-{fecha.month:02d}"
             else:
                 label = fecha.isoformat()
@@ -3526,7 +3521,7 @@ def reportes_api(request):
         })
 
     elif tipo == 'servicios_mas_realizados':
-        agrupacion = (request.GET.get('agrupacion') or '').strip().lower()
+        agrupacion = (agrupacion_param or '').strip().lower()
         detalles = Detalleordentrabajo.objects.filter(id_producto__isnull=True)
         if fecha_inicio:
             detalles = detalles.filter(id_orden_trabajo__fecha_creacion__gte=fecha_inicio)
@@ -3544,7 +3539,7 @@ def reportes_api(request):
         total_veces = 0
         total_ingresos = Decimal('0.00')
         for detalle in detalles:
-            nombre = (detalle.get('tipo') or detalle.get('descripcion') or 'Servicio').strip()
+            nombre = (detalle.get('descripcion') or detalle.get('tipo') or 'Servicio').strip()
             if nombre == '':
                 nombre = 'Servicio'
             cantidad = detalle.get('cantidad') or 0
@@ -3561,7 +3556,7 @@ def reportes_api(request):
                     periodo_label = f"Semana {week} ({week_start.isoformat()}-{week_end.isoformat()})"
                     periodo_key = f"{year}-W{week:02d}"
                 elif agrupacion == 'mes':
-                    periodo_label = f"{calendar.month_name[fecha_creacion.month]} {fecha_creacion.year}"
+                    periodo_label = f"{MESES_ES[fecha_creacion.month]} {fecha_creacion.year}"
                     periodo_key = f"{fecha_creacion.year}-{fecha_creacion.month:02d}"
                 else:
                     periodo_label = fecha_creacion.isoformat()
@@ -3706,7 +3701,43 @@ def reportes_api(request):
             })
 
     else:
-        return Response({"exito": False, "error": "Tipo de consulta inválido."}, status=400)
+        return resultados, "Tipo de consulta inválido."
+
+    return resultados, None
+
+
+@api_view(['GET'])
+def reportes_api(request):
+    usuario_sesion, error_auth = obtener_usuario_autenticado(request)
+    if error_auth:
+        return error_auth
+
+    export = (request.GET.get('export') or '').strip().lower()
+    accion = 'Exportar' if export else 'Buscar'
+    error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU18', accion)
+    if error_permiso:
+        return error_permiso
+
+    tipo = (request.GET.get('tipo') or '').strip().lower()
+    fecha_inicio = parse_date((request.GET.get('fecha_inicio') or '').strip())
+    fecha_fin = parse_date((request.GET.get('fecha_fin') or '').strip())
+    agrupacion_param = (request.GET.get('agrupacion') or '').strip().lower()
+    top = request.GET.get('top')
+    try:
+        top = int(top) if top else 10
+    except ValueError:
+        top = 10
+    if top < 1:
+        top = 10
+
+    email_destino = (request.GET.get('email_destino') or '').strip()
+
+    if fecha_inicio and fecha_fin and fecha_inicio > fecha_fin:
+        return Response({"exito": False, "error": "La fecha inicio no puede ser mayor que fecha fin."}, status=400)
+
+    resultados, error_reporte = construir_resultados_reporte(tipo, fecha_inicio, fecha_fin, agrupacion_param, top)
+    if error_reporte:
+        return Response({"exito": False, "error": error_reporte}, status=400)
 
     registrar_bitacora(
         usuario_sesion,
@@ -3720,7 +3751,7 @@ def reportes_api(request):
             'tipo': tipo,
             'fecha_inicio': fecha_inicio.isoformat() if fecha_inicio else '',
             'fecha_fin': fecha_fin.isoformat() if fecha_fin else '',
-            'agrupacion': (request.GET.get('agrupacion') or '').strip().lower(),
+            'agrupacion': agrupacion_param,
             'top': top,
             'generado_en': timezone.localtime().strftime('%d/%m/%Y %H:%M'),
         }
@@ -3758,6 +3789,116 @@ def reportes_api(request):
         return Response({"exito": False, "error": "Formato de exportación inválido."}, status=400)
 
     return Response({"exito": True, "resultados": resultados}, status=200)
+
+
+@api_view(['POST'])
+def reportes_asistente_voz_api(request):
+    """CU18: asistente de voz - interpreta una pregunta en lenguaje natural con Claude
+    y la traduce a parámetros de reporte, pero la consulta real la sigue corriendo
+    construir_resultados_reporte (la IA nunca inventa datos, solo elige los filtros).
+    """
+    usuario_sesion, error_auth = obtener_usuario_autenticado(request)
+    if error_auth:
+        return error_auth
+
+    error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU18', 'Buscar')
+    if error_permiso:
+        return error_permiso
+
+    pregunta = (request.data.get('pregunta') or '').strip()
+    if not pregunta:
+        return Response({"exito": False, "error": "La pregunta no puede estar vacía."}, status=400)
+
+    if not settings.ANTHROPIC_API_KEY:
+        return Response(
+            {"exito": False, "error": "El asistente de voz no está configurado (falta ANTHROPIC_API_KEY)."},
+            status=503,
+        )
+
+    hoy = timezone.localtime().date().isoformat()
+    prompt_sistema = (
+        "Eres un asistente que traduce preguntas en español sobre reportes de un taller de motos "
+        "a parámetros JSON estructurados. Responde ÚNICAMENTE con un objeto JSON válido, sin texto adicional ni markdown.\n"
+        f"La fecha de hoy es {hoy}.\n"
+        "Formato exacto del JSON:\n"
+        '{"tipo": "...", "fecha_inicio": "YYYY-MM-DD o null", "fecha_fin": "YYYY-MM-DD o null", '
+        '"agrupacion": "dia|semana|mes o null", "top": numero_entero}\n'
+        '"tipo" debe ser uno de: ' + ", ".join(TIPOS_REPORTE_VALIDOS) + ". "
+        'Si la pregunta no corresponde a ninguno, usa "tipo": null. '
+        '"agrupacion" solo aplica a ingresos_por_periodo y servicios_mas_realizados. '
+        'Si el usuario no menciona un fechas relativas como "este mes" o "el ultimo trimestre", calcula el rango real usando la fecha de hoy. '
+        '"top" por defecto es 10 si no se menciona.'
+    )
+
+    try:
+        import anthropic
+        cliente = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        respuesta = cliente.messages.create(
+            model=settings.ANTHROPIC_MODEL,
+            max_tokens=300,
+            system=prompt_sistema,
+            messages=[{"role": "user", "content": pregunta}],
+        )
+        texto_respuesta = respuesta.content[0].text.strip()
+    except ImportError:
+        return Response(
+            {"exito": False, "error": "Asistente de voz no disponible. Instale el paquete anthropic en el backend."},
+            status=501,
+        )
+    except Exception:
+        logger.exception("Error llamando a la API de Anthropic en reportes_asistente_voz_api")
+        return Response({"exito": False, "error": "No se pudo interpretar la pregunta. Intente nuevamente."}, status=502)
+
+    texto_json = texto_respuesta
+    if texto_json.startswith('```'):
+        texto_json = texto_json.strip('`')
+        if texto_json.lower().startswith('json'):
+            texto_json = texto_json[4:]
+
+    try:
+        interpretacion = json.loads(texto_json)
+    except (json.JSONDecodeError, ValueError):
+        return Response({"exito": False, "error": "No se pudo interpretar la pregunta. Intente reformularla."}, status=502)
+
+    tipo = (interpretacion.get('tipo') or '').strip().lower()
+    if tipo not in TIPOS_REPORTE_VALIDOS:
+        return Response(
+            {"exito": False, "error": "No reconocí a qué reporte te refieres. Intenta ser más específico."},
+            status=400,
+        )
+
+    fecha_inicio = parse_date((interpretacion.get('fecha_inicio') or '').strip()) if interpretacion.get('fecha_inicio') else None
+    fecha_fin = parse_date((interpretacion.get('fecha_fin') or '').strip()) if interpretacion.get('fecha_fin') else None
+    agrupacion_param = (interpretacion.get('agrupacion') or '').strip().lower() if interpretacion.get('agrupacion') else ''
+    try:
+        top = int(interpretacion.get('top') or 10)
+    except (TypeError, ValueError):
+        top = 10
+    if top < 1:
+        top = 10
+
+    if fecha_inicio and fecha_fin and fecha_inicio > fecha_fin:
+        return Response({"exito": False, "error": "La fecha inicio no puede ser mayor que fecha fin."}, status=400)
+
+    resultados, error_reporte = construir_resultados_reporte(tipo, fecha_inicio, fecha_fin, agrupacion_param, top)
+    if error_reporte:
+        return Response({"exito": False, "error": error_reporte}, status=400)
+
+    registrar_bitacora(
+        usuario_sesion,
+        'REPORTE',
+        f'Generó reporte {tipo} vía asistente de voz: "{pregunta}".',
+    )
+
+    return Response({
+        "exito": True,
+        "tipo": tipo,
+        "fecha_inicio": fecha_inicio.isoformat() if fecha_inicio else '',
+        "fecha_fin": fecha_fin.isoformat() if fecha_fin else '',
+        "agrupacion": agrupacion_param,
+        "top": top,
+        "resultados": resultados,
+    }, status=200)
 
 
 @api_view(['GET'])
