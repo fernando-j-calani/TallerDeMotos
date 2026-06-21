@@ -8,4 +8,4 @@ openpyxl
 gunicorn
 django-cloudinary-storage
 cloudinary
-anthropic
+google-genai

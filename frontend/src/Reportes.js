@@ -140,6 +140,51 @@ const Reportes = () => {
     setEscuchando(false);
   };
 
+  const hablar = (texto) => {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(texto);
+    utterance.lang = 'es-ES';
+    utterance.rate = 1.1;
+    utterance.pitch = 1.0;
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const generarResumenVoz = (tipo, datos) => {
+    if (!datos || datos.length === 0) return 'No se encontraron resultados para tu consulta.';
+    const total = datos.length;
+
+    switch (tipo) {
+      case 'ingresos_por_periodo': {
+        const totalRow = datos.find(d => d.periodo === 'TOTAL');
+        if (totalRow) {
+          const bs = totalRow.ingreso_neto.toLocaleString('es-BO', { minimumFractionDigits: 2 });
+          return `Se encontraron ${total - 1} períodos. El ingreso neto total es de ${bs} bolivianos.`;
+        }
+        return `Se encontraron ${total} períodos de ingresos.`;
+      }
+      case 'servicios_mas_realizados': {
+        const primero = datos[0];
+        return `El servicio más realizado fue "${primero.servicio}" con ${primero.veces_realizado} veces. Se encontraron ${total} servicios en total.`;
+      }
+      case 'repuestos_mas_vendidos': {
+        const primero = datos[0];
+        return `El repuesto más vendido fue "${primero.repuesto}" con ${primero.cantidad_vendida} unidades. Se encontraron ${total} repuestos.`;
+      }
+      case 'clientes_frecuentes': {
+        const primero = datos[0];
+        const gasto = primero.total_gastado.toLocaleString('es-BO', { minimumFractionDigits: 2 });
+        return `El cliente más frecuente es "${primero.cliente}" con ${primero.cantidad_servicios} servicios y un total gastado de ${gasto} bolivianos.`;
+      }
+      case 'ordenes_por_estado':
+        return `Se encontraron ${total} estados de órdenes.`;
+      case 'inventario_critico':
+        return `Hay ${total} productos con stock crítico que necesitan reposición.`;
+      default:
+        return `Reporte generado con ${total} resultados.`;
+    }
+  };
+
   const preguntarAsistente = async (textoOverride) => {
     const pregunta = (textoOverride ?? preguntaAsistente).trim();
     if (!pregunta) {
@@ -166,6 +211,7 @@ const Reportes = () => {
       if (data.top) setTop(data.top);
       setResultados(Array.isArray(data.resultados) ? data.resultados : []);
       setSuccess('El asistente interpretó tu pregunta y generó el reporte.');
+      hablar(generarResumenVoz(data.tipo, data.resultados));
     } catch {
       setError('Error de conexión consultando al asistente.');
     } finally {
@@ -435,9 +481,9 @@ const Reportes = () => {
           </button>
           <button
             type="button"
-            onClick={preguntarAsistente}
+            onClick={() => preguntarAsistente()}
             className="bitacora-btn bitacora-btn--export"
-            disabled={consultandoAsistente || escuchando || !preguntaAsistente.trim()}
+            disabled={consultandoAsistente || escuchando || !(preguntaAsistente || '').trim()}
           >
             {consultandoAsistente ? 'Consultando...' : 'Preguntar'}
           </button>

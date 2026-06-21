@@ -1,5 +1,5 @@
 # 1. Usar una imagen oficial de Node.js (necesaria para React)
-FROM node:18-alpine
+FROM node:20-alpine
 
 # 2. Crear la carpeta "app" dentro del contenedor
 WORKDIR /app

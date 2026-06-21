@@ -3831,7 +3831,7 @@ def reportes_api(request):
 
 @api_view(['POST'])
 def reportes_asistente_voz_api(request):
-    """CU18: asistente de voz - interpreta una pregunta en lenguaje natural con Claude
+    """CU18: asistente de voz - interpreta una pregunta en lenguaje natural con Gemini
     y la traduce a parámetros de reporte, pero la consulta real la sigue corriendo
     construir_resultados_reporte (la IA nunca inventa datos, solo elige los filtros).
     """
@@ -3847,9 +3847,9 @@ def reportes_asistente_voz_api(request):
     if not pregunta:
         return Response({"exito": False, "error": "La pregunta no puede estar vacía."}, status=400)
 
-    if not settings.ANTHROPIC_API_KEY:
+    if not settings.GEMINI_API_KEY:
         return Response(
-            {"exito": False, "error": "El asistente de voz no está configurado (falta ANTHROPIC_API_KEY)."},
+            {"exito": False, "error": "El asistente de voz no está configurado (falta GEMINI_API_KEY)."},
             status=503,
         )
 
@@ -3869,22 +3869,25 @@ def reportes_asistente_voz_api(request):
     )
 
     try:
-        import anthropic
-        cliente = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-        respuesta = cliente.messages.create(
-            model=settings.ANTHROPIC_MODEL,
-            max_tokens=300,
-            system=prompt_sistema,
-            messages=[{"role": "user", "content": pregunta}],
+        from google import genai
+        cliente = genai.Client(api_key=settings.GEMINI_API_KEY)
+        respuesta = cliente.models.generate_content(
+            model=settings.GEMINI_MODEL,
+            contents=pregunta,
+            config=genai.types.GenerateContentConfig(
+                system_instruction=prompt_sistema,
+                max_output_tokens=300,
+                temperature=0.0,
+            ),
         )
-        texto_respuesta = respuesta.content[0].text.strip()
+        texto_respuesta = respuesta.text.strip()
     except ImportError:
         return Response(
-            {"exito": False, "error": "Asistente de voz no disponible. Instale el paquete anthropic en el backend."},
+            {"exito": False, "error": "Asistente de voz no disponible. Instale el paquete google-genai en el backend."},
             status=501,
         )
     except Exception:
-        logger.exception("Error llamando a la API de Anthropic en reportes_asistente_voz_api")
+        logger.exception("Error llamando a la API de Gemini en reportes_asistente_voz_api")
         return Response({"exito": False, "error": "No se pudo interpretar la pregunta. Intente nuevamente."}, status=502)
 
     texto_json = texto_respuesta
