@@ -25,31 +25,27 @@ def obtener_ip_request_actual():
     if not request:
         return None
     
-    # 1. PRIMERO: intentar obtener la IP desde el header que envía el frontend
-    #    (capturada directamente desde el navegador con ipify)
-    client_ip_header = request.META.get('HTTP_X_CLIENT_IP', '').strip()
-    if client_ip_header and client_ip_header != '127.0.0.1':
-        return client_ip_header
+    # Intenta extraer la IP real desde encabezados comunes de proxy
+    # En Render, Docker Compose, etc., vienen en estos headers
     
-    # 2. FALLBACK: si no viene en header, intentar extraer de X-Forwarded-For
-    #    (para proxies, tomar la última IP que es la más confiable)
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR', '')
+    # 1. X-Forwarded-For: lista de IPs, la última es la más confiable
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR', '').strip()
     if x_forwarded_for:
-        ips = [ip.strip() for ip in x_forwarded_for.split(',')]
-        # Tomar la última IP válida
+        ips = [ip.strip() for ip in x_forwarded_for.split(',') if ip.strip()]
+        # Tomar la última IP válida (cliente real)
         for ip in reversed(ips):
-            if ip and ip != '127.0.0.1':
+            if ip and ip not in ('127.0.0.1', '::1'):
                 return ip
     
-    # 3. FALLBACK: otros encabezados comunes
+    # 2. Otros headers comunes de proxies/CDNs
     for header in ['HTTP_CF_CONNECTING_IP', 'HTTP_X_REAL_IP']:
         ip = request.META.get(header, '').strip()
-        if ip and ip != '127.0.0.1':
+        if ip and ip not in ('127.0.0.1', '::1'):
             return ip
     
-    # 4. ÚLTIMO: REMOTE_ADDR (puede ser el proxy)
+    # 3. REMOTE_ADDR (último recurso, puede ser el proxy)
     remote_addr = request.META.get('REMOTE_ADDR', '').strip()
-    if remote_addr and remote_addr != '127.0.0.1':
+    if remote_addr and remote_addr not in ('127.0.0.1', '::1'):
         return remote_addr
     
     return None

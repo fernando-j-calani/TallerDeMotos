@@ -1,24 +1,12 @@
-import { API_BASE_URL, getClientIP } from './config';
+import { API_BASE_URL } from './config';
 const API = `${API_BASE_URL}/api`;
 
 /**
- * Wrapper de fetch que agrega automáticamente la IP del cliente en el header X-Client-IP
+ * Wrapper de fetch - el servidor captura la IP desde X-Forwarded-For
+ * o REMOTE_ADDR en los headers HTTP estándar
  */
-export const fetchWithIP = async (url, options = {}) => {
-  const clientIP = await getClientIP();
-  
-  const headers = {
-    ...options.headers,
-  };
-
-  if (clientIP) {
-    headers['X-Client-IP'] = clientIP;
-  }
-
-  return fetch(url, {
-    ...options,
-    headers,
-  });
+export const fetchWithIP = (url, options) => {
+  return fetch(url, options);
 };
 
 export const logoutUniversal = async () => {
