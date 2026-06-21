@@ -259,7 +259,7 @@ def _inicializar_permisos():
         'Recepcionista': {
             'CU05': ['Mostrar', 'Buscar', 'Adicionar', 'Editar', 'Eliminar'],
             'CU06': ['Mostrar', 'Buscar', 'Adicionar', 'Editar', 'Eliminar'],
-            'CU07': ['Mostrar', 'Buscar', 'Adicionar', 'Editar'],
+            'CU07': ['Mostrar', 'Buscar', 'Adicionar', 'Editar', 'Eliminar'],
             'CU08': ['Mostrar', 'Buscar', 'Adicionar', 'Editar'],
             'CU09': ['Mostrar', 'Buscar', 'Adicionar'],
             'CU10': ['Mostrar', 'Buscar', 'Adicionar', 'Editar', 'Eliminar'],
@@ -589,12 +589,15 @@ def _validar_detalle_cotizacion(detalle):
     precio_unitario = _normalizar_decimal(detalle.get('precio_unitario'))
     subtotal = _normalizar_decimal(detalle.get('subtotal'))
 
-    if id_producto not in (None, ''):
+    if id_producto in (None, ''):
+        id_producto = None
+    else:
         try:
             producto = Producto.objects.get(codigo=id_producto)
         except Producto.DoesNotExist:
             return None, f"Producto con id {id_producto} no encontrado."
 
+        id_producto = producto.codigo
         if not tipo:
             tipo = 'Producto'
         if not descripcion:
@@ -623,6 +626,7 @@ def _validar_detalle_cotizacion(detalle):
         'cantidad': cantidad,
         'precio_unitario': precio_unitario,
         'subtotal': subtotal,
+        'id_producto_id': id_producto,
     }, None
 
 
@@ -2367,19 +2371,66 @@ def cotizaciones_api(request):
     )
 
 
-@api_view(['PUT'])
+@api_view(['PUT', 'DELETE'])
 def cotizacion_detalle_api(request, cotizacion_id):
     usuario_sesion, error_auth = obtener_usuario_autenticado(request)
     if error_auth:
         return error_auth
 
-    error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU07', 'Editar')
+    if request.method == 'DELETE':
+        error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU07', 'Eliminar')
+    else:
+        error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU07', 'Editar')
     if error_permiso:
         return error_permiso
 
     cotizacion = Cotizaciones.BuscaCotizacion(cotizacion_id)
     if cotizacion is None:
         return Response({"exito": False, "error": "Cotización no encontrada."}, status=404)
+
+    if request.method == 'DELETE':
+        estaba_aprobada = (cotizacion.estado or '').strip().lower() == 'aprobada'
+        items_con_producto = []
+        if estaba_aprobada:
+            items_con_producto = list(
+                Detallecotizacion.objects.filter(id_cotizacion=cotizacion, id_producto__isnull=False)
+                .select_related('id_producto')
+            )
+
+        with transaction.atomic():
+            for item in items_con_producto:
+                producto = item.id_producto
+                producto.stock_actual = (producto.stock_actual or 0) + item.cantidad
+                producto.save(update_fields=['stock_actual'])
+
+            Detallecotizacion.objects.filter(id_cotizacion=cotizacion).delete()
+            cotizacion.delete()
+
+        registrar_bitacora(
+            usuario_sesion,
+            'ELIMINACIÓN',
+            f"Eliminó cotización #{cotizacion_id}"
+            + (" y repuso stock de repuestos asociados." if items_con_producto else "."),
+        )
+        return Response({"exito": True, "mensaje": "Cotización eliminada."}, status=200)
+
+    detalles_nuevos = request.data.get('detalles')
+    detalles_creados = None
+    if detalles_nuevos is not None:
+        if not isinstance(detalles_nuevos, list) or len(detalles_nuevos) == 0:
+            return Response({"exito": False, "error": "La cotización debe incluir al menos un item."}, status=400)
+        try:
+            detalles_creados = Cotizaciones.CreaItems(detalles_nuevos)
+        except ValueError as exc:
+            return Response({"exito": False, "error": str(exc)}, status=400)
+
+        subtotal_items = sum((item['subtotal'] for item in detalles_creados), Decimal('0'))
+        subtotal_payload = _normalizar_decimal(request.data.get('subtotal'))
+        if subtotal_payload is not None and subtotal_items != subtotal_payload:
+            return Response(
+                {"exito": False, "error": "El subtotal de los items no coincide con el subtotal de la cotización."},
+                status=400,
+            )
 
     serializer = CotizacionSerializer(cotizacion, data=request.data, partial=True)
     if not serializer.is_valid():
@@ -2389,6 +2440,10 @@ def cotizacion_detalle_api(request, cotizacion_id):
         cotizacion_actualizada = serializer.save()
     except Exception as exc:
         return Response({"exito": False, "error": str(exc)}, status=400)
+
+    if detalles_creados is not None:
+        Detallecotizacion.objects.filter(id_cotizacion=cotizacion_actualizada).delete()
+        cotizacion_actualizada.crear_items(detalles_creados)
 
     registrar_bitacora(usuario_sesion, 'MODIFICACIÓN', f"Actualizó cotización #{cotizacion.codigo}.")
     return Response(
@@ -4025,8 +4080,39 @@ def aceptar_cotizacion_api(request, cotizacion_id):
     except Cotizacion.DoesNotExist:
         return Response({"exito": False, "error": "Cotización no encontrada."}, status=404)
 
-    cotizacion.estado = 'Aprobada'
-    cotizacion.save(update_fields=['estado'])
+    ya_estaba_aprobada = (cotizacion.estado or '').strip().lower() == 'aprobada'
+
+    if not ya_estaba_aprobada:
+        items_con_producto = list(
+            Detallecotizacion.objects.filter(id_cotizacion=cotizacion, id_producto__isnull=False)
+            .select_related('id_producto')
+        )
+
+        errores_stock = []
+        for item in items_con_producto:
+            stock_disponible = item.id_producto.stock_actual or 0
+            if stock_disponible < item.cantidad:
+                errores_stock.append(
+                    f"{item.id_producto.nombre}: stock disponible {stock_disponible}, se requieren {item.cantidad}."
+                )
+
+        if errores_stock:
+            return Response(
+                {
+                    "exito": False,
+                    "error": "No hay stock suficiente para aprobar esta cotización: " + " | ".join(errores_stock),
+                },
+                status=400,
+            )
+
+        with transaction.atomic():
+            for item in items_con_producto:
+                producto = item.id_producto
+                producto.stock_actual = (producto.stock_actual or 0) - item.cantidad
+                producto.save(update_fields=['stock_actual'])
+
+            cotizacion.estado = 'Aprobada'
+            cotizacion.save(update_fields=['estado'])
 
     cliente = cotizacion.id_cliente
 

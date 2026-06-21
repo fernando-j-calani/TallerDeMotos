@@ -112,6 +112,11 @@ class DetalleCotizacionSerializer(serializers.ModelSerializer):
 class CotizacionSerializer(serializers.ModelSerializer):
     id_cliente_nombre = serializers.ReadOnlyField(source='id_cliente.nombre')
     id_motocicleta_placa = serializers.ReadOnlyField(source='id_motocicleta.placa')
+    detalles = serializers.SerializerMethodField()
+
+    def get_detalles(self, obj):
+        items = Detallecotizacion.objects.filter(id_cotizacion=obj).order_by('codigo')
+        return DetalleCotizacionSerializer(items, many=True).data
 
     class Meta:
         model = Cotizacion

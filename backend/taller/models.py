@@ -251,6 +251,7 @@ class Detallecompra(models.Model):
 class Detallecotizacion(models.Model):
     codigo = models.AutoField(primary_key=True)
     id_cotizacion = models.ForeignKey(Cotizacion, models.DO_NOTHING, db_column='id_cotizacion')
+    id_producto = models.ForeignKey('Producto', models.DO_NOTHING, db_column='id_producto', blank=True, null=True)
     tipo = models.CharField(max_length=50)
     descripcion = models.TextField(blank=True, null=True)
     cantidad = models.IntegerField()
