@@ -5,6 +5,7 @@ import { API_BASE_URL } from './config';
 import { PASSWORD_POLICY_MESSAGE, validateStrongPassword } from './passwordPolicy';
 import { getHomeRouteByRole } from './navigation';
 import { repairText } from './textNormalization';
+import { fetchWithIP } from './auth';
 
 const maskEmail = (value) => {
   const [local, domain] = (value || '').split('@');
@@ -100,7 +101,7 @@ export default function RegistroPage() {
       if (!token) {
         return getHomeRouteByRole(usuario.rol);
       }
-      const res = await fetch(`${API_BASE_URL}/api/permisos/`, {
+      const res = await fetchWithIP(`${API_BASE_URL}/api/permisos/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json().catch(() => []);
@@ -128,7 +129,7 @@ export default function RegistroPage() {
     setMessage('');
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/login/`, {
+      const response = await fetchWithIP(`${API_BASE_URL}/api/login/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: loginEmail, password: loginPassword })
@@ -208,7 +209,7 @@ export default function RegistroPage() {
 
     setConfirmLoading(true);
     try {
-      const verifyRes = await fetch(`${API_BASE_URL}/api/password/verify-code/`, {
+      const verifyRes = await fetchWithIP(`${API_BASE_URL}/api/password/verify-code/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: forgotEmail, codigo: confirmCode }),
@@ -220,7 +221,7 @@ export default function RegistroPage() {
         return;
       }
 
-      const resetRes = await fetch(`${API_BASE_URL}/api/password/reset/`, {
+      const resetRes = await fetchWithIP(`${API_BASE_URL}/api/password/reset/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -298,7 +299,7 @@ export default function RegistroPage() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/register/`, {
+      const response = await fetchWithIP(`${API_BASE_URL}/api/register/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -338,7 +339,7 @@ export default function RegistroPage() {
     setRegisterVerifyLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/register/verify/`, {
+      const res = await fetchWithIP(`${API_BASE_URL}/api/register/verify/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, codigo: registerVerifyCode }),
@@ -367,7 +368,7 @@ export default function RegistroPage() {
     setRegisterResendLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/register/resend/`, {
+      const res = await fetchWithIP(`${API_BASE_URL}/api/register/resend/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
