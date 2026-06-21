@@ -50,9 +50,8 @@ const OrdenesTrabajo = () => {
     return rol.includes('mec') && rol.includes('nico');
   };
   const fechaBoliviaHoy = () => {
-    const ahora = new Date();
-    const utcMs = ahora.getTime() + ahora.getTimezoneOffset() * 60000;
-    const bolivia = new Date(utcMs - 4 * 60 * 60000);
+    // Date.now() ya es UTC real, independiente del huso horario del equipo del usuario.
+    const bolivia = new Date(Date.now() - 4 * 60 * 60000);
     return bolivia.toISOString().slice(0, 10);
   };
   const sumarItemsPorTipo = (cotizacion, tipoBuscado) =>

@@ -8,52 +8,61 @@ import { repairText } from './textNormalization';
 
 const API = `${API_BASE_URL}/api`;
 
+const fechaHoraBoliviaAhora = () => {
+  // Date.now() ya es UTC real, independiente del huso horario del equipo del usuario.
+  const bolivia = new Date(Date.now() - 4 * 60 * 60000);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${bolivia.getUTCFullYear()}-${pad(bolivia.getUTCMonth() + 1)}-${pad(bolivia.getUTCDate())}T${pad(bolivia.getUTCHours())}:${pad(bolivia.getUTCMinutes())}`;
+};
+
 const NotasTrabajo = () => {
   const navigate = useNavigate();
   const usuarioLocal = useMemo(() => JSON.parse(localStorage.getItem('usuario')), []);
   const [ordenes, setOrdenes] = useState([]);
   const [notas, setNotas] = useState([]);
   const [error, setError] = useState('');
+  const [ordenSeleccionada, setOrdenSeleccionada] = useState(null);
+  const [busquedaPlaca, setBusquedaPlaca] = useState('');
   const [nuevo, setNuevo] = useState({
-    id_orden_trabajo: '',
-    fecha_hora: '',
+    fecha_hora: fechaHoraBoliviaAhora(),
     contenido: '',
-    tipo_nota: '',
+    tipo_nota: 'Diagnóstico',
   });
   const [notaEdicion, setNotaEdicion] = useState(null);
   const [editNota, setEditNota] = useState({
-    id_orden_trabajo: '',
     fecha_hora: '',
     contenido: '',
     tipo_nota: '',
   });
 
-  const SeleccionarOrdenTrabajoAsignada = (ordenId) => {
-    setNuevo({ ...nuevo, id_orden_trabajo: Number(ordenId) });
+  const formatearFechaHora = (valor) => {
+    if (!valor) return '-';
+    const fecha = new Date(valor);
+    if (Number.isNaN(fecha.getTime())) return '-';
+    const bolivia = new Date(fecha.getTime() - 4 * 60 * 60000);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${pad(bolivia.getUTCDate())}/${pad(bolivia.getUTCMonth() + 1)}/${bolivia.getUTCFullYear()} ${pad(bolivia.getUTCHours())}:${pad(bolivia.getUTCMinutes())}`;
   };
-
-  const RedactaNota = (tipo, contenido) => {
-    setNuevo({ ...nuevo, tipo_nota: tipo, contenido });
-  };
-
-  const SolicitaGuardarNota = async (e) => {
-    await crearNota(e);
-  };
-
-  const RecibeConfirmacionVisual = (mensaje) => mensaje;
 
   const aFormatoDatetimeLocal = (valor) => {
     if (!valor) return '';
     const fecha = new Date(valor);
     if (Number.isNaN(fecha.getTime())) return '';
+    // Reexpresa el instante UTC como hora de Bolivia, sin depender del huso del navegador.
+    const bolivia = new Date(fecha.getTime() - 4 * 60 * 60000);
     const pad = (n) => String(n).padStart(2, '0');
-    return `${fecha.getFullYear()}-${pad(fecha.getMonth() + 1)}-${pad(fecha.getDate())}T${pad(fecha.getHours())}:${pad(fecha.getMinutes())}`;
+    return `${bolivia.getUTCFullYear()}-${pad(bolivia.getUTCMonth() + 1)}-${pad(bolivia.getUTCDate())}T${pad(bolivia.getUTCHours())}:${pad(bolivia.getUTCMinutes())}`;
+  };
+
+  const seleccionarOrden = (orden) => {
+    setOrdenSeleccionada(orden);
+    setNuevo({ fecha_hora: fechaHoraBoliviaAhora(), contenido: '', tipo_nota: 'Diagnóstico' });
+    setError('');
   };
 
   const abrirEdicionNota = (nota) => {
     setNotaEdicion(nota);
     setEditNota({
-      id_orden_trabajo: nota.id_orden_trabajo || '',
       fecha_hora: aFormatoDatetimeLocal(nota.fecha_hora),
       contenido: nota.contenido || '',
       tipo_nota: nota.tipo_nota || '',
@@ -65,7 +74,6 @@ const NotasTrabajo = () => {
     if (!notaEdicion) return;
     setError('');
     const payload = {
-      id_orden_trabajo: Number(editNota.id_orden_trabajo),
       fecha_hora: editNota.fecha_hora,
       contenido: editNota.contenido,
       tipo_nota: editNota.tipo_nota,
@@ -97,14 +105,19 @@ const NotasTrabajo = () => {
   };
 
   const ordenesOrdenadas = useMemo(
-    () => [...ordenes].sort((a, b) => Number(a.codigo) - Number(b.codigo)),
-    [ordenes]
+    () => [...ordenes]
+      .filter((o) => (o.estado || '').toLowerCase() !== 'cancelado')
+      .filter((o) => (o.motocicleta_placa || '').toLowerCase().includes(busquedaPlaca.trim().toLowerCase()))
+      .sort((a, b) => Number(a.codigo) - Number(b.codigo)),
+    [ordenes, busquedaPlaca]
   );
 
-  const notasOrdenadas = useMemo(
-    () => [...notas].sort((a, b) => Number(a.codigo) - Number(b.codigo)),
-    [notas]
-  );
+  const notasDeOrdenSeleccionada = useMemo(() => {
+    if (!ordenSeleccionada) return [];
+    return [...notas]
+      .filter((n) => Number(n.id_orden_trabajo) === Number(ordenSeleccionada.codigo))
+      .sort((a, b) => Number(a.codigo) - Number(b.codigo));
+  }, [notas, ordenSeleccionada]);
 
   const headers = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` });
 
@@ -164,15 +177,17 @@ const NotasTrabajo = () => {
 
   const crearNota = async (e) => {
     e.preventDefault();
+    if (!ordenSeleccionada) return;
     setError('');
+    const payload = { ...nuevo, id_orden_trabajo: ordenSeleccionada.codigo };
     const res = await fetch(`${API}/notas-trabajo/`, {
       method: 'POST',
       headers: headers(),
-      body: JSON.stringify(nuevo),
+      body: JSON.stringify(payload),
     });
     const data = await res.json();
     if (!res.ok) return setError(data.error || JSON.stringify(data.errores || {}));
-    setNuevo({ id_orden_trabajo: '', fecha_hora: '', contenido: '', tipo_nota: '' });
+    setNuevo({ fecha_hora: fechaHoraBoliviaAhora(), contenido: '', tipo_nota: 'Diagnóstico' });
     await cargarNotas();
   };
 
@@ -199,57 +214,113 @@ const NotasTrabajo = () => {
 
       <div className="notas-content">
         <div className="bitacora-panel notas-form-panel">
-          <h3 className="usuarios-panel-title">Registrar nota de trabajo</h3>
-          <form onSubmit={crearNota}>
-            <div className="input-group"><label>Orden de trabajo</label><select value={nuevo.id_orden_trabajo} onChange={(e) => setNuevo({ ...nuevo, id_orden_trabajo: Number(e.target.value) })} required><option value="">Seleccione</option>{ordenesOrdenadas.map((o) => (<option key={o.codigo} value={o.codigo}>{`#${o.codigo} - ${o.cliente_nombre || ''}`}</option>))}</select></div>
-            <div className="input-group"><label>Fecha y hora</label><input type="datetime-local" value={nuevo.fecha_hora} onChange={(e) => setNuevo({ ...nuevo, fecha_hora: e.target.value })} required /></div>
-            <div className="input-group"><label>Tipo de nota</label><input value={nuevo.tipo_nota} onChange={(e) => setNuevo({ ...nuevo, tipo_nota: e.target.value })} /></div>
-            <div className="input-group"><label>Contenido</label><textarea value={nuevo.contenido} onChange={(e) => setNuevo({ ...nuevo, contenido: e.target.value })} rows="5" required /></div>
-            <button type="submit" className="bitacora-btn bitacora-btn--filter" style={{ marginTop: '16px' }}>Crear nota</button>
-          </form>
-        </div>
-
-        <div className="bitacora-panel notas-list-panel">
-          <div className="notas-list-header">
-            <h3 className="usuarios-panel-title">Listado de notas</h3>
+          <h3 className="usuarios-panel-title">Lista de Notas</h3>
+          <div className="notas-search" style={{ marginBottom: '12px' }}>
+            <input
+              type="text"
+              value={busquedaPlaca}
+              onChange={(e) => setBusquedaPlaca(e.target.value)}
+              placeholder="Buscar por placa de la moto"
+              className="bitacora-input"
+            />
           </div>
           <div className="bitacora-table-wrap">
             <table className="bitacora-table">
               <thead>
                 <tr>
-                  <th>Código</th>
                   <th>Orden</th>
-                  <th>Mecánico</th>
-                  <th>Tipo</th>
-                  <th>Contenido</th>
-                  <th>Fecha</th>
-                  <th>Acciones</th>
+                  <th>Cliente</th>
+                  <th>Motocicleta</th>
+                  <th>Estado</th>
                 </tr>
               </thead>
               <tbody>
-                {notasOrdenadas.length === 0 ? (
+                {ordenesOrdenadas.length === 0 ? (
                   <tr>
-                    <td colSpan="7" style={{ textAlign: 'center' }}>No hay notas registradas.</td>
+                    <td colSpan="4" style={{ textAlign: 'center' }}>No hay órdenes de trabajo registradas.</td>
                   </tr>
                 ) : (
-                  notasOrdenadas.map((n) => (
-                    <tr key={n.codigo}>
-                      <td>#{n.codigo}</td>
-                      <td>{n.orden_numero || '-'}</td>
-                      <td>{n.mecanico_nombre || '-'}</td>
-                      <td>{n.tipo_nota || '-'}</td>
-                      <td className="notas-contenido-cell">{n.contenido || '-'}</td>
-                      <td>{n.fecha_hora || '-'}</td>
-                      <td>
-                        <button onClick={() => abrirEdicionNota(n)} className="table-action-btn table-action-btn--edit">Editar</button>
-                        <button onClick={() => eliminarNota(n)} className="table-action-btn table-action-btn--danger">Eliminar</button>
-                      </td>
+                  ordenesOrdenadas.map((o) => (
+                    <tr
+                      key={o.codigo}
+                      onClick={() => seleccionarOrden(o)}
+                      style={{ cursor: 'pointer' }}
+                      className={ordenSeleccionada?.codigo === o.codigo ? 'motos-row--inactiva' : ''}
+                    >
+                      <td>#{o.codigo}</td>
+                      <td>{o.cliente_nombre || '-'}</td>
+                      <td>{o.motocicleta_placa || '-'}</td>
+                      <td>{o.estado || '-'}</td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
           </div>
+        </div>
+
+        <div className="bitacora-panel notas-list-panel">
+          <div className="notas-list-header">
+            <h3 className="usuarios-panel-title">Detalles {ordenSeleccionada ? `- Orden #${ordenSeleccionada.codigo}` : ''}</h3>
+          </div>
+
+          {!ordenSeleccionada ? (
+            <p>Seleccione una orden de trabajo en el panel de la izquierda para ver sus notas.</p>
+          ) : (
+            <>
+              <form onSubmit={crearNota} style={{ marginBottom: '20px' }}>
+                <div className="input-group"><label>Fecha y hora</label><input type="datetime-local" value={nuevo.fecha_hora} onChange={(e) => setNuevo({ ...nuevo, fecha_hora: e.target.value })} required /></div>
+                <div className="input-group">
+                  <label>Tipo de nota</label>
+                  <select value={nuevo.tipo_nota} onChange={(e) => setNuevo({ ...nuevo, tipo_nota: e.target.value })}>
+                    <option value="Diagnóstico">Diagnóstico</option>
+                    <option value="Avance">Avance</option>
+                    <option value="Sistema">Sistema</option>
+                  </select>
+                </div>
+                <div className="input-group"><label>Contenido</label><textarea value={nuevo.contenido} onChange={(e) => setNuevo({ ...nuevo, contenido: e.target.value })} rows="4" required /></div>
+                <button type="submit" className="bitacora-btn bitacora-btn--filter">Crear nota</button>
+              </form>
+
+              <div className="bitacora-table-wrap">
+                <table className="bitacora-table">
+                  <thead>
+                    <tr>
+                      <th>Código</th>
+                      <th>Orden</th>
+                      <th>Mecánico</th>
+                      <th>Tipo</th>
+                      <th>Contenido</th>
+                      <th>Fecha</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {notasDeOrdenSeleccionada.length === 0 ? (
+                      <tr>
+                        <td colSpan="7" style={{ textAlign: 'center' }}>No hay notas registradas para esta orden.</td>
+                      </tr>
+                    ) : (
+                      notasDeOrdenSeleccionada.map((n) => (
+                        <tr key={n.codigo}>
+                          <td>#{n.codigo}</td>
+                          <td>{n.orden_numero || '-'}</td>
+                          <td>{n.mecanico_nombre || '-'}</td>
+                          <td>{n.tipo_nota || '-'}</td>
+                          <td className="notas-contenido-cell">{n.contenido || '-'}</td>
+                          <td>{formatearFechaHora(n.fecha_hora)}</td>
+                          <td>
+                            <button onClick={() => abrirEdicionNota(n)} className="table-action-btn table-action-btn--edit">Editar</button>
+                            <button onClick={() => eliminarNota(n)} className="table-action-btn table-action-btn--danger">Eliminar</button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -258,9 +329,15 @@ const NotasTrabajo = () => {
           <div className="usuarios-modal usuarios-modal--sm">
             <h3 className="usuarios-panel-title">Editar nota #{notaEdicion.codigo}</h3>
             <form onSubmit={guardarEdicionNota}>
-              <div className="input-group"><label>Orden de trabajo</label><select value={editNota.id_orden_trabajo} onChange={(e) => setEditNota({ ...editNota, id_orden_trabajo: Number(e.target.value) })} required><option value="">Seleccione</option>{ordenesOrdenadas.map((o) => (<option key={o.codigo} value={o.codigo}>{`#${o.codigo} - ${o.cliente_nombre || ''}`}</option>))}</select></div>
               <div className="input-group"><label>Fecha y hora</label><input type="datetime-local" value={editNota.fecha_hora} onChange={(e) => setEditNota({ ...editNota, fecha_hora: e.target.value })} required /></div>
-              <div className="input-group"><label>Tipo de nota</label><input value={editNota.tipo_nota} onChange={(e) => setEditNota({ ...editNota, tipo_nota: e.target.value })} /></div>
+              <div className="input-group">
+                <label>Tipo de nota</label>
+                <select value={editNota.tipo_nota} onChange={(e) => setEditNota({ ...editNota, tipo_nota: e.target.value })}>
+                  <option value="Diagnóstico">Diagnóstico</option>
+                  <option value="Avance">Avance</option>
+                  <option value="Sistema">Sistema</option>
+                </select>
+              </div>
               <div className="input-group"><label>Contenido</label><textarea value={editNota.contenido} onChange={(e) => setEditNota({ ...editNota, contenido: e.target.value })} rows="5" required /></div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                 <button type="button" onClick={() => setNotaEdicion(null)} className="bitacora-btn bitacora-btn--clear">Cancelar</button>

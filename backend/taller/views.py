@@ -715,8 +715,8 @@ def _validar_orden_para_nota(orden):
         return "Orden de trabajo no encontrada."
 
     estado = (orden.estado or '').strip()
-    if estado not in ('Abierta', 'En progreso'):
-        return "La orden de trabajo debe estar Abierta o En progreso para registrar una nota."
+    if estado in ('Finalizado', 'Facturado', 'Cancelado'):
+        return f"No se pueden registrar notas en una orden con estado '{estado}'."
 
     return None
 
@@ -1897,6 +1897,10 @@ def obtener_fecha_bolivia():
     return (timezone.now() - timedelta(hours=4)).date()
 
 
+def obtener_datetime_bolivia():
+    return timezone.now() - timedelta(hours=4)
+
+
 def _es_rol_mecanico(usuario):
     nombre_rol = (usuario.id_rol.nombre or '').strip().lower()
     return 'mec' in nombre_rol and 'nico' in nombre_rol
@@ -1967,8 +1971,8 @@ class NotasTrabajo:
 
     @staticmethod
     def RegistraNota(orden, mecanico, datos):
-        datos['id_orden_trabajo'] = orden.codigo
-        datos['id_mecanico'] = mecanico.codigo
+        datos['id_orden_trabajo'] = orden
+        datos['id_mecanico'] = mecanico
         return Notatrabajo.objects.create(**datos)
 
     @staticmethod
@@ -2554,6 +2558,16 @@ def ordenes_trabajo_api(request):
             datos['total'] = total
 
         orden = Ordentrabajo.objects.create(**datos)
+
+        autor_nota = orden.id_mecanico or usuario_sesion
+        Notatrabajo.objects.create(
+            id_orden_trabajo=orden,
+            id_mecanico=autor_nota,
+            fecha_hora=obtener_datetime_bolivia(),
+            contenido=f"Orden de trabajo creada con estado '{orden.estado}'.",
+            tipo_nota='Sistema',
+        )
+
         OrdenTrabajo.SolicitaRegistroBitacora(
             usuario_sesion,
             'CREACIÓN',
@@ -2588,7 +2602,12 @@ def orden_trabajo_detalle_api(request, orden_id):
             return Response({"exito": False, "error": "Esta orden ya está cancelada."}, status=400)
 
         orden.estado = 'Cancelado'
-        orden.save(update_fields=['estado'])
+        with transaction.atomic():
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT set_config('app.usuario_accion', %s, true)", [str(usuario_sesion.codigo)])
+            orden.save(update_fields=['estado'])
+        # La nota "Sistema" por este cambio de estado la genera el trigger trg_auditoria_estado de la BD.
+
         OrdenTrabajo.SolicitaRegistroBitacora(usuario_sesion, 'MODIFICACIÓN', f"Canceló orden de trabajo #{orden.codigo}.")
         return Response({"exito": True, "mensaje": "Orden de trabajo cancelada."}, status=200)
 
@@ -2618,8 +2637,13 @@ def orden_trabajo_detalle_api(request, orden_id):
     if mecanico is not None and not _es_rol_mecanico(mecanico):
         return Response({"exito": False, "error": "El usuario seleccionado no tiene rol de Mecánico."}, status=400)
 
-    orden_actualizada = serializer.save()
+    with transaction.atomic():
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT set_config('app.usuario_accion', %s, true)", [str(usuario_sesion.codigo)])
+        orden_actualizada = serializer.save()
     OrdenTrabajo.ModificaEstado(orden_actualizada, request.data.get('estado'))
+    # La nota "Sistema" por cambio de estado la genera el trigger trg_auditoria_estado de la BD.
+
     OrdenTrabajo.SolicitaRegistroBitacora(usuario_sesion, 'MODIFICACIÓN', f"Actualizó orden de trabajo #{orden.codigo}.")
     confirmacion = OrdenTrabajo.RetornaConfirmacionGeneral(True)
     return Response({"exito": True, "mensaje": "Orden de trabajo actualizada.", **confirmacion}, status=200)
@@ -2651,8 +2675,16 @@ def notas_trabajo_api(request):
         detalles = []
 
     data = NotasTrabajo.EnviaPayloadNota(dict(request.data))
-    data['fecha_hora'] = timezone.now()
+    if not data.get('fecha_hora'):
+        data['fecha_hora'] = obtener_datetime_bolivia()
     data['id_mecanico'] = usuario_sesion.codigo
+
+    tipo_nota = (data.get('tipo_nota') or '').strip()
+    if tipo_nota and tipo_nota not in ('Diagnóstico', 'Avance', 'Sistema'):
+        return Response(
+            {"exito": False, "error": "Tipo de nota inválido. Debe ser 'Diagnóstico', 'Avance' o 'Sistema'."},
+            status=400,
+        )
 
     serializer = NotaTrabajoSerializer(data=data)
     if not serializer.is_valid():
@@ -2750,6 +2782,13 @@ def nota_trabajo_detalle_api(request, nota_id):
         return Response({"exito": False, "error": "Nota de trabajo no encontrada."}, status=404)
 
     if request.method == 'PUT':
+        tipo_nota = (request.data.get('tipo_nota') or '').strip()
+        if tipo_nota and tipo_nota not in ('Diagnóstico', 'Avance', 'Sistema'):
+            return Response(
+                {"exito": False, "error": "Tipo de nota inválido. Debe ser 'Diagnóstico', 'Avance' o 'Sistema'."},
+                status=400,
+            )
+
         serializer = NotaTrabajoSerializer(nota, data=request.data, partial=True)
         if not serializer.is_valid():
             return Response({"exito": False, "errores": serializer.errors}, status=400)
