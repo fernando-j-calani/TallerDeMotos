@@ -266,7 +266,7 @@ def _inicializar_permisos():
             'CU11': ['Mostrar', 'Buscar', 'Adicionar', 'Editar', 'Eliminar'],
             'CU12': ['Mostrar', 'Buscar', 'Adicionar'],
             'CU13': ['Mostrar', 'Buscar', 'Adicionar', 'Editar', 'Eliminar'],
-            'CU14': ['Mostrar', 'Buscar', 'Adicionar'],
+            'CU14': ['Mostrar', 'Buscar', 'Adicionar', 'Eliminar'],
             'CU15': ['Mostrar', 'Buscar', 'Exportar'],
             'CU16': ['Mostrar', 'Buscar', 'Adicionar'],
             'CU18': ['Mostrar', 'Buscar', 'Exportar'],
@@ -2913,18 +2913,17 @@ def solicita_generacion_registros(datos_validados, orden):
             id_nota_servicio=nota,
             numero_autorizacion=datos_validados.get('numero_autorizacion'),
             fecha_emision=fecha_emision,
-            monto_servicio_facturado=total_mano_obra,
+            monto_servicio_facturado=total_general,
             impuesto=datos_validados.get('impuesto'),
-            total_facturado=total_mano_obra + datos_validados.get('impuesto'),
+            total_facturado=total_general + datos_validados.get('impuesto'),
             nit_cliente=datos_validados.get('nit_cliente'),
             razon_social=datos_validados.get('razon_social'),
             metodo_pago=datos_validados.get('metodo_pago') or None,
             comprobante_pago=datos_validados.get('comprobante_pago'),
         )
 
-        nuevo_estado = 'Pagado' if (datos_validados.get('estado_pago') or '').lower() == 'pagado' else 'Facturado'
-        Ordentrabajo.objects.filter(codigo=orden.codigo).update(estado=nuevo_estado)
-        orden.estado = nuevo_estado
+        Ordentrabajo.objects.filter(codigo=orden.codigo).update(estado='Facturado')
+        orden.estado = 'Facturado'
 
         if usuario_sesion is not None:
             registrar_bitacora(
@@ -2997,6 +2996,40 @@ def facturacion_api(request):
     return retorna_confirmacion_general_y_urls_pdfs(nota, factura)
 
 
+@api_view(['DELETE'])
+def factura_detalle_api(request, factura_id):
+    usuario_sesion, error_auth = obtener_usuario_autenticado(request)
+    if error_auth:
+        return error_auth
+
+    error_permiso = exigir_permiso_modulo(usuario_sesion, 'CU14', 'Eliminar')
+    if error_permiso:
+        return error_permiso
+
+    try:
+        factura = Factura.objects.select_related('id_nota_servicio__id_orden_trabajo').get(codigo=factura_id)
+    except Factura.DoesNotExist:
+        return Response({"exito": False, "error": "Factura no encontrada."}, status=404)
+
+    nota = factura.id_nota_servicio
+    orden = nota.id_orden_trabajo if nota else None
+
+    with transaction.atomic():
+        factura.delete()
+        if nota is not None and not Factura.objects.filter(id_nota_servicio=nota).exists():
+            nota.delete()
+            if orden is not None and (orden.estado or '').strip().lower() in ('facturado', 'pagado'):
+                orden.estado = 'Finalizado'
+                orden.save(update_fields=['estado'])
+
+    registrar_bitacora(
+        usuario_sesion,
+        'ELIMINACIÓN',
+        f"Eliminó factura #{factura_id}" + (f" de la orden #{orden.codigo}." if orden else "."),
+    )
+    return Response({"exito": True, "mensaje": "Factura eliminada."}, status=200)
+
+
 @api_view(['GET'])
 def facturacion_historial_api(request):
     usuario_sesion, error_auth = obtener_usuario_autenticado(request)
@@ -3007,33 +3040,78 @@ def facturacion_historial_api(request):
     if error_permiso:
         return error_permiso
 
-    ordenes = (
-        Ordentrabajo.objects.select_related('id_cliente', 'id_motocicleta')
-        .filter(estado__in=['Facturado', 'Pagado'])
-        .order_by('-fecha_fin', '-codigo')
+    # El historial se basa en que exista una Nota de Servicio (factura real emitida),
+    # no en el estado actual de la orden, para que nunca "desaparezca" una factura
+    # si la orden cambia de estado por algún motivo despues de facturada.
+    notas = (
+        Notaservicio.objects.select_related('id_orden_trabajo__id_cliente', 'id_orden_trabajo__id_motocicleta')
+        .order_by('-fecha_emision', '-codigo')
     )
 
-    notas = Notaservicio.objects.filter(id_orden_trabajo__in=ordenes)
-    notas_por_orden = {nota.id_orden_trabajo_id: nota for nota in notas}
-
     facturas = Factura.objects.select_related('id_nota_servicio').filter(id_nota_servicio__in=notas)
-    facturas_por_nota = {factura.id_nota_servicio_id: factura for factura in facturas}
+    facturas_por_nota = {}
+    for factura in facturas:
+        facturas_por_nota.setdefault(factura.id_nota_servicio_id, factura)
 
     respuesta = []
-    for orden in ordenes:
+    for nota in notas:
+        orden = nota.id_orden_trabajo
+        factura = facturas_por_nota.get(nota.codigo)
         detalles = Detalleordentrabajo.objects.select_related('id_producto').filter(id_orden_trabajo=orden)
-        nota = notas_por_orden.get(orden.codigo)
-        factura = facturas_por_nota.get(nota.codigo) if nota else None
         respuesta.append(
             {
                 "orden": OrdenTrabajoSerializer(orden).data,
-                "nota_servicio": NotaServicioSerializer(nota).data if nota else None,
+                "nota_servicio": NotaServicioSerializer(nota).data,
                 "factura": FacturaSerializer(factura).data if factura else None,
                 "detalles": DetalleOrdenTrabajoSerializer(detalles, many=True).data,
             }
         )
 
     return Response(respuesta, status=200)
+
+
+@api_view(['GET'])
+def mis_facturas_api(request):
+    usuario_sesion, error_auth = obtener_usuario_autenticado(request)
+    if error_auth:
+        return error_auth
+
+    if usuario_sesion.id_rol.nombre != 'Cliente':
+        return Response({"exito": False, "error": "No autorizado para esta consulta."}, status=403)
+
+    cliente = obtener_cliente_vinculado(usuario_sesion)
+    if not cliente:
+        return Response(
+            {"exito": True, "facturas": [], "mensaje": "No se encontró un cliente vinculado a tu usuario."},
+            status=200,
+        )
+
+    notas = (
+        Notaservicio.objects.select_related('id_orden_trabajo__id_motocicleta')
+        .filter(id_cliente=cliente)
+        .order_by('-fecha_emision', '-codigo')
+    )
+
+    facturas = Factura.objects.select_related('id_nota_servicio').filter(id_nota_servicio__in=notas)
+    facturas_por_nota = {}
+    for factura in facturas:
+        facturas_por_nota.setdefault(factura.id_nota_servicio_id, factura)
+
+    respuesta = []
+    for nota in notas:
+        orden = nota.id_orden_trabajo
+        factura = facturas_por_nota.get(nota.codigo)
+        detalles = Detalleordentrabajo.objects.select_related('id_producto').filter(id_orden_trabajo=orden)
+        respuesta.append(
+            {
+                "orden": OrdenTrabajoSerializer(orden).data,
+                "nota_servicio": NotaServicioSerializer(nota).data,
+                "factura": FacturaSerializer(factura).data if factura else None,
+                "detalles": DetalleOrdenTrabajoSerializer(detalles, many=True).data,
+            }
+        )
+
+    return Response({"exito": True, "facturas": respuesta}, status=200)
 
 
 # ==========================================

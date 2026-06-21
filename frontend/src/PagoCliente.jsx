@@ -5,6 +5,7 @@ import './Login.css';
 import { repairText } from './textNormalization';
 import { API_BASE_URL } from './config';
 import { logoutUniversal } from './auth';
+import { generarPdfFactura } from './facturaPdfUtils';
 
 const API = `${API_BASE_URL}/api`;
 const PAYPAL_CLIENT_ID = process.env.REACT_APP_PAYPAL_CLIENT_ID || 'test';
@@ -20,6 +21,7 @@ const PagoCliente = () => {
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState('');
   const [resultado, setResultado] = useState(null);
+  const [facturas, setFacturas] = useState([]);
 
   const headers = (json = true) => {
     const token = localStorage.getItem('token');
@@ -35,7 +37,18 @@ const PagoCliente = () => {
     }
 
     cargarPendientes();
+    cargarFacturas();
   }, [navigate, usuarioLocal]);
+
+  const cargarFacturas = async () => {
+    try {
+      const res = await fetch(`${API}/mis-facturas/`, { headers: headers(false) });
+      const data = await res.json();
+      if (res.ok) setFacturas(Array.isArray(data.facturas) ? data.facturas : []);
+    } catch {
+      // El historial de facturas es informativo; si falla, no bloquea el resto de la pantalla.
+    }
+  };
 
   const cargarPendientes = async () => {
     try {
@@ -97,6 +110,7 @@ const PagoCliente = () => {
       setOrdenSeleccionada(null);
       setMetodoPago('');
       await cargarPendientes();
+      await cargarFacturas();
     } catch {
       setError('Error de conexión registrando el pago.');
     } finally {
@@ -191,6 +205,14 @@ const PagoCliente = () => {
                 <p><strong>Factura:</strong> #{resultado?.factura?.codigo || '-'}</p>
                 <p><strong>Estado orden:</strong> {resultado?.orden?.estado || '-'}</p>
                 <p><strong>Método de pago:</strong> {resultado?.factura?.metodo_pago || '-'}</p>
+                <button
+                  type="button"
+                  className="bitacora-btn bitacora-btn--filter"
+                  style={{ marginTop: '10px' }}
+                  onClick={() => generarPdfFactura(resultado)}
+                >
+                  Descargar factura (PDF)
+                </button>
               </div>
             )}
 
@@ -262,6 +284,7 @@ const PagoCliente = () => {
                             setOrdenSeleccionada(null);
                             setMetodoPago('');
                             await cargarPendientes();
+                            await cargarFacturas();
                           } catch (err) {
                             setError(err.message || 'No se pudo confirmar el pago con PayPal.');
                           } finally {
@@ -278,6 +301,49 @@ const PagoCliente = () => {
           </div>
         </div>
       )}
+
+      <div className="bitacora-panel facturacion-history-panel">
+        <h3 className="usuarios-panel-title">Mis Facturas</h3>
+        <div className="bitacora-table-wrap">
+          <table className="bitacora-table">
+            <thead>
+              <tr>
+                <th>Orden</th>
+                <th>Motocicleta</th>
+                <th>Fecha</th>
+                <th>Total</th>
+                <th>Método</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {facturas.length === 0 ? (
+                <tr>
+                  <td colSpan="6" style={{ textAlign: 'center' }}>No tienes facturas registradas todavía.</td>
+                </tr>
+              ) : (
+                facturas.map((item) => (
+                  <tr key={`${item?.orden?.codigo || 'orden'}-${item?.factura?.codigo || 'factura'}`}>
+                    <td>#{item?.orden?.codigo || '-'}</td>
+                    <td>{item?.orden?.motocicleta_placa || '-'}</td>
+                    <td>{item?.factura?.fecha_emision || '-'}</td>
+                    <td>{item?.nota_servicio?.total_general || '-'}</td>
+                    <td>{item?.factura?.metodo_pago || '-'}</td>
+                    <td>
+                      <button
+                        onClick={() => generarPdfFactura(item)}
+                        className="table-action-btn table-action-btn--success"
+                      >
+                        Descargar PDF
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 };
