@@ -21,34 +21,39 @@ class CurrentRequestMiddleware:
 
 
 def obtener_ip_request_actual():
+    """Determina la IP real del cliente a partir de cabeceras que solo
+    pueden poner los proxies/balanceadores de la infraestructura (Render,
+    Azure App Service, nginx), NUNCA a partir de un header que el propio
+    navegador del usuario pueda mandar (como el extinto 'X-Client-IP'):
+    ese tipo de header es controlado por el cliente y cualquiera puede
+    falsificarlo con DevTools/curl/Postman, lo que dejaría la Bitácora de
+    auditoría con datos no confiables.
+    """
     request = getattr(_local, 'request', None)
     if not request:
         return None
-    
-    # 1. PRIMERO: Si el frontend envía X-Client-IP (que obtuvo desde /api/get-client-ip/),
-    #    usarla como fuente primaria
-    client_ip_header = request.META.get('HTTP_X_CLIENT_IP', '').strip()
-    if client_ip_header and client_ip_header not in ('127.0.0.1', '::1', 'unknown'):
-        return client_ip_header
-    
-    # 2. SEGUNDO: Intentar extraer de X-Forwarded-For (para proxies)
-    #    Tomar la última IP porque es la del cliente real
+
+    # 1. X-Forwarded-For: el primer proxy de la cadena le agrega la IP real
+    #    del cliente al inicio de la lista; los siguientes proxies/balanceadores
+    #    van anexando la suya a la derecha. Por eso se toma la IP más a la
+    #    izquierda que no sea loopback, no la más reciente.
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR', '').strip()
     if x_forwarded_for:
         ips = [ip.strip() for ip in x_forwarded_for.split(',') if ip.strip()]
-        for ip in reversed(ips):
+        for ip in ips:
             if ip and ip not in ('127.0.0.1', '::1'):
                 return ip
-    
-    # 3. TERCERO: Otros headers comunes de proxies/CDNs
+
+    # 2. Otros headers que ponen proxies/CDNs específicos (Cloudflare, nginx)
     for header in ['HTTP_CF_CONNECTING_IP', 'HTTP_X_REAL_IP']:
         ip = request.META.get(header, '').strip()
         if ip and ip not in ('127.0.0.1', '::1'):
             return ip
-    
-    # 4. ÚLTIMO: REMOTE_ADDR (puede ser el proxy en Docker/proxies)
+
+    # 3. ÚLTIMO: REMOTE_ADDR (la conexión TCP directa; en Docker/desarrollo
+    #    local puede ser la IP del gateway del contenedor, no la del usuario)
     remote_addr = request.META.get('REMOTE_ADDR', '').strip()
     if remote_addr and remote_addr not in ('127.0.0.1', '::1'):
         return remote_addr
-    
+
     return None

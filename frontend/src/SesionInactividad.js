@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from './config';
-import { logoutUniversal, fetchWithIP } from './auth';
+import { logoutUniversal } from './auth';
 import './SesionInactividad.css';
 
 const TICK_MS = 5000;
@@ -38,7 +38,7 @@ const SesionInactividad = () => {
 
       refrescandoRef.current = true;
       try {
-        const res = await fetchWithIP(`${API_BASE_URL}/api/refresh-token/`, {
+        const res = await fetch(`${API_BASE_URL}/api/refresh-token/`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -136,7 +136,7 @@ const SesionInactividad = () => {
     const token = localStorage.getItem('token');
     if (token) {
       try {
-        const res = await fetchWithIP(`${API_BASE_URL}/api/refresh-token/`, {
+        const res = await fetch(`${API_BASE_URL}/api/refresh-token/`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
         });

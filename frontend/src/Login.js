@@ -6,7 +6,7 @@ import { getHomeRouteByRole } from './navigation';
 import { repairText } from './textNormalization';
 import { API_BASE_URL } from './config';
 import { PASSWORD_POLICY_MESSAGE, validateStrongPassword } from './passwordPolicy';
-import { logoutUniversal, fetchWithIP, fetchClientIPFromServer } from './auth';
+import { logoutUniversal } from './auth';
 
 const leerUsuarioLocal = () => {
   try {
@@ -81,7 +81,7 @@ const Login = () => {
       if (!token) {
         return getHomeRouteByRole(usuario.rol);
       }
-      const res = await fetchWithIP(`${API_BASE_URL}/api/permisos/`, {
+      const res = await fetch(`${API_BASE_URL}/api/permisos/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json().catch(() => []);
@@ -109,7 +109,7 @@ const Login = () => {
     setCargando(true);
 
     try {
-      const respuesta = await fetchWithIP(`${API_BASE_URL}/api/login/`, {
+      const respuesta = await fetch(`${API_BASE_URL}/api/login/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -123,13 +123,7 @@ const Login = () => {
         localStorage.setItem('token', datos.token);
         localStorage.setItem('usuario', JSON.stringify(datos.usuario));
         localStorage.setItem('requires_password_change', datos.requires_password_change ? '1' : '0');
-        
-        // Obtener la IP del cliente en paralelo (NO BLOQUEANTE)
-        // Esto asegura que el login procede inmediatamente
-        fetchClientIPFromServer().catch(err => 
-          console.warn('⚠ No se pudo cachear IP:', err)
-        );
-        
+
         if (datos.requires_password_change) {
           navigate('/cambiar-password-obligatorio');
         } else {
@@ -173,7 +167,7 @@ const Login = () => {
     setForgotLoading(true);
 
     try {
-      const res = await fetchWithIP(`${API_BASE_URL}/api/password/forgot/`, {
+      const res = await fetch(`${API_BASE_URL}/api/password/forgot/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: forgotEmail }),
@@ -217,7 +211,7 @@ const Login = () => {
 
     setConfirmLoading(true);
     try {
-      const verifyRes = await fetchWithIP(`${API_BASE_URL}/api/password/verify-code/`, {
+      const verifyRes = await fetch(`${API_BASE_URL}/api/password/verify-code/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: forgotEmail, codigo: confirmCode }),
@@ -229,7 +223,7 @@ const Login = () => {
         return;
       }
 
-      const resetRes = await fetchWithIP(`${API_BASE_URL}/api/password/reset/`, {
+      const resetRes = await fetch(`${API_BASE_URL}/api/password/reset/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -262,7 +256,7 @@ const Login = () => {
     setResendLoading(true);
 
     try {
-      const res = await fetchWithIP(`${API_BASE_URL}/api/password/forgot/`, {
+      const res = await fetch(`${API_BASE_URL}/api/password/forgot/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: forgotEmail }),
