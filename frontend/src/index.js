@@ -31,6 +31,7 @@ import ForgotPasswordRequest from './ForgotPasswordRequest';
 import ResetPassword from './ResetPassword';
 import ForceChangePassword from './ForceChangePassword';
 import SessionGuard from './SessionGuard';
+import SesionInactividad from './SesionInactividad';
 import './index.css';
 
 document.body.style.margin = "0";
@@ -40,6 +41,7 @@ root.render(
   <React.StrictMode>
     <BrowserRouter>
       <SessionGuard />
+      <SesionInactividad />
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />

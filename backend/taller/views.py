@@ -121,7 +121,7 @@ def obtener_usuario_autenticado(request):
             usuario.id_rol.nombre == 'Cliente'
             and check_password(settings.CLIENT_TEMP_PASSWORD, usuario.contrasena)
         )
-        rutas_permitidas = {'/api/password/force-change/', '/api/logout/'}
+        rutas_permitidas = {'/api/password/force-change/', '/api/logout/', '/api/refresh-token/'}
         if requiere_cambio and request.path not in rutas_permitidas:
             return None, Response(
                 {
@@ -854,6 +854,28 @@ def login_api(request):
     except Usuario.DoesNotExist:
         return Response({"exito": False, "error": "El correo no existe en el sistema"}, status=404)
     
+# ==========================================
+# REFRESCAR TOKEN (mantiene la sesión viva mientras el usuario está activo)
+# ==========================================
+@api_view(['POST'])
+def refresh_token_api(request):
+    usuario_sesion, error_auth = obtener_usuario_autenticado(request)
+    if error_auth:
+        return error_auth
+
+    # Volvemos a firmar el token con un timestamp nuevo: esto reinicia la
+    # ventana de expiración de TOKEN_MAX_AGE_SECONDS sin tocar 'sesion_actual',
+    # asi que no afecta el control de sesión única por dispositivo.
+    token_data = {
+        'id_usuario': usuario_sesion.codigo,
+        'rol': usuario_sesion.id_rol.nombre,
+        'pwd_sig': usuario_sesion.contrasena[-16:],
+        'sesion': usuario_sesion.sesion_actual,
+    }
+    token_seguro = signing.dumps(token_data)
+
+    return Response({"exito": True, "token": token_seguro}, status=200)
+
 # ==========================================
 # CERRAR SESIÓN (Para la Bitácora)
 # ==========================================
